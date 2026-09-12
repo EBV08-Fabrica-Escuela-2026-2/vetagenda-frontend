@@ -1,5 +1,5 @@
 import React from 'react';
-import { ClientRegisterForm } from './components/clients/ClientRegisterForm';
+import { CatalogoServicios } from './components/services/CatalogoServicios';
 import { Logo } from './components/ui/Logo';
 
 export const App: React.FC = () => {
@@ -23,18 +23,17 @@ export const App: React.FC = () => {
         <Logo size="sm" light />
       </header>
 
-      {/* Contenido Principal */}
+      {/* Contenido Principal: HU08 - Consultar catálogo de servicios */}
       <main
         style={{
           flex: 1,
           padding: '2.5rem 1rem',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          justifyContent: 'center'
+          alignItems: 'center'
         }}
       >
-        <ClientRegisterForm />
+        <CatalogoServicios onSesionInvalida={() => console.warn('Redirigir a login (HU03)')} />
       </main>
 
       {/* Pie de página institucional */}

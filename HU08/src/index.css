@@ -81,6 +81,15 @@ h1, h2, h3, h4, h5, h6, .font-display {
   }
 }
 
+@keyframes pulseFade {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
 .animate-fade-in {
   animation: fadeIn 0.3s ease-out forwards;
 }
@@ -91,6 +100,10 @@ h1, h2, h3, h4, h5, h6, .font-display {
 
 .animate-spin {
   animation: spin 0.8s linear infinite;
+}
+
+.animate-pulse-fade {
+  animation: pulseFade 1.3s ease-in-out infinite;
 }
 
 /* Base utility classes */
