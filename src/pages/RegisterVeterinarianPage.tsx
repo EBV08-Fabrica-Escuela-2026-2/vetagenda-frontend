@@ -24,9 +24,10 @@ export const RegisterVeterinarianPage: React.FC = () => {
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [showSuccessModal, setShowSuccessModal] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Prevenir tecleo de letras en campos numéricos (Documento y Celular)
   const handleNumericKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const allowedKeys = ['Backspace', 'Tab', 'ArrowLeft', 'ArrowRight', 'Delete'];
     if (!allowedKeys.includes(e.key) && !/^\d$/.test(e.key)) {
@@ -34,7 +35,6 @@ export const RegisterVeterinarianPage: React.FC = () => {
     }
   };
 
-  // Prevenir tecleo de números en campos de texto (Nombres y Apellidos)
   const handleLettersKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     const allowedKeys = ['Backspace', 'Tab', 'ArrowLeft', 'ArrowRight', 'Delete', ' '];
     if (!allowedKeys.includes(e.key) && /\d/.test(e.key)) {
@@ -51,38 +51,36 @@ export const RegisterVeterinarianPage: React.FC = () => {
     if (errors[name as keyof FormErrors]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
     }
+    if (errorMessage) {
+      setErrorMessage(null);
+    }
   };
 
   const validateForm = (): boolean => {
     const newErrors: FormErrors = {};
 
-    // Validar Nombres (solo letras)
     if (!formData.firstName.trim()) {
       newErrors.firstName = 'Este campo es obligatorio';
     } else if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(formData.firstName.trim())) {
       newErrors.firstName = 'El nombre no debe contener números';
     }
 
-    // Validar Apellidos (solo letras)
     if (!formData.lastName.trim()) {
       newErrors.lastName = 'Este campo es obligatorio';
     } else if (!/^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$/.test(formData.lastName.trim())) {
       newErrors.lastName = 'El apellido no debe contener números';
     }
 
-    // Validar Documento
     if (!formData.documentNumber.trim()) {
       newErrors.documentNumber = 'Este campo es obligatorio';
     }
 
-    // Validar Celular (10 dígitos)
     if (!formData.phone.trim()) {
       newErrors.phone = 'Este campo es obligatorio';
     } else if (formData.phone.trim().length !== 10) {
       newErrors.phone = 'El número celular no es válido';
     }
 
-    // Validar Tarjeta Profesional (debe incluir letras y al menos 4 números)
     const digitsInLicense = (formData.professionalLicense.match(/\d/g) || []).length;
     if (!formData.professionalLicense.trim()) {
       newErrors.professionalLicense = 'Este campo es obligatorio';
@@ -90,14 +88,12 @@ export const RegisterVeterinarianPage: React.FC = () => {
       newErrors.professionalLicense = 'Debe incluir letras y al menos 4 números';
     }
 
-    // Validar Correo
     if (!formData.email.trim()) {
       newErrors.email = 'Este campo es obligatorio';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
       newErrors.email = 'El correo no es válido';
     }
 
-    // Validar Especialidad
     if (!formData.specialty) {
       newErrors.specialty = 'Este campo es obligatorio';
     }
@@ -108,14 +104,22 @@ export const RegisterVeterinarianPage: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setSuccessMessage(null);
+    setErrorMessage(null);
 
     if (validateForm()) {
-      setSuccessMessage('Registro de veterinario exitoso');
+      setIsLoading(true);
+
+      // Simulación de respuesta de red/servidor (1.5 segundos)
+      setTimeout(() => {
+        setIsLoading(false);
+        setShowSuccessModal(true);
+      }, 1500);
+    } else {
+      setErrorMessage('Por favor, corrija los campos marcados antes de continuar.');
     }
   };
 
-  const handleCancel = () => {
+  const resetForm = () => {
     setFormData({
       firstName: '',
       lastName: '',
@@ -128,7 +132,12 @@ export const RegisterVeterinarianPage: React.FC = () => {
       isActive: true,
     });
     setErrors({});
-    setSuccessMessage(null);
+    setErrorMessage(null);
+  };
+
+  const handleCloseModal = () => {
+    setShowSuccessModal(false);
+    resetForm();
   };
 
   return (
@@ -145,10 +154,10 @@ export const RegisterVeterinarianPage: React.FC = () => {
         </div>
       </div>
 
-      {/* Alerta de Éxito */}
-      {successMessage && (
-        <div style={{ maxWidth: '800px', margin: '0 auto 16px auto', padding: '12px 16px', backgroundColor: '#d1fae5', border: '1px solid #10b981', borderRadius: '8px', color: '#065f46', fontSize: '14px', fontWeight: '600' }}>
-          ✓ {successMessage}
+      {/* Alerta de Error General */}
+      {errorMessage && (
+        <div style={{ maxWidth: '800px', margin: '0 auto 16px auto', padding: '12px 16px', backgroundColor: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '8px', color: '#991b1b', fontSize: '14px', fontWeight: '500' }}>
+          ⚠️ {errorMessage}
         </div>
       )}
 
@@ -175,6 +184,7 @@ export const RegisterVeterinarianPage: React.FC = () => {
               <input
                 type="text"
                 name="firstName"
+                disabled={isLoading}
                 value={formData.firstName}
                 onChange={handleChange}
                 onKeyDown={handleLettersKeyDown}
@@ -187,6 +197,7 @@ export const RegisterVeterinarianPage: React.FC = () => {
                   fontSize: '14px',
                   boxSizing: 'border-box',
                   outline: 'none',
+                  backgroundColor: isLoading ? '#f1f5f9' : '#ffffff',
                 }}
               />
               {errors.firstName && (
@@ -203,6 +214,7 @@ export const RegisterVeterinarianPage: React.FC = () => {
               <input
                 type="text"
                 name="lastName"
+                disabled={isLoading}
                 value={formData.lastName}
                 onChange={handleChange}
                 onKeyDown={handleLettersKeyDown}
@@ -215,6 +227,7 @@ export const RegisterVeterinarianPage: React.FC = () => {
                   fontSize: '14px',
                   boxSizing: 'border-box',
                   outline: 'none',
+                  backgroundColor: isLoading ? '#f1f5f9' : '#ffffff',
                 }}
               />
               {errors.lastName && (
@@ -233,9 +246,10 @@ export const RegisterVeterinarianPage: React.FC = () => {
               </label>
               <select
                 name="documentType"
+                disabled={isLoading}
                 value={formData.documentType}
                 onChange={handleChange}
-                style={{ width: '100%', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', backgroundColor: '#fff', boxSizing: 'border-box' }}
+                style={{ width: '100%', padding: '10px 14px', border: '1px solid #cbd5e1', borderRadius: '8px', fontSize: '14px', backgroundColor: isLoading ? '#f1f5f9' : '#fff', boxSizing: 'border-box' }}
               >
                 <option value="CC">Cédula de Ciudadanía</option>
                 <option value="CE">Cédula de Extranjería</option>
@@ -250,6 +264,7 @@ export const RegisterVeterinarianPage: React.FC = () => {
               <input
                 type="text"
                 name="documentNumber"
+                disabled={isLoading}
                 value={formData.documentNumber}
                 onChange={handleChange}
                 onKeyDown={handleNumericKeyDown}
@@ -262,6 +277,7 @@ export const RegisterVeterinarianPage: React.FC = () => {
                   fontSize: '14px',
                   boxSizing: 'border-box',
                   outline: 'none',
+                  backgroundColor: isLoading ? '#f1f5f9' : '#ffffff',
                 }}
               />
               {errors.documentNumber && (
@@ -282,6 +298,7 @@ export const RegisterVeterinarianPage: React.FC = () => {
                 type="text"
                 name="phone"
                 maxLength={10}
+                disabled={isLoading}
                 value={formData.phone}
                 onChange={handleChange}
                 onKeyDown={handleNumericKeyDown}
@@ -294,6 +311,7 @@ export const RegisterVeterinarianPage: React.FC = () => {
                   fontSize: '14px',
                   boxSizing: 'border-box',
                   outline: 'none',
+                  backgroundColor: isLoading ? '#f1f5f9' : '#ffffff',
                 }}
               />
               {errors.phone && (
@@ -310,6 +328,7 @@ export const RegisterVeterinarianPage: React.FC = () => {
               <input
                 type="text"
                 name="professionalLicense"
+                disabled={isLoading}
                 value={formData.professionalLicense}
                 onChange={handleChange}
                 placeholder="Ej. TP-123456-VET"
@@ -321,6 +340,7 @@ export const RegisterVeterinarianPage: React.FC = () => {
                   fontSize: '14px',
                   boxSizing: 'border-box',
                   outline: 'none',
+                  backgroundColor: isLoading ? '#f1f5f9' : '#ffffff',
                 }}
               />
               {errors.professionalLicense ? (
@@ -343,6 +363,7 @@ export const RegisterVeterinarianPage: React.FC = () => {
             <input
               type="email"
               name="email"
+              disabled={isLoading}
               value={formData.email}
               onChange={handleChange}
               placeholder="medico@veterinaria.com"
@@ -354,6 +375,7 @@ export const RegisterVeterinarianPage: React.FC = () => {
                 fontSize: '14px',
                 boxSizing: 'border-box',
                 outline: 'none',
+                backgroundColor: isLoading ? '#f1f5f9' : '#ffffff',
               }}
             />
             {errors.email && (
@@ -370,6 +392,7 @@ export const RegisterVeterinarianPage: React.FC = () => {
             </label>
             <select
               name="specialty"
+              disabled={isLoading}
               value={formData.specialty}
               onChange={handleChange}
               style={{
@@ -378,7 +401,7 @@ export const RegisterVeterinarianPage: React.FC = () => {
                 border: `1px solid ${errors.specialty ? '#ef4444' : '#cbd5e1'}`,
                 borderRadius: '8px',
                 fontSize: '14px',
-                backgroundColor: '#fff',
+                backgroundColor: isLoading ? '#f1f5f9' : '#fff',
                 boxSizing: 'border-box',
               }}
             >
@@ -402,15 +425,15 @@ export const RegisterVeterinarianPage: React.FC = () => {
               <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>El médico podrá iniciar sesión y gestionar citas.</p>
             </div>
             <div
-              onClick={() => setFormData((prev) => ({ ...prev, isActive: !prev.isActive }))}
+              onClick={() => !isLoading && setFormData((prev) => ({ ...prev, isActive: !prev.isActive }))}
               style={{
                 width: '44px',
                 height: '24px',
                 backgroundColor: formData.isActive ? '#115e59' : '#cbd5e1',
                 borderRadius: '12px',
                 position: 'relative',
-                cursor: 'pointer',
-                transition: 'background-color 0.2s',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                opacity: isLoading ? 0.6 : 1,
               }}
             >
               <div
@@ -428,18 +451,43 @@ export const RegisterVeterinarianPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Botones de Acción */}
+          {/* Botones de Acción con Estado de Carga */}
           <div style={{ display: 'flex', gap: '12px', paddingTop: '8px' }}>
             <button
               type="submit"
-              style={{ padding: '10px 20px', backgroundColor: '#115e59', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}
+              disabled={isLoading}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: isLoading ? '#0f766e' : '#115e59',
+                color: '#ffffff',
+                border: 'none',
+                borderRadius: '8px',
+                fontWeight: '600',
+                fontSize: '14px',
+                cursor: isLoading ? 'wait' : 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                opacity: isLoading ? 0.8 : 1,
+              }}
             >
-              Guardar
+              {isLoading ? 'Guardando...' : 'Guardar'}
             </button>
             <button
               type="button"
-              onClick={handleCancel}
-              style={{ padding: '10px 20px', backgroundColor: '#ffffff', color: '#334155', border: '1px solid #cbd5e1', borderRadius: '8px', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}
+              disabled={isLoading}
+              onClick={resetForm}
+              style={{
+                padding: '10px 20px',
+                backgroundColor: '#ffffff',
+                color: '#334155',
+                border: '1px solid #cbd5e1',
+                borderRadius: '8px',
+                fontWeight: '600',
+                fontSize: '14px',
+                cursor: isLoading ? 'not-allowed' : 'pointer',
+                opacity: isLoading ? 0.5 : 1,
+              }}
             >
               Cancelar registro
             </button>
@@ -447,6 +495,30 @@ export const RegisterVeterinarianPage: React.FC = () => {
 
         </form>
       </div>
+
+      {/* Modal de Confirmación de Registro Exitoso (Escenario 1) */}
+      {showSuccessModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', padding: '32px', maxWidth: '400px', width: '90%', textAlign: 'center', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1)' }}>
+            <div style={{ width: '48px', height: '48px', backgroundColor: '#d1fae5', borderRadius: '50%', color: '#059669', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px auto', fontSize: '24px', fontWeight: 'bold' }}>
+              ✓
+            </div>
+            <h3 style={{ fontSize: '18px', fontWeight: '700', color: '#1e293b', margin: '0 0 8px 0' }}>
+              Registro de veterinario exitoso
+            </h3>
+            <p style={{ fontSize: '14px', color: '#64748b', margin: '0 0 24px 0' }}>
+              El profesional médico ha sido registrado correctamente en el sistema con estado activo.
+            </p>
+            <button
+              onClick={handleCloseModal}
+              style={{ width: '100%', padding: '10px', backgroundColor: '#115e59', color: '#ffffff', border: 'none', borderRadius: '8px', fontWeight: '600', fontSize: '14px', cursor: 'pointer' }}
+            >
+              Aceptar
+            </button>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
