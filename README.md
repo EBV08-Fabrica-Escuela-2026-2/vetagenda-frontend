@@ -15,6 +15,31 @@ backend preparada para ejecutarse de forma local o con Docker Compose.
 - PostCSS y Autoprefixer
 - Node.js 20 o superior
 
+## Rutas del Frontend (VetAgenda)
+
+El frontend usa `react-router-dom` para el manejo de rutas. Configuración actual en `src/App.jsx`:
+
+| Ruta         | Componente         | Descripción                                  | Estado         |
+|--------------|--------------------|-----------------------------------------------|----------------|
+| `/`          | `LandingPage`      | Página de inicio / landing                    | 🚧 Placeholder |
+| `/registro`  | `RegisterPage`     | Formulario de registro de cliente             | ✅ Funcional   |
+
+### Cómo acceder en desarrollo
+
+Con el contenedor corriendo (`docker compose up`), el frontend queda expuesto en:
+
+- **URL base:** http://localhost:3000
+- **Landing page:** http://localhost:3000/
+- **Registro de cliente:** http://localhost:3000/registro
+
+> Nota: el puerto expuesto en el host es `3000`, mapeado al `5173` interno de Vite (ver `docker-compose.yml`).
+
+### Agregar una nueva ruta
+
+1. Crea el componente en `src/` (ej. `NuevaPagina.jsx`).
+2. Impórtalo en `src/App.jsx`.
+3. Agrega una nueva línea `<Route path="/tu-ruta" element={<NuevaPagina />} />` dentro de `<Routes>`.
+
 ### Backend e infraestructura
 
 - Java 17
