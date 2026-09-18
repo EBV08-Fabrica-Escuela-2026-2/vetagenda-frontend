@@ -1,87 +1,79 @@
 # VetAgenda Frontend
 
-Frontend de la aplicación VetAgenda, desarrollado con React + Vite + Tailwind CSS para la gestión de reservas de citas veterinarias y registro de clientes.
+Frontend de VetAgenda desarrollado con React, TypeScript y Vite para la gestión de clientes, veterinarios, mascotas, servicios y catálogo de atención veterinaria.
 
-## Stack tecnológico
+## Stack
 
 - React 18
+- TypeScript
 - Vite
-- JavaScript
 - Tailwind CSS
+- React Router DOM
 - Docker
 - Node.js 20+
 
 ## Requisitos
 
-Antes de ejecutar este proyecto, asegúrate de tener instalado:
+Antes de ejecutar el proyecto asegúrate de tener instalado:
 
 - Node.js 20 o superior
 - npm 10 o superior
-- Docker + Docker Compose (opcional, si deseas ejecutarlo en contenedores)
+- Docker y Docker Compose
 
-## Instalación local
+## Rutas de la aplicación
 
-1. Abre una terminal en la carpeta del frontend:
+Las rutas disponibles en la interfaz son:
 
-   ```bash
-   cd frontend
-   ```
+- `/` - Landing page principal
+- `/registro` - Registro de cliente
+- `/veterinarios/registro` - Registro de veterinario
+- `/servicios/registro` - Registro de servicio asistencial
+- `/mascotas/registro` - Registro de mascota
+- `/catalogo` - Catálogo de servicios
 
-2. Instala las dependencias:
+## Levantar en desarrollo local
 
-   ```bash
-   npm install
-   ```
-
-3. Inicia el proyecto en modo desarrollo:
-
-   ```bash
-   npm run dev
-   ```
-
-4. Abre tu navegador en:
-
-   ```text
-   http://localhost:5173
-   ```
-
-## Ejecución con Docker
-
-Desde la raíz del proyecto principal:
+1. Entrar a la carpeta del frontend:
 
 ```bash
-cd ..
+cd frontend
+```
+
+2. Instalar dependencias:
+
+```bash
+npm install
+```
+
+3. Ejecutar el proyecto:
+
+```bash
+npm run dev
+```
+
+4. Abrir la app en el navegador:
+
+```text
+http://localhost:5173
+```
+
+## Levantar con Docker
+
+Desde la raíz del proyecto:
+
+```bash
 docker compose up --build
 ```
 
-La interfaz quedará disponible en:
+Esto levantará el frontend junto con el backend y la base de datos del proyecto.
+
+La aplicación frontend quedará disponible en:
 
 ```text
 http://localhost:3000
 ```
 
-## Estructura del proyecto
-
-```text
-frontend/
-├── src/
-│   ├── App.jsx          # Componente principal de la interfaz
-│   ├── main.jsx         # Entrada de la aplicación React
-│   ├── index.css        # Estilos base y Tailwind
-│   └── ...
-├── index.html           # HTML base
-├── package.json          # Dependencias y scripts
-├── vite.config.js        # Configuración de Vite
-├── tailwind.config.js   # Configuración de Tailwind
-├── postcss.config.js    # Configuración de PostCSS
-├── Dockerfile            # Imagen Docker para el frontend
-├── README.md             # Documentación del frontend
-└── .dockerignore         # Archivos ignorados por Docker
-```
-
 ## Scripts disponibles
-
-En el archivo `package.json` se incluyen los siguientes comandos:
 
 ```bash
 npm run dev
@@ -89,17 +81,36 @@ npm run build
 npm run preview
 ```
 
-## Descripción general
+## Estructura principal
 
-Este frontend está pensado para:
+```text
+frontend/
+├── src/
+│   ├── App.tsx
+│   ├── main.tsx
+│   ├── index.css
+│   ├── LandingPage.tsx
+│   ├── RegisterPage.tsx
+│   ├── components/
+│   │   └── BrandHeader.tsx
+│   └── pages/
+│       ├── RegisterVeterinarianPage.tsx
+│       ├── RegistroMascotaPage.tsx
+│       ├── RegisterServicePage.tsx
+│       └── CatalogoServiciosPage.tsx
+├── Dockerfile
+├── package.json
+├── vite.config.ts
+├── tailwind.config.js
+├── postcss.config.js
+├── tsconfig.json
+├── tsconfig.app.json
+├── tsconfig.node.json
+├── index.html
+├── README.md
+└── .gitignore
+```
 
-- Registro de clientes
-- Gestión de reservas de citas
-- Interfaz amigable para usuarios veterinarios y clientes
-- Diseño moderno con enfoque en usabilidad y acceso
+## Nota
 
-## Notas
-
-- El proyecto usa Tailwind CSS para mantener un diseño limpio y escalable.
-- La configuración de Vite está preparada para ejecutarse en entorno Docker y en desarrollo local.
-- El backend del proyecto se conecta mediante el puerto 8080 y la base de datos PostgreSQL en el contenedor `db`.
+Este frontend se desarrolló como una interfaz de usuario funcional para la gestión veterinaria, con validaciones en formularios, navegación por rutas y un catálogo visual para servicios. La lógica de negocio se maneja principalmente en la capa de frontend para la demo y flujo actual del producto.
