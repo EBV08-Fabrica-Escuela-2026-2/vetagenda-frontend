@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { BrandHeader } from '../components/BrandHeader';
 
 export function RegistroMascotaPage() {
   const [form, setForm] = useState({
@@ -30,46 +31,52 @@ export function RegistroMascotaPage() {
   };
 
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-10 text-slate-800">
-      <div className="mx-auto max-w-3xl rounded-2xl bg-white p-8 shadow-md">
-        <h1 className="text-2xl font-bold text-sky-700">Registro de Mascota</h1>
-        <p className="mt-2 text-sm text-slate-600">
-          Aquí irá el formulario de alta de mascota.
-        </p>
+    <main className="min-h-screen bg-[#edf7ff] px-4 py-10 text-slate-800 md:px-8">
+      <div className="mx-auto max-w-[960px] rounded-[24px] border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
+        <div className="px-5 py-5 md:px-8 md:py-6">
+          <BrandHeader subtitle="Registro de mascota" className="mb-4" />
+        </div>
 
-        <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-          <div>
-            <label className="mb-1 block text-sm font-medium">Nombre</label>
-            <input
-              name="nombre"
-              value={form.nombre}
-              onChange={handleChange}
-              className="w-full rounded border border-slate-300 px-3 py-2"
-              placeholder="Ej. Luna"
-            />
+        <section className="px-5 pb-8 md:px-10 md:pb-10">
+          <div className="mx-auto max-w-[580px]">
+            <h1 className="text-[2.1rem] font-black leading-tight text-slate-900 md:text-[2.7rem]">Registro de mascota</h1>
+            <p className="mt-2 text-base text-slate-500">Ingrese la información principal de la mascota.</p>
+
+            <form className="mt-7 space-y-5" onSubmit={handleSubmit}>
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700">Nombre</label>
+                <input
+                  name="nombre"
+                  value={form.nombre}
+                  onChange={handleChange}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-800 shadow-sm outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                  placeholder="Ej. Luna"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700">Especie</label>
+                <select name="especie" value={form.especie} onChange={handleChange} className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-800 shadow-sm outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100">
+                  <option>Perro</option>
+                  <option>Gato</option>
+                  <option>Otro</option>
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700">Sexo</label>
+                <select name="sexo" value={form.sexo} onChange={handleChange} className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-800 shadow-sm outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100">
+                  <option>Macho</option>
+                  <option>Hembra</option>
+                </select>
+              </div>
+
+              <button type="submit" className="mt-2 w-full rounded-xl bg-[#0ea5e9] px-5 py-3 text-base font-semibold text-white shadow-[0_8px_20px_rgba(14,165,233,0.25)] transition hover:bg-[#0284c7]">
+                Guardar mascota
+              </button>
+            </form>
           </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium">Especie</label>
-            <select name="especie" value={form.especie} onChange={handleChange} className="w-full rounded border border-slate-300 px-3 py-2">
-              <option>Perro</option>
-              <option>Gato</option>
-              <option>Otro</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="mb-1 block text-sm font-medium">Sexo</label>
-            <select name="sexo" value={form.sexo} onChange={handleChange} className="w-full rounded border border-slate-300 px-3 py-2">
-              <option>Macho</option>
-              <option>Hembra</option>
-            </select>
-          </div>
-
-          <button type="submit" className="rounded bg-sky-600 px-4 py-2 font-semibold text-white hover:bg-sky-700">
-            Guardar mascota
-          </button>
-        </form>
+        </section>
       </div>
 
       {showSuccessModal && (
@@ -79,12 +86,10 @@ export function RegistroMascotaPage() {
               ✓
             </div>
             <h3 className="mb-2 text-lg font-bold text-slate-900">Registro guardado correctamente</h3>
-            <p className="mb-6 text-sm text-slate-500">
-              La mascota se ha registrado correctamente en el sistema.
-            </p>
+            <p className="mb-6 text-sm text-slate-500">La mascota se ha registrado correctamente en el sistema.</p>
             <button
               onClick={handleCloseModal}
-              className="w-full rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-sky-700"
+              className="w-full rounded-xl bg-[#0ea5e9] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0284c7]"
             >
               Aceptar
             </button>
