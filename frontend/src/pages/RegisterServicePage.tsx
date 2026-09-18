@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BrandHeader } from '../components/BrandHeader';
 
 type FormState = {
   nombre: string;
@@ -132,15 +133,7 @@ export function RegisterServicePage() {
     <main className="min-h-screen bg-sky-50 px-4 py-10 text-slate-800 md:px-8">
       <div className="mx-auto max-w-4xl rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-5 md:px-8">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-full bg-sky-100 text-lg font-black text-sky-700">
-              S
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-sky-600">VetAgenda</p>
-              <p className="text-sm text-slate-500">Registrar nuevo servicio</p>
-            </div>
-          </div>
+          <BrandHeader subtitle="Registrar nuevo servicio" />
           <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
             Catalogación clínica
           </span>

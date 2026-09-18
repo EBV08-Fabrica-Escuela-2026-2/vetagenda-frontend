@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { BrandHeader } from '../components/BrandHeader';
 
 type Servicio = {
   id: number;
@@ -190,10 +191,7 @@ export function CatalogoServiciosPage() {
     <main className="min-h-screen bg-sky-50 px-4 py-8 text-slate-800 md:px-8">
       <div className="mx-auto max-w-7xl">
         <header className="mb-8 flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 md:flex-row md:items-center md:justify-between">
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-600">VetAgenda</p>
-            <h1 className="mt-2 text-3xl font-black text-slate-900">Catálogo de servicios</h1>
-          </div>
+          <BrandHeader subtitle="Catálogo de servicios" />
           <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
             Moneda: COP
           </div>

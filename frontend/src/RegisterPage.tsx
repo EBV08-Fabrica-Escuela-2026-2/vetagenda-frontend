@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { BrandHeader } from './components/BrandHeader';
 
 type FormState = {
   fullName: string;
@@ -95,15 +96,7 @@ function App() {
     <main className="min-h-screen bg-[#edf7ff] px-4 py-10 text-slate-800 md:px-8">
       <div className="mx-auto max-w-[960px] rounded-[24px] border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
         <div className="px-5 py-5 md:px-8 md:py-6">
-          <div className="mb-4 flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#dff7ff] text-lg font-black text-[#0ea5e9]">
-              V
-            </div>
-            <div>
-              <p className="text-[11px] font-semibold uppercase tracking-[0.28em] text-sky-600">VetAgenda</p>
-              <p className="text-[10px] text-slate-500">Plataforma de Gestión Veterinaria</p>
-            </div>
-          </div>
+          <BrandHeader subtitle="Plataforma de Gestión Veterinaria" className="mb-4" />
         </div>
 
         <section className="px-5 pb-8 md:px-10 md:pb-10">
