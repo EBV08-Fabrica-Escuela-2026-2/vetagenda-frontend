@@ -116,14 +116,6 @@ npm install
 npm run dev
 ```
 
-Comandos útiles:
-
-```bash
-npm run dev
-npm run build
-npm run preview
-```
-
 ### 2) Backend local
 
 Desde la raíz del proyecto:
@@ -178,6 +170,11 @@ La base del proyecto ya quedó migrada a TypeScript con React para el frontend. 
 - registro de clientes
 - registro de veterinarios
 - configuración base para integración con backend y base de datos
+- referencia de trabajo previo para la HU05 Registro de Mascota
+
+## HU05 Registro de Mascota
+
+La rama de trabajo previa incluía una implementación en React + TypeScript + Vite del flujo de alta de mascota, con componentes como selector de especie, sexo y formulario de registro. En la estructura actual del repositorio, la funcionalidad quedó como referencia histórica para integrarse posteriormente con la base del proyecto actual.
 
 ## Convenciones de desarrollo
 
@@ -186,3 +183,47 @@ La base del proyecto ya quedó migrada a TypeScript con React para el frontend. 
 - Estilos con Tailwind CSS
 - Backend con Spring Boot y conexión PostgreSQL
 - Ejecución recomendada con Docker Compose para entorno consistente
+│   ├── Header.tsx              # Barra de tabs (HU) + appbar con usuario
+│   ├── Breadcrumb.tsx          # Mis Mascotas > Nueva Mascota
+│   ├── EspecieSelector.tsx     # Tarjetas Perro / Gato / Otro
+│   ├── SexoSelector.tsx        # Pills Macho / Hembra
+│   └── RegistroMascotaForm.tsx # Formulario completo con validaciones
+├── pages/
+│   └── RegistroMascotaPage.tsx # Ensambla breadcrumb + formulario
+├── types/
+│   └── mascota.ts              # Tipos, catálogo de razas por especie
+├── styles/
+│   └── global.css              # Estilos fieles al diseño (colores, layout)
+├── App.tsx
+└── main.tsx
+```
+
+## Detalles de la implementación
+
+- **Validación**: cliente, nombre, especie, raza y sexo son obligatorios; se
+  muestran mensajes de error inline al intentar guardar sin completarlos.
+- **Cliente existente obligatorio**: `ClienteSelector.tsx` obliga a elegir un
+  cliente de la lista de registrados (`CLIENTES_MOCK` en `types/mascota.ts`,
+  simulando la integración con HU01). No se puede guardar sin cliente.
+- **Raza dependiente de especie**: el combo de razas se filtra según la
+  especie seleccionada y se reinicia si el usuario cambia de especie.
+- **Validación de campos numéricos (criterio de aceptación)**:
+  - *Edad*: "años" (0–30) y "meses" (0–11) solo aceptan dígitos mientras se
+    escribe y se validan como enteros dentro de rango al guardar.
+  - *Peso*: campo obligatorio en kg, acepta hasta 2 decimales, validado
+    contra un rango razonable (0.1–150 kg). Si el valor está fuera de rango o
+    vacío, se marca el campo en rojo (`aria-invalid`) con su mensaje.
+- **Avisos de error (criterio de aceptación)**: al intentar guardar con datos
+  inválidos aparece un banner general ("Revisa los campos marcados en
+  rojo...") además del mensaje puntual bajo cada campo inválido.
+- **Confirmación visual de éxito (criterio de aceptación)**: al guardar
+  correctamente, el formulario se reemplaza por `SuccessPanel.tsx`: un ícono
+  de check, el mensaje "¡Mascota registrada con éxito!", un resumen
+  (especie, raza, sexo, peso) y acciones para registrar otra mascota o volver
+  a "Mis Mascotas".
+- **Punto de integración**: `RegistroMascotaPage` expone `onGuardar` /
+  `onVolver`; ahí se conectaría el llamado real al backend/API de HU05
+  (incluyendo `clienteId` como dueño) y la navegación hacia "Mis Mascotas".
+- El diseño (colores, tipografía, tarjetas, distribución) replica fielmente
+  las capturas provistas; no se introdujeron elementos ajenos al mockup.
+>>>>>>> origin/registro_mascota
