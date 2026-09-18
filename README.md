@@ -1,68 +1,114 @@
 # VetAgenda
 
-VetAgenda es una plataforma para la gestión de clientes, mascotas y citas
-veterinarias. Este repositorio contiene el frontend web y una base inicial del
-backend preparada para ejecutarse de forma local o con Docker Compose.
+VetAgenda es una plataforma para la gestión de clientes, mascotas, veterinarios y citas veterinarias. Este repositorio contiene el frontend web en React + TypeScript y una base inicial del backend en Spring Boot para ejecutarse localmente o con Docker Compose.
 
 ## Stack tecnológico
 
 ### Frontend
 
 - React 18
-- JavaScript (ES Modules)
+- TypeScript
 - Vite 5
 - Tailwind CSS 3
+- React Router DOM
 - PostCSS y Autoprefixer
 - Node.js 20 o superior
 
-## Rutas del Frontend (VetAgenda)
-
-El frontend usa `react-router-dom` para el manejo de rutas. Configuración actual en `src/App.jsx`:
-
-| Ruta         | Componente         | Descripción                                  | Estado         |
-|--------------|--------------------|-----------------------------------------------|----------------|
-| `/`          | `LandingPage`      | Página de inicio / landing                    | 🚧 Placeholder |
-| `/registro`  | `RegisterPage`     | Formulario de registro de cliente             | ✅ Funcional   |
-
-### Cómo acceder en desarrollo
-
-Con el contenedor corriendo (`docker compose up`), el frontend queda expuesto en:
-
-- **URL base:** http://localhost:3000
-- **Landing page:** http://localhost:3000/
-- **Registro de cliente:** http://localhost:3000/registro
-
-> Nota: el puerto expuesto en el host es `3000`, mapeado al `5173` interno de Vite (ver `docker-compose.yml`).
-
-### Agregar una nueva ruta
-
-1. Crea el componente en `src/` (ej. `NuevaPagina.jsx`).
-2. Impórtalo en `src/App.jsx`.
-3. Agrega una nueva línea `<Route path="/tu-ruta" element={<NuevaPagina />} />` dentro de `<Routes>`.
-
-### Backend e infraestructura
+### Backend
 
 - Java 17
-- Spring Boot
-- Maven Wrapper
+- Spring Boot 3.3.3
+- Spring Web
+- Spring Data JPA
 - PostgreSQL 16
-- Docker y Docker Compose
+- Maven Wrapper
+
+### Infraestructura
+
+- Docker
+- Docker Compose
+- Git
+
+## Estructura del proyecto
+
+```text
+VetAgenda/
+├── backend/
+│   ├── Dockerfile
+│   ├── mvnw
+│   ├── mvnw.cmd
+│   ├── pom.xml
+│   └── src/
+│       ├── main/
+│       │   ├── java/com/vetagenda/
+│       │   │   ├── VetAgendaApplication.java
+│       │   │   └── controller/
+│       │   │       └── HelloController.java
+│       │   └── resources/
+│       │       └── application.properties
+├── frontend/
+│   ├── Dockerfile
+│   ├── index.html
+│   ├── package.json
+│   ├── postcss.config.js
+│   ├── tailwind.config.js
+│   ├── tsconfig.app.json
+│   ├── tsconfig.node.json
+│   ├── vite.config.ts
+│   └── src/
+│       ├── App.tsx
+│       ├── LandingPage.tsx
+│       ├── RegisterPage.tsx
+│       ├── index.css
+│       ├── main.tsx
+│       ├── components/
+│       │   └── VetForm.tsx
+│       └── pages/
+│           └── RegisterVeterinarianPage.tsx
+├── docker-compose.yml
+├── .gitignore
+├── README.md
+└── LICENSE (si aplica)
+```
+
+## Rutas del frontend
+
+El frontend usa React Router para la navegación. Las rutas actuales son:
+
+| Ruta | Componente | Descripción | Estado |
+|---|---|---|---|
+| `/` | `LandingPage` | Página de bienvenida / landing | ✅ Activa |
+| `/registro` | `RegisterPage` | Registro de cliente | ✅ Activa |
+| `/veterinarios/registro` | `RegisterVeterinarianPage` | Registro de veterinario | ✅ Activa |
+
+### Acceso local
+
+Si se levanta el proyecto en modo desarrollo:
+
+- Frontend: http://localhost:5173
+- Backend: http://localhost:8080
+- Base de datos: localhost:5432
+
+Con Docker Compose, el frontend queda expuesto en:
+
+- http://localhost:3000
 
 ## Requisitos
 
-Para ejecutar el proyecto localmente se necesita:
+Antes de ejecutar el proyecto, asegúrate de tener instalado:
 
-- Node.js 20 o superior y npm 10 o superior.
-- Java 17 o superior.
-- Docker Desktop con Docker Compose, si se desea ejecutar toda la solución en
-  contenedores.
-- Git.
+- Node.js 20+
+- npm 10+
+- Java 17+
+- Maven (opcional si usas el wrapper)
+- Docker Desktop + Docker Compose
+- Git
 
-## Instalación y ejecución local
+## Instalación y ejecución
 
-### Frontend
+### 1) Frontend local
 
-Desde la raíz del repositorio:
+Desde la raíz del proyecto:
 
 ```bash
 cd frontend
@@ -70,47 +116,43 @@ npm install
 npm run dev
 ```
 
-La aplicación estará disponible en <http://localhost:5173>.
-
-Comandos principales:
+Comandos útiles:
 
 ```bash
-npm run dev       # Servidor de desarrollo
-npm run build     # Compilación de producción
-npm run preview   # Previsualización de la compilación
+npm run dev
+npm run build
+npm run preview
 ```
 
-### Backend
+### 2) Backend local
 
-Desde la raíz del repositorio:
+Desde la raíz del proyecto:
 
 ```bash
 cd backend
 ./mvnw spring-boot:run
 ```
 
-En Windows se puede utilizar:
+Windows:
 
 ```powershell
 cd backend
-.\mvnw.cmd spring-boot:run
+./mvnw.cmd spring-boot:run
 ```
 
-El backend utiliza el puerto `8080`.
+### 3) Ejecutar con Docker Compose
 
-## Ejecución con Docker Compose
-
-Para levantar PostgreSQL, backend y frontend:
+Desde la raíz del repositorio:
 
 ```bash
 docker compose up --build
 ```
 
-Servicios disponibles:
+Esto levanta:
 
-- Frontend: <http://localhost:3000>
-- Backend: <http://localhost:8080>
-- PostgreSQL: `localhost:5432`
+- Frontend en http://localhost:3000
+- Backend en http://localhost:8080
+- PostgreSQL en localhost:5432
 
 Para detener los servicios:
 
@@ -118,43 +160,29 @@ Para detener los servicios:
 docker compose down
 ```
 
-Las credenciales de desarrollo de PostgreSQL están definidas en
-`docker-compose.yml`. No deben reutilizarse en producción.
+## Variables y configuración
 
-## Estructura del proyecto
+La configuración de base de datos está definida en `docker-compose.yml`:
 
-```text
-VetAgenda/
-├── backend/
-│   ├── src/main/java/com/vetagenda/
-│   │   ├── VetAgendaApplication.java
-│   │   └── controller/
-│   │       └── HelloController.java
-│   ├── src/main/resources/
-│   │   └── application.properties
-│   ├── pom.xml
-│   ├── Dockerfile
-│   ├── mvnw
-│   └── mvnw.cmd
-├── frontend/
-│   ├── src/
-│   │   ├── App.jsx
-│   │   ├── main.jsx
-│   │   └── index.css
-│   ├── index.html
-│   ├── package.json
-│   ├── vite.config.js
-│   ├── tailwind.config.js
-│   ├── postcss.config.js
-│   ├── Dockerfile
-│   └── README.md
-├── docker-compose.yml
-├── .gitignore
-└── README.md
-```
+- Base de datos: `vetagenda`
+- Usuario: `vetagenda`
+- Contraseña: `vetagenda123`
 
-## Estado actual
+El backend usa esas credenciales para conectarse a PostgreSQL mediante la variable `SPRING_DATASOURCE_URL`.
 
-El frontend incluye la pantalla de registro de clientes con validaciones para
-nombre, correo, teléfono, contraseña y confirmación de contraseña. El backend
-contiene la configuración inicial de Spring Boot y un endpoint de prueba.
+## Estado actual del proyecto
+
+La base del proyecto ya quedó migrada a TypeScript con React para el frontend. Actualmente se cuenta con:
+
+- landing page inicial
+- registro de clientes
+- registro de veterinarios
+- configuración base para integración con backend y base de datos
+
+## Convenciones de desarrollo
+
+- Frontend en TypeScript + React
+- Rutas definidas en `frontend/src/App.tsx`
+- Estilos con Tailwind CSS
+- Backend con Spring Boot y conexión PostgreSQL
+- Ejecución recomendada con Docker Compose para entorno consistente
