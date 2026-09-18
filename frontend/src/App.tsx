@@ -3,6 +3,8 @@ import LandingPage from './LandingPage';
 import RegisterPage from './RegisterPage';
 import { RegisterVeterinarianPage } from './pages/RegisterVeterinarianPage';
 import { RegistroMascotaPage } from './pages/RegistroMascotaPage';
+import { CatalogoServiciosPage } from './pages/CatalogoServiciosPage';
+import { RegisterServicePage } from './pages/RegisterServicePage';
 
 function App() {
   return (
@@ -11,7 +13,9 @@ function App() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/registro" element={<RegisterPage />} />
         <Route path="/veterinarios/registro" element={<RegisterVeterinarianPage />} />
+        <Route path="/servicios/registro" element={<RegisterServicePage />} />
         <Route path="/mascotas/registro" element={<RegistroMascotaPage />} />
+        <Route path="/catalogo" element={<CatalogoServiciosPage />} />
       </Routes>
     </BrowserRouter>
   );
