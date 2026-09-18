@@ -1,6 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
-const initialState = {
+type FormState = {
+  fullName: string;
+  email: string;
+  phone: string;
+  password: string;
+  confirmPassword: string;
+};
+
+const initialState: FormState = {
   fullName: '',
   email: '',
   phone: '',
@@ -8,25 +16,79 @@ const initialState = {
   confirmPassword: '',
 };
 
-const invalidNameChars = /[^a-zA-ZÁÉÍÓÚáéíóúÑñ\s]/g;
-const invalidPhoneChars = /[^0-9+\s()-]/g;
-
 function App() {
-  const [form, setForm] = useState(initialState);
+  const [form, setForm] = useState<FormState>(initialState);
+  const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
-  const validation = useMemo(() => {
-    const fullNameInvalid = !!form.fullName && invalidNameChars.test(form.fullName);
-    const phoneInvalid = !!form.phone && invalidPhoneChars.test(form.phone);
-    const emailInvalid = !!form.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email);
-    const passwordWeak = !!form.password && (form.password.length < 8 || !/[A-Z]/.test(form.password) || !/[0-9]/.test(form.password));
-    const confirmMismatch = !!form.confirmPassword && form.password !== form.confirmPassword;
-
-    return { fullNameInvalid, phoneInvalid, emailInvalid, passwordWeak, confirmMismatch };
-  }, [form]);
-
-  const handleChange = (event) => {
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
-    setForm((current) => ({ ...current, [name]: value }));
+
+    let nextValue = value;
+    if (name === 'phone') {
+      nextValue = value.replace(/\D/g, '');
+    }
+
+    if (name === 'fullName') {
+      nextValue = value.replace(/[^a-zA-ZÁÉÍÓÚáéíóúÑñ\s]/g, '');
+    }
+
+    setForm((current) => ({ ...current, [name]: nextValue }));
+    setErrors((current) => ({ ...current, [name]: undefined }));
+    setShowSuccessModal(false);
+  };
+
+  const validateForm = () => {
+    const nextErrors: Partial<Record<keyof FormState, string>> = {};
+
+    if (!form.fullName.trim()) {
+      nextErrors.fullName = 'Este campo es obligatorio.';
+    } else if (form.fullName.trim().length < 2) {
+      nextErrors.fullName = 'Ingresa un nombre válido.';
+    }
+
+    if (!form.email.trim()) {
+      nextErrors.email = 'Este campo es obligatorio.';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
+      nextErrors.email = 'Ingresa un correo válido.';
+    }
+
+    if (!form.phone.trim()) {
+      nextErrors.phone = 'Este campo es obligatorio.';
+    } else if (form.phone.length < 10) {
+      nextErrors.phone = 'El celular debe tener al menos 10 dígitos.';
+    }
+
+    if (!form.password) {
+      nextErrors.password = 'Este campo es obligatorio.';
+    } else if (form.password.length < 8 || !/[A-Z]/.test(form.password) || !/[0-9]/.test(form.password)) {
+      nextErrors.password = 'Mínimo 8 caracteres, una mayúscula y un número.';
+    }
+
+    if (!form.confirmPassword) {
+      nextErrors.confirmPassword = 'Este campo es obligatorio.';
+    } else if (form.confirmPassword !== form.password) {
+      nextErrors.confirmPassword = 'Las contraseñas no coinciden.';
+    }
+
+    setErrors(nextErrors);
+    return Object.keys(nextErrors).length === 0;
+  };
+
+  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    if (!validateForm()) {
+      return;
+    }
+
+    setShowSuccessModal(true);
+    setForm(initialState);
+  };
+
+  const handleCloseModal = () => {
+    setShowSuccessModal(false);
+    setErrors({});
   };
 
   return (
@@ -53,91 +115,103 @@ function App() {
               Registra tus datos para gestionar tus mascotas
             </p>
 
-            <form className="mt-7 space-y-5">
+            <form className="mt-7 space-y-5" onSubmit={handleSubmit} noValidate>
               <div className="grid gap-5 md:grid-cols-2">
                 <div className="md:col-span-2 space-y-2">
-                  <label className="block text-sm font-semibold text-slate-700">Nombre completo</label>
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Nombre completo <span className="text-red-500">*</span>
+                  </label>
                   <input
                     name="fullName"
                     type="text"
                     value={form.fullName}
                     onChange={handleChange}
                     placeholder="Juan Pérez"
+                    required
                     className={`w-full rounded-xl border bg-white px-4 py-3 text-base text-slate-800 shadow-sm outline-none transition focus:ring-4 ${
-                      validation.fullNameInvalid ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'
+                      errors.fullName ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'
                     }`}
                   />
-                  {validation.fullNameInvalid && (
-                    <p className="text-xs font-medium text-red-600">Solo se permiten letras, espacios y acentos.</p>
-                  )}
+                  {errors.fullName && <p className="text-xs font-medium text-red-600">{errors.fullName}</p>}
                 </div>
 
                 <div className="md:col-span-2 space-y-2">
-                  <label className="block text-sm font-semibold text-slate-700">Correo electrónico</label>
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Correo electrónico <span className="text-red-500">*</span>
+                  </label>
                   <input
                     name="email"
                     type="email"
                     value={form.email}
                     onChange={handleChange}
                     placeholder="juan@email.com"
+                    required
                     className={`w-full rounded-xl border bg-white px-4 py-3 text-base text-slate-800 shadow-sm outline-none transition focus:ring-4 ${
-                      validation.emailInvalid ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'
+                      errors.email ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'
                     }`}
                   />
-                  {validation.emailInvalid && (
-                    <p className="text-xs font-medium text-red-600">Ingresa un correo electrónico válido.</p>
-                  )}
+                  {errors.email && <p className="text-xs font-medium text-red-600">{errors.email}</p>}
                 </div>
 
                 <div className="md:col-span-2 space-y-2">
-                  <label className="block text-sm font-semibold text-slate-700">Teléfono de contacto</label>
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Teléfono de contacto <span className="text-red-500">*</span>
+                  </label>
                   <input
                     name="phone"
                     type="tel"
+                    inputMode="numeric"
                     value={form.phone}
                     onChange={handleChange}
-                    placeholder="+57 300 123 4567"
+                    placeholder="3001234567"
+                    required
+                    maxLength={15}
                     className={`w-full rounded-xl border bg-white px-4 py-3 text-base text-slate-800 shadow-sm outline-none transition focus:ring-4 ${
-                      validation.phoneInvalid ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'
+                      errors.phone ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'
                     }`}
                   />
-                  <p className="text-xs text-slate-400">Opcional. Te contactaremos para recordatorios de citas.</p>
-                  {validation.phoneInvalid && (
-                    <p className="text-xs font-medium text-red-600">Solo se permiten números, +, espacios, guiones y paréntesis.</p>
+                  {errors.phone ? (
+                    <p className="text-xs font-medium text-red-600">{errors.phone}</p>
+                  ) : (
+                    <p className="text-xs text-slate-400">Solo se permiten números.</p>
                   )}
                 </div>
 
                 <div className="md:col-span-2 space-y-2">
-                  <label className="block text-sm font-semibold text-slate-700">Contraseña</label>
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Contraseña <span className="text-red-500">*</span>
+                  </label>
                   <input
                     name="password"
                     type="password"
                     value={form.password}
                     onChange={handleChange}
                     placeholder="********"
+                    required
                     className={`w-full rounded-xl border bg-white px-4 py-3 text-base text-slate-800 shadow-sm outline-none transition focus:ring-4 ${
-                      validation.passwordWeak ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'
+                      errors.password ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'
                     }`}
                   />
-                  {validation.passwordWeak && (
-                    <p className="text-xs font-medium text-red-600">Mínimo 8 caracteres, una mayúscula y un número.</p>
-                  )}
+                  {errors.password && <p className="text-xs font-medium text-red-600">{errors.password}</p>}
                 </div>
 
                 <div className="md:col-span-2 space-y-2">
-                  <label className="block text-sm font-semibold text-slate-700">Confirmar contraseña</label>
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Confirmar contraseña <span className="text-red-500">*</span>
+                  </label>
                   <input
                     name="confirmPassword"
                     type="password"
                     value={form.confirmPassword}
                     onChange={handleChange}
                     placeholder="********"
+                    required
                     className={`w-full rounded-xl border bg-white px-4 py-3 text-base text-slate-800 shadow-sm outline-none transition focus:ring-4 ${
-                      validation.confirmMismatch ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'
+                      errors.confirmPassword ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'
                     }`}
                   />
-                  {validation.confirmMismatch && (
-                    <p className="text-xs font-medium text-red-600">Las contraseñas no coinciden.</p>
+                  {errors.confirmPassword && (
+                    <p className="text-xs font-medium text-red-600">{errors.confirmPassword}</p>
                   )}
                 </div>
               </div>
@@ -158,14 +232,34 @@ function App() {
 
               <p className="pt-2 text-center text-xs text-slate-400">
                 Al registrarte aceptas nuestros{' '}
-                <span className="font-medium text-slate-500 underline-offset-2 hover:underline">Términos de Servicio</span>
-                {' '}y la{' '}
+                <span className="font-medium text-slate-500 underline-offset-2 hover:underline">Términos de Servicio</span>{' '}
+                y la{' '}
                 <span className="font-medium text-slate-500 underline-offset-2 hover:underline">Política de Privacidad</span>.
               </p>
             </form>
           </div>
         </section>
       </div>
+
+      {showSuccessModal && (
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/50">
+          <div className="w-[90%] max-w-[400px] rounded-xl bg-white p-8 text-center shadow-2xl">
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-2xl font-bold text-emerald-600">
+              ✓
+            </div>
+            <h3 className="mb-2 text-lg font-bold text-slate-900">Registro guardado correctamente</h3>
+            <p className="mb-6 text-sm text-slate-500">
+              La cuenta del cliente se ha registrado correctamente en el sistema.
+            </p>
+            <button
+              onClick={handleCloseModal}
+              className="w-full rounded-xl bg-[#0ea5e9] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0284c7]"
+            >
+              Aceptar
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
