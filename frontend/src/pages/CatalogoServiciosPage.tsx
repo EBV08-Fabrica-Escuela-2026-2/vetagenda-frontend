@@ -6,6 +6,7 @@ type Servicio = {
   nombre: string;
   descripcion: string;
   precio: number;
+  duracion: string;
 };
 
 type Veterinario = {
@@ -17,44 +18,7 @@ type Veterinario = {
   servicios: Servicio[];
 };
 
-const mockVeterinarios: Veterinario[] = [
-  {
-    id: 1,
-    nombre: 'Dra. Ana García',
-    direccion: 'Cra 12 #45-67, Bogotá',
-    horario: 'Lunes a sábado · 8:00 a.m. - 6:00 p.m.',
-    telefono: '3001234567',
-    servicios: [
-      { id: 1, nombre: 'Consulta general', descripcion: 'Valoración clínica inicial para mascotas.', precio: 65000 },
-      { id: 2, nombre: 'Vacunación', descripcion: 'Aplicación de vacunas según esquema veterinario.', precio: 90000 },
-      { id: 3, nombre: 'Desparasitación', descripcion: 'Control de parásitos internos y externos.', precio: 50000 },
-    ],
-  },
-  {
-    id: 2,
-    nombre: 'Dr. Luis Pérez',
-    direccion: 'Av. 68 #10-25, Medellín',
-    horario: 'Martes a domingo · 9:00 a.m. - 5:00 p.m.',
-    telefono: '3109876543',
-    servicios: [],
-  },
-  {
-    id: 3,
-    nombre: 'Dra. Camila Rojas',
-    direccion: 'Cl. 50 #18-90, Cali',
-    horario: 'Lunes a viernes · 9:00 a.m. - 7:00 p.m.',
-    telefono: '3204567890',
-    servicios: [
-      { id: 4, nombre: 'Control de esterilización', descripcion: 'Seguimiento postoperatorio y cuidados.', precio: 110000 },
-      { id: 5, nombre: 'Urgencias', descripcion: 'Atención inmediata para casos críticos.', precio: 150000 },
-    ],
-  },
-];
-
-const simulateCatalogError = false;
-const simulateEmptyCatalog = false;
-
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const SERVICES_STORAGE_KEY = 'vetagenda-services';
 
 const currencyFormatter = new Intl.NumberFormat('es-CO', {
   style: 'currency',
@@ -64,18 +28,75 @@ const currencyFormatter = new Intl.NumberFormat('es-CO', {
 
 const formatPrice = (value: number) => currencyFormatter.format(value);
 
+const defaultCatalogServices: Servicio[] = [
+  {
+    id: 1,
+    nombre: 'Consulta general',
+    descripcion: 'Valoración clínica inicial, revisión general y recomendaciones para el cuidado de la mascota.',
+    precio: 65000,
+    duracion: '30 min',
+  },
+  {
+    id: 2,
+    nombre: 'Vacunación',
+    descripcion: 'Aplicación de vacunas según el esquema veterinario y control de salud preventiva.',
+    precio: 90000,
+    duracion: '45 min',
+  },
+  {
+    id: 3,
+    nombre: 'Desparasitación',
+    descripcion: 'Tratamiento de parásitos internos y externos para mantener la salud del paciente.',
+    precio: 50000,
+    duracion: '20 min',
+  },
+];
+
+const readStoredServices = (): Servicio[] => {
+  try {
+    const rawValue = localStorage.getItem(SERVICES_STORAGE_KEY);
+    if (!rawValue) {
+      return defaultCatalogServices;
+    }
+
+    const parsedValue = JSON.parse(rawValue);
+    if (!Array.isArray(parsedValue)) {
+      return defaultCatalogServices;
+    }
+
+    return parsedValue.map((service) => ({
+      id: Number(service.id) || Date.now(),
+      nombre: String(service.nombre || 'Servicio sin nombre'),
+      descripcion: String(service.descripcion || 'Sin descripción disponible.'),
+      precio: Number(service.precio) || 0,
+      duracion: String(service.duracion || '30 min'),
+    }));
+  } catch {
+    return defaultCatalogServices;
+  }
+};
+
+const buildCatalogFromStoredServices = (): Veterinario[] => {
+  const servicios = readStoredServices();
+
+  return [
+    {
+      id: 1,
+      nombre: 'Veterinario registrado',
+      direccion: 'Sede clínica',
+      horario: 'Atención según agenda del veterinario',
+      telefono: 'Sin registro',
+      servicios,
+    },
+  ];
+};
+
 const fetchCatalogData = async (): Promise<Veterinario[]> => {
-  await delay(1200);
-
-  if (simulateCatalogError) {
-    throw new Error('No se pudo conectar con el servidor. Intenta nuevamente más tarde.');
-  }
-
-  if (simulateEmptyCatalog) {
-    return [];
-  }
-
-  return mockVeterinarios;
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve(buildCatalogFromStoredServices());
+    }, 300);
+  });
 };
 
 function CatalogSkeleton() {
@@ -290,6 +311,9 @@ export function CatalogoServiciosPage() {
                               <span className="font-bold text-sky-700">{formatPrice(servicio.precio)}</span>
                             </div>
                             <p className="mt-2 text-sm text-slate-500">{servicio.descripcion}</p>
+                            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
+                              Duración: {servicio.duracion}
+                            </p>
                           </div>
                         ))}
                       </div>

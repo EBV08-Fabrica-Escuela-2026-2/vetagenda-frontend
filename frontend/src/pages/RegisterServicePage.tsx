@@ -17,7 +17,16 @@ type FormErrors = {
   duplicate?: string;
 };
 
+type StoredService = {
+  id: number;
+  nombre: string;
+  descripcion: string;
+  precio: number;
+  duracion: string;
+};
+
 const MAX_DESCRIPTION_LENGTH = 500;
+const SERVICES_STORAGE_KEY = 'vetagenda-services';
 const initialForm: FormState = {
   nombre: '',
   descripcion: '',
@@ -25,7 +34,19 @@ const initialForm: FormState = {
   duracion: '',
 };
 
-const existingServicesSeed = ['Consulta general', 'Vacunación', 'Desparasitación'];
+const readStoredServices = (): StoredService[] => {
+  try {
+    const rawValue = localStorage.getItem(SERVICES_STORAGE_KEY);
+    if (!rawValue) {
+      return [];
+    }
+
+    const parsedValue = JSON.parse(rawValue);
+    return Array.isArray(parsedValue) ? parsedValue : [];
+  } catch {
+    return [];
+  }
+};
 
 export function RegisterServicePage() {
   const navigate = useNavigate();
@@ -33,7 +54,7 @@ export function RegisterServicePage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [descriptionLimitMessage, setDescriptionLimitMessage] = useState('');
-  const [existingServices, setExistingServices] = useState<string[]>(existingServicesSeed);
+  const [existingServices, setExistingServices] = useState<string[]>(() => readStoredServices().map((service) => service.nombre));
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target;
@@ -115,7 +136,17 @@ export function RegisterServicePage() {
       return;
     }
 
-    setExistingServices((current) => [...current, form.nombre.trim()]);
+    const nextService: StoredService = {
+      id: Date.now(),
+      nombre: form.nombre.trim(),
+      descripcion: form.descripcion.trim(),
+      precio: Number(form.precio),
+      duracion: form.duracion.trim(),
+    };
+
+    const nextStoredServices = [...readStoredServices(), nextService];
+    localStorage.setItem(SERVICES_STORAGE_KEY, JSON.stringify(nextStoredServices));
+    setExistingServices(nextStoredServices.map((service) => service.nombre));
     setShowSuccessModal(true);
     setForm(initialForm);
     setDescriptionLimitMessage('');
