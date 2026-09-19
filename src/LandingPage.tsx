@@ -1,11 +1,14 @@
+import { Logo } from './components/ui/Logo';
+import './LandingPage.css';
+
 function LandingPage() {
   return (
     <div>
       {/* Encabezado */}
-      <header>
-        <h2>🐾 VetAgenda</h2>
+      <header className="landing-header">
+        <Logo size="md" />
 
-        <nav>
+        <nav className="landing-nav">
           <span>Inicio</span>
           <span>Servicios</span>
           <span>Veterinarios</span>
@@ -14,18 +17,38 @@ function LandingPage() {
         </nav>
       </header>
 
-      {/* Sección principal */}
+      {/* Contenido principal */}
       <main>
-        <section>
-          <h1>Atención veterinaria para tu mascota</h1>
+        {/* Hero */}
+        <section className="hero">
+          <div className="hero-content">
+            <p className="hero-label">
+              CUIDADO VETERINARIO DE CONFIANZA
+            </p>
 
-          <p>
-            Encuentra profesionales veterinarios, consulta sus servicios
-            y agenda fácilmente.
-          </p>
+            <h1>
+              Atención veterinaria para
+              <span> tu mascota</span>
+            </h1>
 
-          <button>Ver servicios</button>
-          <button>Registrarme</button>
+            <p className="hero-description">
+              Encuentra profesionales veterinarios, consulta sus servicios
+              y agenda fácilmente.
+            </p>
+
+            <div className="hero-buttons">
+              <button className="btn-primary">Ver servicios</button>
+              <button className="btn-secondary">Registrarme</button>
+            </div>
+          </div>
+
+          <div className="hero-visual">
+            <div className="pet-card">
+              <span className="pet-icon">🐾</span>
+              <h3>VetAgenda</h3>
+              <p>El bienestar de tu mascota en buenas manos.</p>
+            </div>
+          </div>
         </section>
 
         {/* Cómo funciona */}
@@ -62,7 +85,7 @@ function LandingPage() {
         <p>© 2026 VetAgenda — Fábrica Escuela 2026-2</p>
       </footer>
     </div>
-  )
+  );
 }
 
-export default LandingPage
+export default LandingPage;
