@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { BackToHomeButton } from '../components/BackToHomeButton';
 import { BrandHeader } from '../components/BrandHeader';
 
 interface FormErrors {
@@ -170,9 +171,12 @@ export const RegisterVeterinarianPage: React.FC = () => {
         {/* Encabezado */}
         <div className="flex items-center justify-between px-5 py-5 md:px-8 md:py-6">
           <BrandHeader subtitle="Alta de Profesional Veterinario" />
-          <div className="flex items-center gap-2">
-            <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" />
-            <span className="text-xs font-medium text-slate-500">Sistema activo</span>
+          <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
+              <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" />
+              <span className="text-xs font-medium text-slate-500">Sistema activo</span>
+            </div>
+            <BackToHomeButton />
           </div>
         </div>
 

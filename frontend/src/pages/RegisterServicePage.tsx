@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BackToHomeButton } from '../components/BackToHomeButton';
 import { BrandHeader } from '../components/BrandHeader';
 import { createService, getStoredServices } from '../services/api';
 
@@ -150,9 +151,12 @@ export function RegisterServicePage() {
       <div className="mx-auto max-w-4xl rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-5 md:px-8">
           <BrandHeader subtitle="Registrar nuevo servicio" />
-          <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-            Catalogación clínica
-          </span>
+          <div className="flex items-center gap-3">
+            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+              Catalogación clínica
+            </span>
+            <BackToHomeButton />
+          </div>
         </div>
 
         <section className="px-5 py-8 md:px-8 md:py-10">

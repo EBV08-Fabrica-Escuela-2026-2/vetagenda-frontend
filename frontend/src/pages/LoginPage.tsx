@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { BackToHomeButton } from '../components/BackToHomeButton';
 import { loginUser } from '../services/api';
 
 export default function LoginPage() {
@@ -29,6 +30,9 @@ export default function LoginPage() {
   return (
     <main className="min-h-screen bg-sky-50 px-4 py-16 text-slate-800">
       <div className="mx-auto max-w-md rounded-3xl bg-white p-8 shadow-xl ring-1 ring-slate-200">
+        <div className="mb-5 flex justify-end">
+          <BackToHomeButton />
+        </div>
         <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-600">VetAgenda</p>
         <h1 className="mt-4 text-3xl font-black text-slate-900">Iniciar sesión</h1>
         <p className="mt-2 text-sm text-slate-500">

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { BackToHomeButton } from '../components/BackToHomeButton';
 import { BrandHeader } from '../components/BrandHeader';
 import { listServices } from '../services/api';
 
@@ -161,8 +162,11 @@ export function CatalogoServiciosPage() {
       <div className="mx-auto max-w-7xl">
         <header className="mb-8 flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 md:flex-row md:items-center md:justify-between">
           <BrandHeader subtitle="Catálogo de servicios" />
-          <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
-            Moneda: COP
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
+              Moneda: COP
+            </div>
+            <BackToHomeButton />
           </div>
         </header>
 
