@@ -1,51 +1,36 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BrandHeader } from '../components/BrandHeader';
+import { createService, getStoredServices } from '../services/api';
 
 type FormState = {
   nombre: string;
   descripcion: string;
   precio: string;
-  duracion: string;
+  veterinarioId: string;
 };
 
 type FormErrors = {
   nombre?: string;
   descripcion?: string;
   precio?: string;
-  duracion?: string;
+  veterinarioId?: string;
   duplicate?: string;
 };
 
-type StoredService = {
-  id: number;
-  nombre: string;
-  descripcion: string;
-  precio: number;
-  duracion: string;
-};
+const VETERINARIOS = [
+  { id: 1, nombre: 'Dr. Carlos Pérez' },
+  { id: 2, nombre: 'Dra. María López' },
+  { id: 3, nombre: 'Dr. Andrés Martínez' },
+  { id: 4, nombre: 'Dra. Laura Rodríguez' },
+];
 
 const MAX_DESCRIPTION_LENGTH = 500;
-const SERVICES_STORAGE_KEY = 'vetagenda-services';
 const initialForm: FormState = {
   nombre: '',
   descripcion: '',
   precio: '',
-  duracion: '',
-};
-
-const readStoredServices = (): StoredService[] => {
-  try {
-    const rawValue = localStorage.getItem(SERVICES_STORAGE_KEY);
-    if (!rawValue) {
-      return [];
-    }
-
-    const parsedValue = JSON.parse(rawValue);
-    return Array.isArray(parsedValue) ? parsedValue : [];
-  } catch {
-    return [];
-  }
+  veterinarioId: '',
 };
 
 export function RegisterServicePage() {
@@ -54,7 +39,7 @@ export function RegisterServicePage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [descriptionLimitMessage, setDescriptionLimitMessage] = useState('');
-  const [existingServices, setExistingServices] = useState<string[]>(() => readStoredServices().map((service) => service.nombre));
+  const [existingServices, setExistingServices] = useState<string[]>(() => getStoredServices().map((service) => service.nombre));
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target;
@@ -95,7 +80,6 @@ export function RegisterServicePage() {
     const normalizedName = form.nombre.trim();
     const normalizedDescription = form.descripcion.trim();
     const normalizedPrice = form.precio.trim();
-    const normalizedDuration = form.duracion.trim();
 
     if (!normalizedName) {
       nextErrors.nombre = 'Este campo es obligatorio';
@@ -116,40 +100,41 @@ export function RegisterServicePage() {
       }
     }
 
-    if (!normalizedDuration) {
-      nextErrors.duracion = 'Este campo es obligatorio';
-    } else {
-      const durationNumber = Number(normalizedDuration);
-      if (Number.isNaN(durationNumber) || durationNumber <= 0) {
-        nextErrors.duracion = 'La duración estimada debe ser mayor a cero';
-      }
+    if (!form.veterinarioId) {
+      nextErrors.veterinarioId = 'Debes seleccionar un veterinario';
     }
 
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!validateForm()) {
       return;
     }
 
-    const nextService: StoredService = {
-      id: Date.now(),
-      nombre: form.nombre.trim(),
-      descripcion: form.descripcion.trim(),
-      precio: Number(form.precio),
-      duracion: form.duracion.trim(),
-    };
+    try {
+      const createdService = await createService({
+        veterinarioId: Number(form.veterinarioId),
+        nombre: form.nombre.trim(),
+        descripcion: form.descripcion.trim(),
+        precio: Number(form.precio),
+      });
 
-    const nextStoredServices = [...readStoredServices(), nextService];
-    localStorage.setItem(SERVICES_STORAGE_KEY, JSON.stringify(nextStoredServices));
-    setExistingServices(nextStoredServices.map((service) => service.nombre));
-    setShowSuccessModal(true);
-    setForm(initialForm);
-    setDescriptionLimitMessage('');
+      const nextStoredServices = [...getStoredServices(), createdService];
+      localStorage.setItem('vetagenda-services', JSON.stringify(nextStoredServices));
+      setExistingServices(nextStoredServices.map((service) => service.nombre));
+      setShowSuccessModal(true);
+      setForm(initialForm);
+      setDescriptionLimitMessage('');
+    } catch {
+      setErrors((current) => ({
+        ...current,
+        duplicate: 'No se pudo guardar el servicio en este momento.',
+      }));
+    }
   };
 
   const handleCloseModal = () => {
@@ -228,6 +213,31 @@ export function RegisterServicePage() {
                 </div>
               </div>
 
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700">
+                  Veterinario responsable <span className="text-red-500">*</span>
+                </label>
+                <select
+                  name="veterinarioId"
+                  value={form.veterinarioId}
+                  onChange={(e) => {
+                    setForm((current) => ({ ...current, veterinarioId: e.target.value }));
+                    setErrors((current) => ({ ...current, veterinarioId: undefined }));
+                  }}
+                  className={`w-full rounded-xl border bg-white px-4 py-3 text-base text-slate-800 shadow-sm outline-none transition focus:ring-4 ${
+                    errors.veterinarioId ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'
+                  }`}
+                >
+                  <option value="">Selecciona un veterinario...</option>
+                  {VETERINARIOS.map((vet) => (
+                    <option key={vet.id} value={vet.id}>
+                      {vet.nombre}
+                    </option>
+                  ))}
+                </select>
+                {errors.veterinarioId && <p className="text-xs font-medium text-red-600">{errors.veterinarioId}</p>}
+              </div>
+
               <div className="grid gap-5 md:grid-cols-2">
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-slate-700">
@@ -253,29 +263,6 @@ export function RegisterServicePage() {
                   {errors.precio && <p className="text-xs font-medium text-red-600">{errors.precio}</p>}
                 </div>
 
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-slate-700">
-                    Duración estimada <span className="text-red-500">*</span>
-                  </label>
-                  <div className="relative">
-                    <input
-                      type="number"
-                      min="1"
-                      step="1"
-                      name="duracion"
-                      value={form.duracion}
-                      onChange={handleChange}
-                      placeholder="Ej. 45"
-                      className={`w-full rounded-xl border bg-white py-3 pr-16 pl-4 text-base text-slate-800 shadow-sm outline-none transition focus:ring-4 ${
-                        errors.duracion ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'
-                      }`}
-                    />
-                    <span className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-sm font-semibold text-slate-500">
-                      min
-                    </span>
-                  </div>
-                  {errors.duracion && <p className="text-xs font-medium text-red-600">{errors.duracion}</p>}
-                </div>
               </div>
 
               <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">

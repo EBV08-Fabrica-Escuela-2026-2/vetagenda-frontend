@@ -25,11 +25,14 @@ Antes de ejecutar el proyecto asegúrate de tener instalado:
 Las rutas disponibles en la interfaz son:
 
 - `/` - Landing page principal
+- `/login` - Ruta opcional de demo para iniciar sesión, sin auth real
 - `/registro` - Registro de cliente
 - `/veterinarios/registro` - Registro de veterinario
 - `/servicios/registro` - Registro de servicio asistencial
 - `/mascotas/registro` - Registro de mascota
 - `/catalogo` - Catálogo de servicios
+
+> El alcance actual del proyecto es la landing page y las 5 historias de usuario; no existe login funcional en este repositorio.
 
 ## Levantar en desarrollo local
 
@@ -55,6 +58,12 @@ npm run dev
 
 ```text
 http://localhost:5173
+```
+
+5. Si quieres consumir el backend real, crea un archivo `.env` con:
+
+```env
+VITE_API_URL=http://localhost:8080/api
 ```
 
 ## Levantar con Docker

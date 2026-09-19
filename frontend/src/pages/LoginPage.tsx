@@ -1,11 +1,29 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { loginUser } from '../services/api';
 
-export function LoginPage() {
+export default function LoginPage() {
   const navigate = useNavigate();
+  const [email, setEmail] = useState('cliente@vetagenda.com');
+  const [password, setPassword] = useState('12345678');
+  const [error, setError] = useState('');
 
-  const handleLogin = () => {
-    localStorage.setItem('vetagenda_session', 'true');
-    navigate('/catalogo');
+  const handleLogin = async () => {
+    if (!email.trim() || !password.trim()) {
+      setError('Debe ingresar correo y contraseña.');
+      return;
+    }
+
+    try {
+      const response = await loginUser(email, password);
+      const token = response?.token || 'offline-token';
+      localStorage.setItem('vetagenda_session', 'true');
+      localStorage.setItem('vetagenda_token', token);
+      setError('');
+      navigate('/catalogo');
+    } catch {
+      setError('No fue posible iniciar sesión. Intenta nuevamente.');
+    }
   };
 
   return (
@@ -22,7 +40,8 @@ export function LoginPage() {
             <label className="mb-1 block text-sm font-semibold text-slate-700">Correo</label>
             <input
               type="email"
-              defaultValue="cliente@vetagenda.com"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-sky-500"
             />
           </div>
@@ -31,10 +50,13 @@ export function LoginPage() {
             <label className="mb-1 block text-sm font-semibold text-slate-700">Contraseña</label>
             <input
               type="password"
-              defaultValue="12345678"
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
               className="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 outline-none focus:border-sky-500"
             />
           </div>
+
+          {error && <p className="text-sm font-medium text-red-600">{error}</p>}
 
           <button
             type="button"

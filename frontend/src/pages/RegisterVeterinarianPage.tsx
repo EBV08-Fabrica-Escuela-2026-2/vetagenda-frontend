@@ -9,6 +9,8 @@ interface FormErrors {
   professionalLicense?: string;
   email?: string;
   specialty?: string;
+  address?: string;
+  attentionSchedule?: string;
 }
 
 const baseInputClasses =
@@ -27,6 +29,8 @@ export const RegisterVeterinarianPage: React.FC = () => {
     professionalLicense: '',
     email: '',
     specialty: '',
+    address: '',
+    attentionSchedule: '',
     isActive: true,
   });
 
@@ -53,7 +57,9 @@ export const RegisterVeterinarianPage: React.FC = () => {
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    const sanitizedValue = name === 'phone' ? value.replace(/\D/g, '').slice(0, 10) : value;
+
+    setFormData((prev) => ({ ...prev, [name]: sanitizedValue }));
 
     if (errors[name as keyof FormErrors]) {
       setErrors((prev) => ({ ...prev, [name]: undefined }));
@@ -106,6 +112,14 @@ export const RegisterVeterinarianPage: React.FC = () => {
       newErrors.specialty = 'Este campo es obligatorio';
     }
 
+    if (!formData.address.trim()) {
+      newErrors.address = 'Este campo es obligatorio';
+    }
+
+    if (!formData.attentionSchedule.trim()) {
+      newErrors.attentionSchedule = 'Este campo es obligatorio';
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -137,6 +151,8 @@ export const RegisterVeterinarianPage: React.FC = () => {
       professionalLicense: '',
       email: '',
       specialty: '',
+      address: '',
+      attentionSchedule: '',
       isActive: true,
     });
     setErrors({});
@@ -353,6 +369,49 @@ export const RegisterVeterinarianPage: React.FC = () => {
                 {errors.specialty && (
                   <p className="text-xs font-medium text-red-600">{errors.specialty}</p>
                 )}
+              </div>
+
+              {/* Dirección y horario de atención */}
+              <div className="grid gap-5 md:grid-cols-2">
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Dirección <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="address"
+                    disabled={isLoading}
+                    value={formData.address}
+                    onChange={handleChange}
+                    placeholder="Ej. Calle 45 # 12-30, Bogotá"
+                    className={`${baseInputClasses} ${errors.address ? invalidInputClasses : validInputClasses} ${
+                      isLoading ? disabledInputClasses : ''
+                    }`}
+                  />
+                  {errors.address && (
+                    <p className="text-xs font-medium text-red-600">{errors.address}</p>
+                  )}
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Horario de atención <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name="attentionSchedule"
+                    disabled={isLoading}
+                    value={formData.attentionSchedule}
+                    onChange={handleChange}
+                    placeholder="Ej. Lunes a sábado, 8:00 AM - 6:00 PM"
+                    className={`${baseInputClasses} ${
+                      errors.attentionSchedule ? invalidInputClasses : validInputClasses
+                    } ${isLoading ? disabledInputClasses : ''}`}
+                  />
+                  {errors.attentionSchedule && (
+                    <p className="text-xs font-medium text-red-600">{errors.attentionSchedule}</p>
+                  )}
+                </div>
               </div>
 
               {/* Estado de la Cuenta */}

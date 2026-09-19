@@ -1,29 +1,54 @@
 import { useState } from 'react';
 import { BrandHeader } from '../components/BrandHeader';
+import { registerPet } from '../services/api';
 
 export function RegistroMascotaPage() {
   const [form, setForm] = useState({
     nombre: '',
     especie: 'Perro',
     sexo: 'Macho',
+    raza: '',
+    edad: '',
+    observaciones: '',
+    documentoIdentidad: '',
   });
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
+    setError('');
     setShowSuccessModal(false);
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!form.nombre.trim()) {
-      setShowSuccessModal(true);
+
+    if (!form.nombre.trim() || !form.raza.trim() || !form.documentoIdentidad.trim() || !form.sexo.trim() || Number(form.edad) < 0) {
+      setError('Todos los campos obligatorios deben estar completos.');
       return;
     }
 
-    setShowSuccessModal(true);
-    setForm({ nombre: '', especie: 'Perro', sexo: 'Macho' });
+    try {
+      await registerPet(
+        {
+          nombre: form.nombre.trim(),
+          especie: form.especie,
+          sexo: form.sexo,
+          raza: form.raza.trim(),
+          edad: Number(form.edad),
+          observaciones: form.observaciones.trim(),
+        },
+        form.documentoIdentidad
+      );
+
+      setShowSuccessModal(true);
+      setError('');
+      setForm({ nombre: '', especie: 'Perro', sexo: 'Macho', raza: '', edad: '', observaciones: '', documentoIdentidad: '' });
+    } catch {
+      setError('No se pudo guardar la mascota en este momento.');
+    }
   };
 
   const handleCloseModal = () => {
@@ -43,6 +68,17 @@ export function RegistroMascotaPage() {
             <p className="mt-2 text-base text-slate-500">Ingrese la información principal de la mascota.</p>
 
             <form className="mt-7 space-y-5" onSubmit={handleSubmit}>
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700">Documento del cliente</label>
+                <input
+                  name="documentoIdentidad"
+                  value={form.documentoIdentidad}
+                  onChange={handleChange}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-800 shadow-sm outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                  placeholder="Ej. 1234567890"
+                />
+              </div>
+
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-slate-700">Nombre</label>
                 <input
@@ -70,6 +106,44 @@ export function RegistroMascotaPage() {
                   <option>Hembra</option>
                 </select>
               </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700">Raza</label>
+                <input
+                  name="raza"
+                  value={form.raza}
+                  onChange={handleChange}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-800 shadow-sm outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                  placeholder="Ej. Labrador"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700">Edad (años)</label>
+                <input
+                  name="edad"
+                  type="number"
+                  min="0"
+                  value={form.edad}
+                  onChange={handleChange}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-800 shadow-sm outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                  placeholder="Ej. 4"
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700">Observaciones</label>
+                <textarea
+                  name="observaciones"
+                  value={form.observaciones}
+                  onChange={handleChange}
+                  rows={4}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-800 shadow-sm outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                  placeholder="Ej. Tiene alergia a ciertos alimentos."
+                />
+              </div>
+
+              {error && <p className="text-sm font-medium text-red-600">{error}</p>}
 
               <button type="submit" className="mt-2 w-full rounded-xl bg-[#0ea5e9] px-5 py-3 text-base font-semibold text-white shadow-[0_8px_20px_rgba(14,165,233,0.25)] transition hover:bg-[#0284c7]">
                 Guardar mascota

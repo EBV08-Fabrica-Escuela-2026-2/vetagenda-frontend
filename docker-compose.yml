@@ -13,6 +13,7 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ../veterinary-system/src/main/resources/db/migration/V1__create_tables_and_seed_data.sql:/docker-entrypoint-initdb.d/init.sql
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U vetagenda -d vetagenda"]
       interval: 10s
@@ -21,7 +22,7 @@ services:
 
   backend:
     build:
-      context: ./backend
+      context: ../veterinary-system
       dockerfile: Dockerfile
     container_name: vetagenda-backend
     restart: always
@@ -34,7 +35,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/vetagenda
       SPRING_DATASOURCE_USERNAME: vetagenda
       SPRING_DATASOURCE_PASSWORD: vetagenda123
-    command: ["./mvnw", "spring-boot:run"]
+    command: ["mvn", "spring-boot:run"]
 
   frontend:
     build:
@@ -47,7 +48,7 @@ services:
     ports:
       - "3000:5173"
     environment:
-      VITE_API_URL: http://localhost:8080
+      VITE_API_URL: http://localhost:8080/api
     volumes:
       - ./frontend:/app
       - /app/node_modules

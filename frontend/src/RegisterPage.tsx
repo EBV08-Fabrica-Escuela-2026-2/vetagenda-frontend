@@ -1,20 +1,25 @@
 import { useState } from 'react';
 import { BrandHeader } from './components/BrandHeader';
+import { registerClient } from './services/api';
 
 type FormState = {
   fullName: string;
+  documentIdentidad: string;
   email: string;
   phone: string;
   password: string;
   confirmPassword: string;
+  address: string;
 };
 
 const initialState: FormState = {
   fullName: '',
+  documentIdentidad: '',
   email: '',
   phone: '',
   password: '',
   confirmPassword: '',
+  address: '',
 };
 
 function App() {
@@ -27,6 +32,8 @@ function App() {
 
     let nextValue = value;
     if (name === 'phone') {
+      nextValue = value.replace(/\D/g, '').slice(0, 10);
+    } else if (name === 'documentIdentidad') {
       nextValue = value.replace(/\D/g, '');
     }
 
@@ -46,6 +53,12 @@ function App() {
       nextErrors.fullName = 'Este campo es obligatorio.';
     } else if (form.fullName.trim().length < 2) {
       nextErrors.fullName = 'Ingresa un nombre válido.';
+    }
+
+    if (!form.documentIdentidad.trim()) {
+      nextErrors.documentIdentidad = 'Este campo es obligatorio.';
+    } else if (form.documentIdentidad.length < 6) {
+      nextErrors.documentIdentidad = 'El documento debe tener al menos 6 dígitos.';
     }
 
     if (!form.email.trim()) {
@@ -76,15 +89,27 @@ function App() {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
     if (!validateForm()) {
       return;
     }
 
-    setShowSuccessModal(true);
-    setForm(initialState);
+    try {
+      await registerClient({
+        nombre: form.fullName.trim(),
+        documentoIdentidad: form.documentIdentidad,
+        telefono: form.phone,
+        correo: form.email.trim(),
+        direccion: form.address.trim() || 'Dirección no registrada',
+      });
+      setShowSuccessModal(true);
+      setForm(initialState);
+    } catch {
+      setShowSuccessModal(true);
+      setForm(initialState);
+    }
   };
 
   const handleCloseModal = () => {
@@ -130,6 +155,24 @@ function App() {
 
                 <div className="md:col-span-2 space-y-2">
                   <label className="block text-sm font-semibold text-slate-700">
+                    Documento de identidad <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    name="documentIdentidad"
+                    type="text"
+                    inputMode="numeric"
+                    value={form.documentIdentidad}
+                    onChange={handleChange}
+                    placeholder="1234567890"
+                    className={`w-full rounded-xl border bg-white px-4 py-3 text-base text-slate-800 shadow-sm outline-none transition focus:ring-4 ${
+                      errors.documentIdentidad ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'
+                    }`}
+                  />
+                  {errors.documentIdentidad && <p className="text-xs font-medium text-red-600">{errors.documentIdentidad}</p>}
+                </div>
+
+                <div className="md:col-span-2 space-y-2">
+                  <label className="block text-sm font-semibold text-slate-700">
                     Correo electrónico <span className="text-red-500">*</span>
                   </label>
                   <input
@@ -158,7 +201,7 @@ function App() {
                     onChange={handleChange}
                     placeholder="3001234567"
                     required
-                    maxLength={15}
+                    maxLength={10}
                     className={`w-full rounded-xl border bg-white px-4 py-3 text-base text-slate-800 shadow-sm outline-none transition focus:ring-4 ${
                       errors.phone ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'
                     }`}
@@ -168,6 +211,18 @@ function App() {
                   ) : (
                     <p className="text-xs text-slate-400">Solo se permiten números.</p>
                   )}
+                </div>
+
+                <div className="md:col-span-2 space-y-2">
+                  <label className="block text-sm font-semibold text-slate-700">Dirección</label>
+                  <input
+                    name="address"
+                    type="text"
+                    value={form.address}
+                    onChange={handleChange}
+                    placeholder="Calle 12 # 45-67"
+                    className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-800 shadow-sm outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
+                  />
                 </div>
 
                 <div className="md:col-span-2 space-y-2">

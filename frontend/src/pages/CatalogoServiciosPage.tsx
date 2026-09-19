@@ -1,12 +1,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import { BrandHeader } from '../components/BrandHeader';
+import { listServices } from '../services/api';
 
 type Servicio = {
   id: number;
   nombre: string;
   descripcion: string;
-  precio: number;
-  duracion: string;
+  precio: string;
 };
 
 type Veterinario = {
@@ -18,66 +18,22 @@ type Veterinario = {
   servicios: Servicio[];
 };
 
-const SERVICES_STORAGE_KEY = 'vetagenda-services';
-
 const currencyFormatter = new Intl.NumberFormat('es-CO', {
   style: 'currency',
   currency: 'COP',
   maximumFractionDigits: 0,
 });
 
-const formatPrice = (value: number) => currencyFormatter.format(value);
-
-const defaultCatalogServices: Servicio[] = [
-  {
-    id: 1,
-    nombre: 'Consulta general',
-    descripcion: 'Valoración clínica inicial, revisión general y recomendaciones para el cuidado de la mascota.',
-    precio: 65000,
-    duracion: '30 min',
-  },
-  {
-    id: 2,
-    nombre: 'Vacunación',
-    descripcion: 'Aplicación de vacunas según el esquema veterinario y control de salud preventiva.',
-    precio: 90000,
-    duracion: '45 min',
-  },
-  {
-    id: 3,
-    nombre: 'Desparasitación',
-    descripcion: 'Tratamiento de parásitos internos y externos para mantener la salud del paciente.',
-    precio: 50000,
-    duracion: '20 min',
-  },
-];
-
-const readStoredServices = (): Servicio[] => {
-  try {
-    const rawValue = localStorage.getItem(SERVICES_STORAGE_KEY);
-    if (!rawValue) {
-      return defaultCatalogServices;
-    }
-
-    const parsedValue = JSON.parse(rawValue);
-    if (!Array.isArray(parsedValue)) {
-      return defaultCatalogServices;
-    }
-
-    return parsedValue.map((service) => ({
-      id: Number(service.id) || Date.now(),
-      nombre: String(service.nombre || 'Servicio sin nombre'),
-      descripcion: String(service.descripcion || 'Sin descripción disponible.'),
-      precio: Number(service.precio) || 0,
-      duracion: String(service.duracion || '30 min'),
-    }));
-  } catch {
-    return defaultCatalogServices;
+const formatPrice = (value: string | number) => {
+  if (typeof value === 'string') {
+    return value;
   }
+
+  return currencyFormatter.format(value);
 };
 
-const buildCatalogFromStoredServices = (): Veterinario[] => {
-  const servicios = readStoredServices();
+const fetchCatalogData = async (): Promise<Veterinario[]> => {
+  const services = await listServices();
 
   return [
     {
@@ -86,17 +42,9 @@ const buildCatalogFromStoredServices = (): Veterinario[] => {
       direccion: 'Sede clínica',
       horario: 'Atención según agenda del veterinario',
       telefono: 'Sin registro',
-      servicios,
+      servicios: services,
     },
   ];
-};
-
-const fetchCatalogData = async (): Promise<Veterinario[]> => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(buildCatalogFromStoredServices());
-    }, 300);
-  });
 };
 
 function CatalogSkeleton() {
@@ -312,7 +260,7 @@ export function CatalogoServiciosPage() {
                             </div>
                             <p className="mt-2 text-sm text-slate-500">{servicio.descripcion}</p>
                             <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                              Duración: {servicio.duracion}
+                              Precio: {formatPrice(servicio.precio)}
                             </p>
                           </div>
                         ))}
