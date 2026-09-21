@@ -1,13 +1,14 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BackToHomeButton } from '../components/BackToHomeButton';
 import { BrandHeader } from '../components/BrandHeader';
-import { createService, getStoredServices } from '../services/api';
+import { createService, getStoredServices, listVeterinarians, VeterinarioListaItem } from '../services/api';
 
 type FormState = {
   nombre: string;
   descripcion: string;
   precio: string;
+  duracionMinutos: string;
   veterinarioId: string;
 };
 
@@ -15,22 +16,17 @@ type FormErrors = {
   nombre?: string;
   descripcion?: string;
   precio?: string;
+  duracionMinutos?: string;
   veterinarioId?: string;
   duplicate?: string;
 };
-
-const VETERINARIOS = [
-  { id: 1, nombre: 'Dr. Carlos Pérez' },
-  { id: 2, nombre: 'Dra. María López' },
-  { id: 3, nombre: 'Dr. Andrés Martínez' },
-  { id: 4, nombre: 'Dra. Laura Rodríguez' },
-];
 
 const MAX_DESCRIPTION_LENGTH = 500;
 const initialForm: FormState = {
   nombre: '',
   descripcion: '',
   precio: '',
+  duracionMinutos: '',
   veterinarioId: '',
 };
 
@@ -40,38 +36,52 @@ export function RegisterServicePage() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [descriptionLimitMessage, setDescriptionLimitMessage] = useState('');
-  const [existingServices, setExistingServices] = useState<string[]>(() => getStoredServices().map((service) => service.nombre));
+  const [existingServices, setExistingServices] = useState<string[]>(() =>
+    getStoredServices().map((service) => service.nombre),
+  );
+  const [veterinarios, setVeterinarios] = useState<VeterinarioListaItem[]>([]);
+  const [loadingVets, setLoadingVets] = useState(true);
+  const [vetsError, setVetsError] = useState<string | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Cargar veterinarios activos desde el backend
+  useEffect(() => {
+    let isMounted = true;
+    setLoadingVets(true);
+    setVetsError(null);
+
+    listVeterinarians()
+      .then((data) => {
+        if (isMounted) setVeterinarios(data);
+      })
+      .catch(() => {
+        if (isMounted) setVetsError('No se pudo cargar la lista de veterinarios. Verifica que el backend esté activo.');
+      })
+      .finally(() => {
+        if (isMounted) setLoadingVets(false);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target;
-
     setForm((current) => ({ ...current, [name]: value }));
-
-    setErrors((current) => ({
-      ...current,
-      [name]: undefined,
-      duplicate: undefined,
-    }));
-  };
-
-  const buildValidationError = (field: keyof FormErrors, message: string) => {
-    setErrors((current) => ({
-      ...current,
-      [field]: message,
-    }));
+    setErrors((current) => ({ ...current, [name]: undefined, duplicate: undefined }));
+    setSubmitError(null);
   };
 
   const handleDescriptionChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
     const nextValue = event.target.value;
     const trimmed = nextValue.slice(0, MAX_DESCRIPTION_LENGTH);
-
     setForm((current) => ({ ...current, descripcion: trimmed }));
-
     if (nextValue.length > MAX_DESCRIPTION_LENGTH) {
       setDescriptionLimitMessage('Límite de 500 caracteres alcanzado');
       return;
     }
-
     setDescriptionLimitMessage('');
     setErrors((current) => ({ ...current, descripcion: undefined }));
   };
@@ -81,6 +91,7 @@ export function RegisterServicePage() {
     const normalizedName = form.nombre.trim();
     const normalizedDescription = form.descripcion.trim();
     const normalizedPrice = form.precio.trim();
+    const normalizedDuration = form.duracionMinutos.trim();
 
     if (!normalizedName) {
       nextErrors.nombre = 'Este campo es obligatorio';
@@ -101,6 +112,15 @@ export function RegisterServicePage() {
       }
     }
 
+    if (!normalizedDuration) {
+      nextErrors.duracionMinutos = 'Este campo es obligatorio';
+    } else {
+      const durationNumber = Number(normalizedDuration);
+      if (!Number.isInteger(durationNumber) || durationNumber < 1) {
+        nextErrors.duracionMinutos = 'La duración debe ser al menos 1 minuto';
+      }
+    }
+
     if (!form.veterinarioId) {
       nextErrors.veterinarioId = 'Debes seleccionar un veterinario';
     }
@@ -111,30 +131,29 @@ export function RegisterServicePage() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setSubmitError(null);
 
-    if (!validateForm()) {
-      return;
-    }
+    if (!validateForm()) return;
 
+    setIsSubmitting(true);
     try {
       const createdService = await createService({
         veterinarioId: Number(form.veterinarioId),
         nombre: form.nombre.trim(),
         descripcion: form.descripcion.trim(),
         precio: Number(form.precio),
+        duracionMinutos: Number(form.duracionMinutos),
       });
 
       const nextStoredServices = [...getStoredServices(), createdService];
-      localStorage.setItem('vetagenda-services', JSON.stringify(nextStoredServices));
       setExistingServices(nextStoredServices.map((service) => service.nombre));
       setShowSuccessModal(true);
       setForm(initialForm);
       setDescriptionLimitMessage('');
-    } catch {
-      setErrors((current) => ({
-        ...current,
-        duplicate: 'No se pudo guardar el servicio en este momento.',
-      }));
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : 'No se pudo guardar el servicio en este momento.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -168,7 +187,14 @@ export function RegisterServicePage() {
               </p>
             </div>
 
+            {submitError && (
+              <div className="mb-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                ⚠️ {submitError}
+              </div>
+            )}
+
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Nombre del servicio */}
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-slate-700">
                   Nombre del servicio <span className="text-red-500">*</span>
@@ -180,13 +206,16 @@ export function RegisterServicePage() {
                   onChange={handleChange}
                   placeholder="Ej. Ultrasonido abdominal"
                   className={`w-full rounded-xl border bg-white px-4 py-3 text-base text-slate-800 shadow-sm outline-none transition focus:ring-4 ${
-                    errors.nombre || errors.duplicate ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'
+                    errors.nombre || errors.duplicate
+                      ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
+                      : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'
                   }`}
                 />
                 {errors.nombre && <p className="text-xs font-medium text-red-600">{errors.nombre}</p>}
                 {errors.duplicate && <p className="text-xs font-medium text-red-600">{errors.duplicate}</p>}
               </div>
 
+              {/* Descripción */}
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-slate-700">
                   Descripción <span className="text-red-500">*</span>
@@ -199,14 +228,14 @@ export function RegisterServicePage() {
                   rows={5}
                   placeholder="Ingrese una descripción detallada del servicio."
                   className={`w-full rounded-xl border bg-white px-4 py-3 text-base text-slate-800 shadow-sm outline-none transition focus:ring-4 ${
-                    errors.descripcion ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'
+                    errors.descripcion
+                      ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
+                      : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'
                   }`}
                 />
                 <div className="flex items-center justify-between gap-3">
                   <div>
-                    {errors.descripcion && (
-                      <p className="text-xs font-medium text-red-600">{errors.descripcion}</p>
-                    )}
+                    {errors.descripcion && <p className="text-xs font-medium text-red-600">{errors.descripcion}</p>}
                     {descriptionLimitMessage && (
                       <p className="text-xs font-medium text-amber-600">{descriptionLimitMessage}</p>
                     )}
@@ -217,31 +246,46 @@ export function RegisterServicePage() {
                 </div>
               </div>
 
+              {/* Veterinario responsable */}
               <div className="space-y-2">
                 <label className="block text-sm font-semibold text-slate-700">
                   Veterinario responsable <span className="text-red-500">*</span>
                 </label>
-                <select
-                  name="veterinarioId"
-                  value={form.veterinarioId}
-                  onChange={(e) => {
-                    setForm((current) => ({ ...current, veterinarioId: e.target.value }));
-                    setErrors((current) => ({ ...current, veterinarioId: undefined }));
-                  }}
-                  className={`w-full rounded-xl border bg-white px-4 py-3 text-base text-slate-800 shadow-sm outline-none transition focus:ring-4 ${
-                    errors.veterinarioId ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'
-                  }`}
-                >
-                  <option value="">Selecciona un veterinario...</option>
-                  {VETERINARIOS.map((vet) => (
-                    <option key={vet.id} value={vet.id}>
-                      {vet.nombre}
-                    </option>
-                  ))}
-                </select>
+                {loadingVets ? (
+                  <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
+                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-sky-500 border-t-transparent" />
+                    Cargando veterinarios...
+                  </div>
+                ) : vetsError ? (
+                  <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                    ⚠️ {vetsError}
+                  </div>
+                ) : (
+                  <select
+                    name="veterinarioId"
+                    value={form.veterinarioId}
+                    onChange={(e) => {
+                      setForm((current) => ({ ...current, veterinarioId: e.target.value }));
+                      setErrors((current) => ({ ...current, veterinarioId: undefined }));
+                    }}
+                    className={`w-full rounded-xl border bg-white px-4 py-3 text-base text-slate-800 shadow-sm outline-none transition focus:ring-4 ${
+                      errors.veterinarioId
+                        ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
+                        : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'
+                    }`}
+                  >
+                    <option value="">Selecciona un veterinario...</option>
+                    {veterinarios.map((vet) => (
+                      <option key={vet.id} value={vet.id}>
+                        {vet.nombre}
+                      </option>
+                    ))}
+                  </select>
+                )}
                 {errors.veterinarioId && <p className="text-xs font-medium text-red-600">{errors.veterinarioId}</p>}
               </div>
 
+              {/* Precio y Duración */}
               <div className="grid gap-5 md:grid-cols-2">
                 <div className="space-y-2">
                   <label className="block text-sm font-semibold text-slate-700">
@@ -260,15 +304,40 @@ export function RegisterServicePage() {
                       onChange={handleChange}
                       placeholder="Ej. 65000"
                       className={`w-full rounded-xl border bg-white py-3 pl-8 pr-4 text-base text-slate-800 shadow-sm outline-none transition focus:ring-4 ${
-                        errors.precio ? 'border-red-300 focus:border-red-400 focus:ring-red-100' : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'
+                        errors.precio
+                          ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
+                          : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'
                       }`}
                     />
                   </div>
                   {errors.precio && <p className="text-xs font-medium text-red-600">{errors.precio}</p>}
                 </div>
 
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-slate-700">
+                    Duración (minutos) <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    step="1"
+                    name="duracionMinutos"
+                    value={form.duracionMinutos}
+                    onChange={handleChange}
+                    placeholder="Ej. 30"
+                    className={`w-full rounded-xl border bg-white px-4 py-3 text-base text-slate-800 shadow-sm outline-none transition focus:ring-4 ${
+                      errors.duracionMinutos
+                        ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
+                        : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'
+                    }`}
+                  />
+                  {errors.duracionMinutos && (
+                    <p className="text-xs font-medium text-red-600">{errors.duracionMinutos}</p>
+                  )}
+                </div>
               </div>
 
+              {/* Botones */}
               <div className="flex flex-col-reverse gap-3 pt-2 sm:flex-row sm:justify-end">
                 <button
                   type="button"
@@ -279,9 +348,10 @@ export function RegisterServicePage() {
                 </button>
                 <button
                   type="submit"
-                  className="rounded-xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700"
+                  disabled={isSubmitting || loadingVets}
+                  className="rounded-xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-wait disabled:opacity-70"
                 >
-                  Guardar
+                  {isSubmitting ? 'Guardando...' : 'Guardar'}
                 </button>
               </div>
             </form>
@@ -296,9 +366,7 @@ export function RegisterServicePage() {
               ✓
             </div>
             <h3 className="text-xl font-black text-slate-900">Registro exitoso</h3>
-            <p className="mt-2 text-sm text-slate-500">
-              El servicio se ha registrado correctamente en la oferta clínica.
-            </p>
+            <p className="mt-2 text-sm text-slate-500">El servicio se ha registrado correctamente en la oferta clínica.</p>
             <button
               type="button"
               onClick={handleCloseModal}

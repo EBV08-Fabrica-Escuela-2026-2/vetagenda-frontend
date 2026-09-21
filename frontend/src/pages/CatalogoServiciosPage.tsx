@@ -1,23 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { BackToHomeButton } from '../components/BackToHomeButton';
 import { BrandHeader } from '../components/BrandHeader';
-import { listServices } from '../services/api';
-
-type Servicio = {
-  id: number;
-  nombre: string;
-  descripcion: string;
-  precio: string;
-};
-
-type Veterinario = {
-  id: number;
-  nombre: string;
-  direccion: string;
-  horario: string;
-  telefono: string;
-  servicios: Servicio[];
-};
+import { fetchCatalogo, VeterinarioConServicios } from '../services/api';
 
 const currencyFormatter = new Intl.NumberFormat('es-CO', {
   style: 'currency',
@@ -29,23 +13,7 @@ const formatPrice = (value: string | number) => {
   if (typeof value === 'string') {
     return value;
   }
-
   return currencyFormatter.format(value);
-};
-
-const fetchCatalogData = async (): Promise<Veterinario[]> => {
-  const services = await listServices();
-
-  return [
-    {
-      id: 1,
-      nombre: 'Veterinario registrado',
-      direccion: 'Sede clínica',
-      horario: 'Atención según agenda del veterinario',
-      telefono: 'Sin registro',
-      servicios: services,
-    },
-  ];
 };
 
 function CatalogSkeleton() {
@@ -86,7 +54,7 @@ function CatalogSkeleton() {
 }
 
 export function CatalogoServiciosPage() {
-  const [veterinarios, setVeterinarios] = useState<Veterinario[]>([]);
+  const [veterinarios, setVeterinarios] = useState<VeterinarioConServicios[]>([]);
   const [selectedVetId, setSelectedVetId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -99,26 +67,20 @@ export function CatalogoServiciosPage() {
       setError(null);
 
       try {
-        const response = await fetchCatalogData();
+        const data = await fetchCatalogo();
 
-        if (!isMounted) {
-          return;
-        }
+        if (!isMounted) return;
 
-        setVeterinarios(response);
-        setSelectedVetId(response[0]?.id ?? null);
+        setVeterinarios(data);
+        setSelectedVetId(data[0]?.id ?? null);
       } catch (fetchError) {
-        if (!isMounted) {
-          return;
-        }
+        if (!isMounted) return;
 
         setError(fetchError instanceof Error ? fetchError.message : 'Ocurrió un error al cargar los servicios.');
         setVeterinarios([]);
         setSelectedVetId(null);
       } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+        if (isMounted) setIsLoading(false);
       }
     };
 
@@ -131,7 +93,7 @@ export function CatalogoServiciosPage() {
 
   const selectedVet = useMemo(
     () => veterinarios.find((vet) => vet.id === selectedVetId) ?? null,
-    [selectedVetId, veterinarios]
+    [selectedVetId, veterinarios],
   );
 
   if (isLoading) {
@@ -174,7 +136,9 @@ export function CatalogoServiciosPage() {
           <div className="rounded-3xl border border-slate-200 bg-white p-10 text-center shadow-sm">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 text-2xl">🩺</div>
             <h2 className="mt-5 text-2xl font-bold text-slate-900">No hay servicios registrados</h2>
-            <p className="mt-3 text-slate-600">En este momento no hay veterinarios o servicios disponibles para mostrar.</p>
+            <p className="mt-3 text-slate-600">
+              En este momento no hay veterinarios o servicios disponibles para mostrar.
+            </p>
           </div>
         ) : (
           <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr]">
@@ -198,7 +162,7 @@ export function CatalogoServiciosPage() {
                         <h2 className="text-xl font-bold text-slate-900">{veterinario.nombre}</h2>
                         <p className="mt-1 text-sm text-slate-500">{veterinario.direccion}</p>
                       </div>
-                      <span className="rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700">
+                      <span className="shrink-0 rounded-full bg-sky-100 px-3 py-1 text-xs font-semibold text-sky-700">
                         {veterinario.servicios.length} servicios
                       </span>
                     </div>
@@ -206,16 +170,19 @@ export function CatalogoServiciosPage() {
                     <div className="mt-4 space-y-2">
                       {veterinario.servicios.length === 0 ? (
                         <div className="rounded-xl bg-amber-50 px-3 py-2 text-sm font-medium text-amber-700">
-                          Sin servicios registrados
+                          {veterinario.mensajeServicios ?? 'Sin servicios registrados'}
                         </div>
                       ) : (
                         serviciosPreview.map((servicio) => (
-                          <div key={servicio.id} className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2">
+                          <div
+                            key={servicio.id}
+                            className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2"
+                          >
                             <div>
                               <p className="font-medium text-slate-800">{servicio.nombre}</p>
                               <p className="text-xs text-slate-500">{servicio.descripcion}</p>
                             </div>
-                            <span className="font-bold text-sky-700">{formatPrice(servicio.precio)}</span>
+                            <span className="shrink-0 font-bold text-sky-700">{formatPrice(servicio.precio)}</span>
                           </div>
                         ))
                       )}
@@ -240,7 +207,7 @@ export function CatalogoServiciosPage() {
                       <span className="font-semibold text-slate-800">Dirección:</span> {selectedVet.direccion}
                     </p>
                     <p>
-                      <span className="font-semibold text-slate-800">Horario:</span> {selectedVet.horario}
+                      <span className="font-semibold text-slate-800">Horario:</span> {selectedVet.horarioAtencion}
                     </p>
                     <p>
                       <span className="font-semibold text-slate-800">Teléfono:</span> {selectedVet.telefono}
@@ -252,7 +219,7 @@ export function CatalogoServiciosPage() {
 
                     {selectedVet.servicios.length === 0 ? (
                       <div className="mt-3 rounded-xl bg-amber-50 px-3 py-3 text-sm font-medium text-amber-700">
-                        No hay servicios registrados para este veterinario.
+                        {selectedVet.mensajeServicios ?? 'No hay servicios registrados para este veterinario.'}
                       </div>
                     ) : (
                       <div className="mt-4 space-y-3">
@@ -260,12 +227,14 @@ export function CatalogoServiciosPage() {
                           <div key={servicio.id} className="rounded-2xl border border-slate-200 p-3">
                             <div className="flex items-center justify-between gap-3">
                               <p className="font-semibold text-slate-800">{servicio.nombre}</p>
-                              <span className="font-bold text-sky-700">{formatPrice(servicio.precio)}</span>
+                              <span className="shrink-0 font-bold text-sky-700">{formatPrice(servicio.precio)}</span>
                             </div>
                             <p className="mt-2 text-sm text-slate-500">{servicio.descripcion}</p>
-                            <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                              Precio: {formatPrice(servicio.precio)}
-                            </p>
+                            {servicio.duracionMinutos && (
+                              <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-slate-400">
+                                Duración: {servicio.duracionMinutos} min
+                              </p>
+                            )}
                           </div>
                         ))}
                       </div>

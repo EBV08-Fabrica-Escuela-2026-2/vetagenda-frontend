@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { BackToHomeButton } from '../components/BackToHomeButton';
 import { BrandHeader } from '../components/BrandHeader';
+import { registerVeterinarian } from '../services/api';
 
 interface FormErrors {
   firstName?: string;
@@ -54,9 +55,7 @@ export const RegisterVeterinarianPage: React.FC = () => {
     }
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     const sanitizedValue = name === 'phone' ? value.replace(/\D/g, '').slice(0, 10) : value;
 
@@ -125,20 +124,33 @@ export const RegisterVeterinarianPage: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
 
-    if (validateForm()) {
-      setIsLoading(true);
-
-      // Simulación de respuesta de red/servidor (1.5 segundos)
-      setTimeout(() => {
-        setIsLoading(false);
-        setShowSuccessModal(true);
-      }, 1500);
-    } else {
+    if (!validateForm()) {
       setErrorMessage('Por favor, corrija los campos marcados antes de continuar.');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await registerVeterinarian({
+        nombre: `${formData.firstName.trim()} ${formData.lastName.trim()}`,
+        tipoDocumento: formData.documentType,
+        documentoIdentidad: formData.documentNumber.trim(),
+        telefono: formData.phone.trim(),
+        correo: formData.email.trim(),
+        tarjetaProfesional: formData.professionalLicense.trim(),
+        especialidad: formData.specialty,
+        direccion: formData.address.trim() || undefined,
+        horarioAtencion: formData.attentionSchedule.trim() || undefined,
+      });
+      setShowSuccessModal(true);
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : 'No se pudo registrar el veterinario en este momento.');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -214,9 +226,7 @@ export const RegisterVeterinarianPage: React.FC = () => {
                       isLoading ? disabledInputClasses : ''
                     }`}
                   />
-                  {errors.firstName && (
-                    <p className="text-xs font-medium text-red-600">{errors.firstName}</p>
-                  )}
+                  {errors.firstName && <p className="text-xs font-medium text-red-600">{errors.firstName}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -235,9 +245,7 @@ export const RegisterVeterinarianPage: React.FC = () => {
                       isLoading ? disabledInputClasses : ''
                     }`}
                   />
-                  {errors.lastName && (
-                    <p className="text-xs font-medium text-red-600">{errors.lastName}</p>
-                  )}
+                  {errors.lastName && <p className="text-xs font-medium text-red-600">{errors.lastName}</p>}
                 </div>
               </div>
 
@@ -301,9 +309,7 @@ export const RegisterVeterinarianPage: React.FC = () => {
                       isLoading ? disabledInputClasses : ''
                     }`}
                   />
-                  {errors.phone && (
-                    <p className="text-xs font-medium text-red-600">{errors.phone}</p>
-                  )}
+                  {errors.phone && <p className="text-xs font-medium text-red-600">{errors.phone}</p>}
                 </div>
 
                 <div className="space-y-2">
@@ -345,9 +351,7 @@ export const RegisterVeterinarianPage: React.FC = () => {
                     isLoading ? disabledInputClasses : ''
                   }`}
                 />
-                {errors.email && (
-                  <p className="text-xs font-medium text-red-600">{errors.email}</p>
-                )}
+                {errors.email && <p className="text-xs font-medium text-red-600">{errors.email}</p>}
               </div>
 
               {/* Especialidad Asistencial */}
@@ -370,9 +374,7 @@ export const RegisterVeterinarianPage: React.FC = () => {
                   <option value="Dermatología">Dermatología</option>
                   <option value="Cardiología">Cardiología</option>
                 </select>
-                {errors.specialty && (
-                  <p className="text-xs font-medium text-red-600">{errors.specialty}</p>
-                )}
+                {errors.specialty && <p className="text-xs font-medium text-red-600">{errors.specialty}</p>}
               </div>
 
               {/* Dirección y horario de atención */}
@@ -392,9 +394,7 @@ export const RegisterVeterinarianPage: React.FC = () => {
                       isLoading ? disabledInputClasses : ''
                     }`}
                   />
-                  {errors.address && (
-                    <p className="text-xs font-medium text-red-600">{errors.address}</p>
-                  )}
+                  {errors.address && <p className="text-xs font-medium text-red-600">{errors.address}</p>}
                 </div>
 
                 <div className="space-y-2">

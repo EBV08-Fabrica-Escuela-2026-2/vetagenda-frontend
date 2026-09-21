@@ -1,10 +1,10 @@
-version: '3.9'
-
 services:
+
+  # ── Base de datos ─────────────────────────────────────────────────
   db:
     image: postgres:16-alpine
     container_name: vetagenda-db
-    restart: always
+    restart: unless-stopped
     environment:
       POSTGRES_DB: vetagenda
       POSTGRES_USER: vetagenda
@@ -13,46 +13,58 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ../veterinary-system/src/main/resources/db/migration/V1__create_tables_and_seed_data.sql:/docker-entrypoint-initdb.d/init.sql
+      # Script unificado V1–V7: solo se ejecuta la primera vez que se crea el volumen
+      - ./docker/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U vetagenda -d vetagenda"]
       interval: 10s
       timeout: 5s
       retries: 5
 
+  # ── Backend Spring Boot ───────────────────────────────────────────
   backend:
     build:
       context: ../veterinary-system
       dockerfile: Dockerfile
     container_name: vetagenda-backend
-    restart: always
+    restart: unless-stopped
     depends_on:
       db:
         condition: service_healthy
     ports:
       - "8080:8080"
     environment:
+      # Sobreescribe application.yml para apuntar al contenedor de BD
       SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/vetagenda
       SPRING_DATASOURCE_USERNAME: vetagenda
       SPRING_DATASOURCE_PASSWORD: vetagenda123
-    command: ["mvn", "spring-boot:run"]
+      # Validar esquema existente (init.sql ya lo creó)
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      # Zona horaria
+      TZ: America/Bogota
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api-docs > /dev/null 2>&1 || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
 
+  # ── Frontend React (Nginx) ────────────────────────────────────────
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        # VITE_API_URL se quema en el bundle durante el build.
+        # El navegador del usuario accede a localhost:8080 directamente.
+        VITE_API_URL: http://localhost:8080/api
     container_name: vetagenda-frontend
-    restart: always
+    restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
-      - "3000:5173"
-    environment:
-      VITE_API_URL: http://localhost:8080/api
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    command: ["npm", "run", "dev", "--", "--host"]
+      - "5173:80"
 
 volumes:
   postgres_data:

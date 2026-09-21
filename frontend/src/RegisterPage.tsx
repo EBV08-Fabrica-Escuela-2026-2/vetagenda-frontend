@@ -27,6 +27,7 @@ function App() {
   const [form, setForm] = useState<FormState>(initialState);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [backendError, setBackendError] = useState<string | null>(null);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -44,6 +45,7 @@ function App() {
 
     setForm((current) => ({ ...current, [name]: nextValue }));
     setErrors((current) => ({ ...current, [name]: undefined }));
+    setBackendError(null);
     setShowSuccessModal(false);
   };
 
@@ -92,6 +94,7 @@ function App() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    setBackendError(null);
 
     if (!validateForm()) {
       return;
@@ -107,15 +110,17 @@ function App() {
       });
       setShowSuccessModal(true);
       setForm(initialState);
-    } catch {
-      setShowSuccessModal(true);
-      setForm(initialState);
+    } catch (err) {
+      setBackendError(
+        err instanceof Error ? err.message : 'No se pudo completar el registro. Intenta nuevamente.',
+      );
     }
   };
 
   const handleCloseModal = () => {
     setShowSuccessModal(false);
     setErrors({});
+    setBackendError(null);
   };
 
   return (
@@ -136,6 +141,12 @@ function App() {
             <p className="mt-2 text-base text-slate-500">
               Registra tus datos para gestionar tus mascotas
             </p>
+
+            {backendError && (
+              <div className="mt-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-medium text-red-700">
+                ⚠️ {backendError}
+              </div>
+            )}
 
             <form className="mt-7 space-y-5" onSubmit={handleSubmit} noValidate>
               <div className="grid gap-5 md:grid-cols-2">
