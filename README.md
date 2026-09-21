@@ -13,12 +13,13 @@ VetAgenda es una plataforma web para la gestión de clientes, mascotas, veterina
 - Node.js 20+
 
 ### Backend
-- Java 17
-- Spring Boot 3.x
-- Spring Web
+- Java 21
+- Spring Boot 4.x
+- Spring Web MVC
 - Spring Data JPA
+- Spring Security
 - PostgreSQL 16
-- Maven Wrapper
+- Maven
 
 ### Infraestructura
 - Docker
@@ -27,14 +28,17 @@ VetAgenda es una plataforma web para la gestión de clientes, mascotas, veterina
 
 ## Requisitos previos
 
-Antes de ejecutar el proyecto asegúrate de tener instalado:
+### Con Docker (recomendado)
+Solo necesitas:
+- **Docker Desktop** con Docker Compose
+- **Git**
 
+### En modo desarrollo local
 - Node.js 20 o superior
 - npm 10 o superior
-- Java 17
-- Maven (opcional si usas el wrapper)
-- Docker Desktop con Docker Compose
-- Git
+- Java 21
+- Maven 3.9+
+- PostgreSQL 16
 
 ## Estructura del proyecto
 
@@ -108,74 +112,77 @@ El frontend usa React Router y estas son las rutas principales actualmente dispo
 - `/mascotas/registro` - Registro de mascota
 - `/catalogo` - Catálogo de servicios
 
-## Puertos y servicios
-
-### Ejecutando con Docker Compose
-- Frontend: http://localhost:3000
-- Backend: http://localhost:8080
-- PostgreSQL: localhost:5432
-
-### Ejecutando localmente (modo desarrollo)
-- Frontend Vite: http://localhost:5173
-- Backend Spring Boot: http://localhost:8080
-- PostgreSQL: localhost:5432
-
-## Variables de entorno y configuración
-
-En `docker-compose.yml` se configura la base de datos con:
-
-- Base de datos: `vetagenda`
-- Usuario: `vetagenda`
-- Contraseña: `vetagenda123`
-
-El frontend envía la API al backend mediante:
-
-- `VITE_API_URL=http://localhost:8080/api`
-
 ## Cómo ejecutar el proyecto
 
 ### Opción 1: Docker Compose (recomendado)
 
+> Requiere tener clonados **ambos repositorios** en carpetas hermanas:
+> ```
+> proyectos/
+> ├── VetAgenda/           ← este repo
+> └── veterinary-system/   ← backend
+> ```
+
 Desde la raíz de `VetAgenda`:
 
 ```bash
+# Primera vez (o tras cambios en el código)
 docker compose up --build
+
+# Siguientes veces
+docker compose up
 ```
 
-Esto levanta:
-- la base de datos PostgreSQL
-- el backend de Spring Boot
-- el frontend de React/Vite
+Esto levanta automáticamente:
+- 🗄️ **PostgreSQL** — con el esquema y datos de prueba
+- ⚙️ **Backend** Spring Boot — compila y arranca el JAR
+- 🖥️ **Frontend** React — compilado y servido con Nginx
 
-Para detenerlo:
+| Servicio | URL |
+|---|---|
+| Frontend | http://localhost:5173 |
+| Backend API | http://localhost:8080/api |
+| Swagger UI | http://localhost:8080/swagger-ui.html |
+| PostgreSQL | localhost:5432 (DB: `vetagenda`) |
+
+Para detener:
 
 ```bash
 docker compose down
 ```
 
-### Opción 2: Frontend local
+> ⚠️ **Si cambias el esquema de la base de datos**, el volumen debe borrarse
+> para que el nuevo `init.sql` se aplique:
+> ```bash
+> docker compose down -v
+> docker compose up --build
+> ```
+
+### Opción 2: Desarrollo local (frontend)
 
 ```bash
 cd frontend
 npm install
 npm run dev
+# Disponible en http://localhost:5173
 ```
 
-### Opción 3: Backend local
-
-Desde la raíz del backend principal (`veterinary-system`):
+### Opción 3: Desarrollo local (backend)
 
 ```bash
 cd ../veterinary-system
-./mvnw spring-boot:run
+mvn spring-boot:run
+# API disponible en http://localhost:8080
 ```
 
-En Windows:
+## Variables de entorno
 
-```powershell
-cd ../veterinary-system
-./mvnw.cmd spring-boot:run
-```
+| Variable | Valor por defecto | Descripción |
+|---|---|---|
+| `VITE_API_URL` | `http://localhost:8080/api` | URL del backend (quemada en el build) |
+| `POSTGRES_DB` | `vetagenda` | Nombre de la base de datos |
+| `POSTGRES_USER` | `vetagenda` | Usuario de PostgreSQL |
+| `POSTGRES_PASSWORD` | `vetagenda123` | Contraseña de PostgreSQL |
 
 ## Flujo actual del proyecto
 
@@ -198,14 +205,6 @@ Actualmente el frontend incluye:
 ## Buenas prácticas
 
 - Mantener el backend y frontend sincronizados con las rutas y endpoints API.
-- Revisar la configuración de CORS si se cambia el puerto del frontend o del backend.
-- Preferir Docker Compose para pruebas y validación del entorno completo.
-  de check, el mensaje "¡Mascota registrada con éxito!", un resumen
-  (especie, raza, sexo, peso) y acciones para registrar otra mascota o volver
-  a "Mis Mascotas".
-- **Punto de integración**: `RegistroMascotaPage` expone `onGuardar` /
-  `onVolver`; ahí se conectaría el llamado real al backend/API de HU05
-  (incluyendo `clienteId` como dueño) y la navegación hacia "Mis Mascotas".
-- El diseño (colores, tipografía, tarjetas, distribución) replica fielmente
-  las capturas provistas; no se introdujeron elementos ajenos al mockup.
->>>>>>> origin/registro_mascota
+- Revisar la configuración de CORS en `SecurityConfig.java` si se cambia el puerto del frontend.
+- Usar `docker compose down -v` para limpiar la BD si cambia el esquema.
+- Preferir Docker Compose para pruebas de integración completa.
