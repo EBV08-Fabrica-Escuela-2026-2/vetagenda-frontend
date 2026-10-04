@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import {
   Calendar,
   Clock,
@@ -8,7 +9,6 @@ import {
   PawPrint,
   Search,
   X,
-  RotateCcw,
   CheckCircle2,
   Trash2,
   LayoutList,
@@ -17,16 +17,13 @@ import {
   CalendarCheck,
   CalendarX,
   User,
-  ShieldCheck,
 } from 'lucide-react';
-import { BrandHeader } from '../components/BrandHeader';
 import { BackToHomeButton } from '../components/BackToHomeButton';
 import { ConfirmacionAnulacionModal } from '../components/ConfirmacionAnulacionModal';
 import {
   cancelarCita,
   Cita,
   getCitas,
-  resetCitas,
 } from '../services/api';
 
 type FiltroEstado = 'TODAS' | 'PROGRAMADA' | 'CANCELADA';
@@ -126,30 +123,145 @@ export const CancelarCitaPage: React.FC = () => {
     }
   };
 
-  const handleRestablecerPrueba = () => {
-    const defaultData = resetCitas();
-    setCitas(defaultData);
-    setMensajeExito('Se han restablecido las citas de prueba iniciales.');
-    setTimeout(() => setMensajeExito(null), 3000);
-  };
-
   return (
-    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.12),_transparent_25%),linear-gradient(135deg,#f0f9ff_0%,#f8fafc_45%,#f1f5f9_100%)] px-3 py-6 text-slate-800 md:px-8 md:py-8">
+    <main className="min-h-screen bg-slate-50/70 px-3 py-5 text-slate-800 md:px-8 md:py-7">
       <div className="mx-auto max-w-6xl">
-        {/* Header institucional */}
-        <header className="mb-5 flex flex-col gap-3.5 rounded-2xl border border-sky-100 bg-white/95 p-4 shadow-xs backdrop-blur-sm md:flex-row md:items-center md:justify-between md:p-5">
-          <BrandHeader subtitle="HU14 · Cancelación de Citas y Liberación de Cupo" />
-          <div className="flex flex-wrap items-center gap-2.5">
-            <button
-              type="button"
-              onClick={handleRestablecerPrueba}
-              title="Restaurar datos de ejemplo para probar la anulación"
-              className="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 transition hover:bg-slate-100 hover:text-slate-900 shadow-2xs"
-            >
-              <RotateCcw className="h-3.5 w-3.5 text-slate-500" />
-              Restablecer demo
-            </button>
+        {/* ========================================================================= */}
+        {/* INTERFAZ SUPERIOR UNIFICADA Y LIMPIA                                     */}
+        {/* ========================================================================= */}
+        <header className="mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
+          {/* Fila 1: Navegación de marca y botón de regreso */}
+          <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/60 px-4 py-3 sm:px-6">
+            <Link to="/" className="group flex items-center gap-2.5 transition">
+              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-sky-600 to-teal-500 font-black text-white shadow-2xs transition group-hover:scale-105">
+                V
+              </div>
+              <div className="flex items-baseline gap-2">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-900">
+                  VetAgenda
+                </span>
+                <span className="text-xs text-slate-400">/</span>
+                <span className="text-xs font-medium text-slate-600">
+                  Agenda Médica
+                </span>
+              </div>
+            </Link>
+
             <BackToHomeButton />
+          </div>
+
+          {/* Fila 2: Título de sección y métricas en vivo */}
+          <div className="border-b border-slate-100 bg-white px-4 py-3.5 sm:px-6">
+            <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
+              <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+                Anulación y Liberación de Turnos
+              </h1>
+
+              {/* Contadores integrados */}
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50/70 px-3 py-1.5 text-xs font-bold text-emerald-800 shadow-2xs">
+                  <CalendarCheck className="h-4 w-4 text-emerald-600" />
+                  <span>{totalProgramadas} Activas</span>
+                </div>
+                <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50/70 px-3 py-1.5 text-xs font-bold text-rose-800 shadow-2xs">
+                  <CalendarX className="h-4 w-4 text-rose-600" />
+                  <span>{totalCanceladas} Anuladas</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Fila 3: Controles integrados (Buscador + Segmented Controls de Filtros + Selector de Vista) */}
+          <div className="flex flex-col gap-3 bg-slate-50/30 px-4 py-3 sm:px-6 md:flex-row md:items-center md:justify-between">
+            {/* Buscador reactivo */}
+            <div className="relative flex-1">
+              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+              <input
+                type="text"
+                placeholder="Buscar por cédula (ej. 1020304050), código, mascota, tutor o doctor..."
+                value={filtroTexto}
+                onChange={(e) => setFiltroTexto(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-8 text-xs sm:text-sm text-slate-800 outline-none transition focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+              />
+              {filtroTexto && (
+                <button
+                  type="button"
+                  onClick={() => setFiltroTexto('')}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex flex-wrap items-center justify-between gap-2.5">
+              {/* Segmented controls de estado */}
+              <div className="inline-flex rounded-xl bg-slate-100 p-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setFiltroEstado('TODAS')}
+                  className={`rounded-lg px-3 py-1 font-semibold transition ${
+                    filtroEstado === 'TODAS'
+                      ? 'bg-white text-slate-900 shadow-2xs'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  Todas ({citas.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFiltroEstado('PROGRAMADA')}
+                  className={`rounded-lg px-3 py-1 font-semibold transition ${
+                    filtroEstado === 'PROGRAMADA'
+                      ? 'bg-white text-emerald-800 shadow-2xs'
+                      : 'text-slate-600 hover:text-emerald-700'
+                  }`}
+                >
+                  Activas ({totalProgramadas})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setFiltroEstado('CANCELADA')}
+                  className={`rounded-lg px-3 py-1 font-semibold transition ${
+                    filtroEstado === 'CANCELADA'
+                      ? 'bg-white text-rose-800 shadow-2xs'
+                      : 'text-slate-600 hover:text-rose-700'
+                  }`}
+                >
+                  Anuladas ({totalCanceladas})
+                </button>
+              </div>
+
+              {/* Selector de modo de vista (Lista / Tarjetas) */}
+              <div className="inline-flex rounded-xl bg-slate-100 p-1 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setModoVista('lista')}
+                  title="Vista en lista compacta"
+                  className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-semibold transition ${
+                    modoVista === 'lista'
+                      ? 'bg-white text-sky-800 shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  <LayoutList className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Lista</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setModoVista('tarjetas')}
+                  title="Vista en tarjetas"
+                  className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 font-semibold transition ${
+                    modoVista === 'tarjetas'
+                      ? 'bg-white text-sky-800 shadow-2xs'
+                      : 'text-slate-500 hover:text-slate-900'
+                  }`}
+                >
+                  <LayoutGrid className="h-3.5 w-3.5" />
+                  <span className="hidden sm:inline">Tarjetas</span>
+                </button>
+              </div>
+            </div>
           </div>
         </header>
 
@@ -169,144 +281,6 @@ export const CancelarCitaPage: React.FC = () => {
             </button>
           </div>
         )}
-
-        {/* Banner informativo optimizado con métricas claras */}
-        <section className="mb-5 rounded-2xl border border-sky-200/70 bg-gradient-to-r from-sky-50 via-cyan-50 to-blue-50 px-5 py-4 shadow-xs">
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-sky-200/80 px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider text-sky-800">
-                  <ShieldCheck className="h-3.5 w-3.5 text-sky-700" />
-                  Agenda Veterinaria
-                </span>
-                <span className="text-xs text-slate-500 hidden sm:inline">
-                  • Gestión de cupos y disponibilidad médica
-                </span>
-              </div>
-              <h1 className="mt-1 text-xl font-black text-slate-900 sm:text-2xl">
-                Anulación y Liberación de Turnos Médicos
-              </h1>
-              <p className="mt-0.5 text-xs text-slate-600 sm:text-sm">
-                Al cancelar una cita que no podrás tomar, el cupo se <strong>reintegra de inmediato</strong> al consultorio para que otra mascota necesitada pueda ser atendida.
-              </p>
-            </div>
-
-            <div className="flex shrink-0 items-center gap-2.5">
-              <div className="flex items-center gap-2.5 rounded-xl border border-sky-200 bg-white/95 px-3.5 py-2 shadow-2xs">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-sky-50 text-sky-600">
-                  <CalendarCheck className="h-5 w-5" />
-                </div>
-                <div>
-                  <span className="text-lg font-black text-sky-700 leading-none">{totalProgramadas}</span>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Activas</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2.5 rounded-xl border border-rose-200 bg-white/95 px-3.5 py-2 shadow-2xs">
-                <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-rose-50 text-rose-600">
-                  <CalendarX className="h-5 w-5" />
-                </div>
-                <div>
-                  <span className="text-lg font-black text-rose-600 leading-none">{totalCanceladas}</span>
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Anuladas</p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Barra de controles: Búsqueda, Filtros de estado y Selector de Vista */}
-        <div className="mb-4 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3.5 shadow-xs md:flex-row md:items-center md:justify-between">
-          {/* Búsqueda rápida */}
-          <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
-            <input
-              type="text"
-              placeholder="Buscar por documento (ej. 1020304050), código, mascota o doctor..."
-              value={filtroTexto}
-              onChange={(e) => setFiltroTexto(e.target.value)}
-              className="w-full rounded-xl border border-slate-200 bg-slate-50/60 py-2 pl-9 pr-8 text-xs sm:text-sm text-slate-800 outline-none transition focus:border-sky-400 focus:bg-white focus:ring-2 focus:ring-sky-100"
-            />
-            {filtroTexto && (
-              <button
-                type="button"
-                onClick={() => setFiltroTexto('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1"
-              >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-2.5">
-            {/* Filtros por estado */}
-            <div className="flex items-center gap-1.5">
-              <button
-                type="button"
-                onClick={() => setFiltroEstado('TODAS')}
-                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
-                  filtroEstado === 'TODAS'
-                    ? 'bg-slate-900 text-white shadow-2xs'
-                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
-                }`}
-              >
-                Todas ({citas.length})
-              </button>
-              <button
-                type="button"
-                onClick={() => setFiltroEstado('PROGRAMADA')}
-                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
-                  filtroEstado === 'PROGRAMADA'
-                    ? 'bg-emerald-700 text-white shadow-2xs'
-                    : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
-                }`}
-              >
-                Activas ({totalProgramadas})
-              </button>
-              <button
-                type="button"
-                onClick={() => setFiltroEstado('CANCELADA')}
-                className={`rounded-lg px-3 py-1.5 text-xs font-bold transition ${
-                  filtroEstado === 'CANCELADA'
-                    ? 'bg-rose-700 text-white shadow-2xs'
-                    : 'bg-rose-50 text-rose-800 hover:bg-rose-100'
-                }`}
-              >
-                Anuladas ({totalCanceladas})
-              </button>
-            </div>
-
-            {/* Selector de Modo de Vista (Optimización de espacio) */}
-            <div className="flex items-center rounded-xl border border-slate-200 bg-slate-100/90 p-0.5">
-              <button
-                type="button"
-                onClick={() => setModoVista('lista')}
-                title="Vista en formato lista compacta"
-                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold transition ${
-                  modoVista === 'lista'
-                    ? 'bg-white text-sky-800 shadow-2xs'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <LayoutList className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Lista</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => setModoVista('tarjetas')}
-                title="Vista en formato cuadrícula de tarjetas"
-                className={`flex items-center gap-1.5 rounded-lg px-2.5 py-1 text-xs font-bold transition ${
-                  modoVista === 'tarjetas'
-                    ? 'bg-white text-sky-800 shadow-2xs'
-                    : 'text-slate-500 hover:text-slate-800'
-                }`}
-              >
-                <LayoutGrid className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Tarjetas</span>
-              </button>
-            </div>
-          </div>
-        </div>
 
         {/* Contenido principal según modo de vista */}
         {isLoading ? (
@@ -365,7 +339,7 @@ export const CancelarCitaPage: React.FC = () => {
                           estaCancelada ? 'bg-slate-50/60' : 'bg-white'
                         }`}
                       >
-                        {/* Columna: Reserva y Estado (CORREGIDO: Sin deformación, 1 sola línea) */}
+                        {/* Columna: Reserva y Estado */}
                         <td className="py-3.5 px-4 align-top">
                           <span className="font-mono text-xs font-extrabold text-slate-800 block">
                             {cita.codigoReserva}
@@ -438,7 +412,6 @@ export const CancelarCitaPage: React.FC = () => {
                             <MapPin className="h-3 w-3 text-slate-400 shrink-0" />
                             <span>{cita.consultorio}</span>
                           </p>
-                          {/* Nota de anulación formateada limpiamente (sin texto rojo corrido) */}
                           {estaCancelada && (
                             <div className="mt-2 flex items-start gap-1.5 rounded-lg border border-slate-200/80 bg-slate-50 px-2 py-1 text-[11px] text-slate-600">
                               <Info className="h-3.5 w-3.5 shrink-0 text-slate-400 mt-0.5" />
@@ -577,7 +550,7 @@ export const CancelarCitaPage: React.FC = () => {
           </div>
         ) : (
           /* ========================================================================= */
-          /* FORMATO DE TARJETAS (TAMBIÉN CORREGIDO Y ELEVADO VISUALMENTE)             */
+          /* FORMATO DE TARJETAS (ELEGANTE Y ACTUALIZADO)                              */
           /* ========================================================================= */
           <div className="grid gap-4 md:grid-cols-2">
             {citasFiltradas.map((cita) => {
