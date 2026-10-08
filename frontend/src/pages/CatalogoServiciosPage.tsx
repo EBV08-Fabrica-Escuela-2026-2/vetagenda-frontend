@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { BackToHomeButton } from '../components/BackToHomeButton';
 import { BrandHeader } from '../components/BrandHeader';
 import { fetchCatalogo, VeterinarioConServicios } from '../services/api';
@@ -216,6 +217,13 @@ export function CatalogoServiciosPage() {
 
                   <div className="mt-6 border-t border-slate-200 pt-5">
                     <h3 className="text-lg font-bold text-slate-900">Servicios</h3>
+                    <Link
+                      to="/disponibilidad"
+                      className="mt-3 inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-700"
+                    >
+                      Consultar disponibilidad
+                      <span aria-hidden="true">→</span>
+                    </Link>
 
                     {selectedVet.servicios.length === 0 ? (
                       <div className="mt-3 rounded-xl bg-amber-50 px-3 py-3 text-sm font-medium text-amber-700">

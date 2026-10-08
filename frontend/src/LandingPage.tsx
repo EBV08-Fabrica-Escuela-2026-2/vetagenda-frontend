@@ -8,6 +8,7 @@ const features = [
   { title: 'Registro de mascota', subtitle: 'Mascota', icon: '🐾', to: '/mascotas/registro' },
   { title: 'Catálogo', subtitle: 'Servicios', icon: '📋', to: '/catalogo' },
   { title: 'Agenda veterinaria', subtitle: 'Gestionar citas', icon: '🗓️', to: '/veterinario/agenda' },
+  { title: 'Consultar disponibilidad', subtitle: 'Agenda tu cita', icon: '🗓️', to: '/disponibilidad' },
 ];
 
 function LandingPage() {
