@@ -66,6 +66,7 @@ VetAgenda/
 │       │   ├── BrandHeader.tsx
 │       │   └── VetForm.tsx
 │       ├── pages/
+│       │   ├── VeterinarianAppointmentsPage.tsx
 │       │   ├── CatalogoServiciosPage.tsx
 │       │   ├── LoginPage.tsx
 │       │   ├── RegisterServicePage.tsx
@@ -111,6 +112,7 @@ El frontend usa React Router y estas son las rutas principales actualmente dispo
 - `/servicios/registro` - Registro de servicio
 - `/mascotas/registro` - Registro de mascota
 - `/catalogo` - Catálogo de servicios
+- `/veterinario/agenda` - Agenda demostrativa del veterinario y cancelación de citas
 
 ## Cómo ejecutar el proyecto
 
