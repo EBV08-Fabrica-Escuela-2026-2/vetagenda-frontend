@@ -6,6 +6,7 @@ import { RegisterVeterinarianPage } from './pages/RegisterVeterinarianPage';
 import { RegistroMascotaPage } from './pages/RegistroMascotaPage';
 import { CatalogoServiciosPage } from './pages/CatalogoServiciosPage';
 import { RegisterServicePage } from './pages/RegisterServicePage';
+import { AvailabilityPage } from './pages/AvailabilityPage';
 
 function App() {
   return (
@@ -19,6 +20,7 @@ function App() {
         <Route path="/servicios/registro" element={<RegisterServicePage />} />
         <Route path="/mascotas/registro" element={<RegistroMascotaPage />} />
         <Route path="/catalogo" element={<CatalogoServiciosPage />} />
+        <Route path="/disponibilidad" element={<AvailabilityPage />} />
       </Routes>
     </BrowserRouter>
   );
