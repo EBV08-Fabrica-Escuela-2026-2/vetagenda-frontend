@@ -7,6 +7,7 @@ const features = [
   { title: 'Registro de servicio', subtitle: 'Servicio', icon: '🧾', to: '/servicios/registro' },
   { title: 'Registro de mascota', subtitle: 'Mascota', icon: '🐾', to: '/mascotas/registro' },
   { title: 'Catálogo', subtitle: 'Servicios', icon: '📋', to: '/catalogo' },
+  { title: 'Consultar disponibilidad', subtitle: 'Agenda tu cita', icon: '🗓️', to: '/disponibilidad' },
 ];
 
 function LandingPage() {
@@ -36,7 +37,7 @@ function LandingPage() {
             </p>
           </div>
 
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {features.map((feature) => (
               <Link
                 key={feature.title}
@@ -58,4 +59,3 @@ function LandingPage() {
 }
 
 export default LandingPage;
-

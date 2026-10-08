@@ -66,6 +66,7 @@ VetAgenda/
 │       │   ├── BrandHeader.tsx
 │       │   └── VetForm.tsx
 │       ├── pages/
+│       │   ├── AvailabilityPage.tsx
 │       │   ├── CatalogoServiciosPage.tsx
 │       │   ├── LoginPage.tsx
 │       │   ├── RegisterServicePage.tsx
@@ -111,6 +112,7 @@ El frontend usa React Router y estas son las rutas principales actualmente dispo
 - `/servicios/registro` - Registro de servicio
 - `/mascotas/registro` - Registro de mascota
 - `/catalogo` - Catálogo de servicios
+- `/disponibilidad` - Consulta demostrativa de disponibilidad y selección de horarios
 
 ## Cómo ejecutar el proyecto
 
@@ -193,7 +195,10 @@ Actualmente el frontend incluye:
 - registro de servicios
 - registro de mascotas
 - catálogo de servicios
+- consulta demostrativa de disponibilidad con calendario, filtro de profesional, horarios y estado sin turnos
 - integración inicial con el backend a través de la API REST
+
+> La disponibilidad es actualmente una experiencia de frontend con datos de demostración; aún no existe una agenda ni un endpoint de reservas en el backend.
 
 ## Notas importantes
 
