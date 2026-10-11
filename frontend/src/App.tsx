@@ -8,6 +8,7 @@ import { CatalogoServiciosPage } from './pages/CatalogoServiciosPage';
 import { RegisterServicePage } from './pages/RegisterServicePage';
 import { VeterinarianAppointmentsPage } from './pages/VeterinarianAppointmentsPage';
 import { AvailabilityPage } from './pages/AvailabilityPage';
+import { DetalleCitaPage } from './pages/DetalleCitaPage';
 
 function App() {
   return (
@@ -23,6 +24,7 @@ function App() {
         <Route path="/catalogo" element={<CatalogoServiciosPage />} />
         <Route path="/veterinario/agenda" element={<VeterinarianAppointmentsPage />} />
         <Route path="/disponibilidad" element={<AvailabilityPage />} />
+        <Route path="/detalle-cita"   element={<DetalleCitaPage />} />
       </Routes>
     </BrowserRouter>
   );
