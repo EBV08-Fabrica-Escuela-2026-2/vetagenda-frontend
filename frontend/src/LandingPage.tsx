@@ -9,6 +9,7 @@ const features = [
   { title: 'Catálogo', subtitle: 'Servicios', icon: '📋', to: '/catalogo' },
   { title: 'Agenda veterinaria', subtitle: 'Gestionar citas', icon: '🗓️', to: '/veterinario/agenda' },
   { title: 'Consultar disponibilidad', subtitle: 'Agenda tu cita', icon: '🗓️', to: '/disponibilidad' },
+  { title: 'Reprogramar cita', subtitle: 'Reprogramar cita', icon: '🔄', to: '/ReprogramarCita' },
 ];
 
 function LandingPage() {
