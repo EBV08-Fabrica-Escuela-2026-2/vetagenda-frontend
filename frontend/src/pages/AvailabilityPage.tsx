@@ -2,11 +2,19 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BackToHomeButton } from '../components/BackToHomeButton';
 import { BrandHeader } from '../components/BrandHeader';
+import { listServices, type CatalogService } from '../services/api';
 
-const services = [
-  { id: 'consulta', name: 'Consulta general', duration: 30, price: '$65.000' },
-  { id: 'vacunacion', name: 'Vacunación', duration: 30, price: '$90.000' },
-  { id: 'desparasitacion', name: 'Desparasitación', duration: 45, price: '$50.000' },
+type AvailabilityService = {
+  id: string;
+  name: string;
+  duration: number;
+  price: string;
+};
+
+const fallbackServices: AvailabilityService[] = [
+  { id: '1', name: 'Consulta general', duration: 30, price: '$65.000' },
+  { id: '2', name: 'Vacunación', duration: 30, price: '$90.000' },
+  { id: '3', name: 'Desparasitación', duration: 45, price: '$50.000' },
 ];
 
 const veterinarians = [
@@ -62,6 +70,37 @@ function formatLongDate(dateKey: string) {
   }).format(fromDateKey(dateKey));
 }
 
+function mapCatalogServices(catalogServices: CatalogService[]): AvailabilityService[] {
+  return catalogServices.map((service) => ({
+    id: String(service.id),
+    name: service.nombre,
+    duration: service.duracionMinutos ?? 30,
+    price: String(service.precio),
+  }));
+}
+
+function getInitialAvailabilityFilters() {
+  const params = new URLSearchParams(window.location.search);
+  const serviceId = params.get('servicio');
+  const veterinarianId = params.get('veterinario');
+  const requestedDate = params.get('fecha');
+  const dateIsValid = requestedDate !== null
+    && /^\d{4}-\d{2}-\d{2}$/.test(requestedDate)
+    && !Number.isNaN(fromDateKey(requestedDate).getTime())
+    && toDateKey(fromDateKey(requestedDate)) === requestedDate;
+  const isWithinAvailabilityWindow = dateIsValid
+    && requestedDate >= toDateKey(today)
+    && requestedDate <= toDateKey(addDays(today, 60));
+
+  return {
+    serviceId: serviceId && (/^\d+$/.test(serviceId) || fallbackServices.some((service) => service.id === serviceId))
+      ? serviceId
+      : fallbackServices[0].id,
+    veterinarianId: veterinarians.find((veterinarian) => veterinarian.id === veterinarianId)?.id ?? veterinarians[0].id,
+    date: isWithinAvailabilityWindow && requestedDate ? requestedDate : toDateKey(today),
+  };
+}
+
 function AvailabilitySkeleton() {
   return (
     <div aria-label="Cargando horarios disponibles" aria-live="polite" className="grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -73,12 +112,37 @@ function AvailabilitySkeleton() {
 }
 
 export function AvailabilityPage() {
-  const [selectedServiceId, setSelectedServiceId] = useState(services[0].id);
-  const [selectedVeterinarianId, setSelectedVeterinarianId] = useState(veterinarians[0].id);
-  const [selectedDate, setSelectedDate] = useState(toDateKey(today));
+  const [services, setServices] = useState(fallbackServices);
+  const [initialFilters] = useState(getInitialAvailabilityFilters);
+  const [selectedServiceId, setSelectedServiceId] = useState(initialFilters.serviceId);
+  const [selectedVeterinarianId, setSelectedVeterinarianId] = useState(initialFilters.veterinarianId);
+  const [selectedDate, setSelectedDate] = useState(initialFilters.date);
   const [selectedTime, setSelectedTime] = useState<string | null>(null);
-  const [visibleMonth, setVisibleMonth] = useState(new Date(today.getFullYear(), today.getMonth(), 1));
+  const [visibleMonth, setVisibleMonth] = useState(() => {
+    const initialDate = fromDateKey(initialFilters.date);
+    return new Date(initialDate.getFullYear(), initialDate.getMonth(), 1);
+  });
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    listServices().then((catalogServices) => {
+      if (!isMounted || catalogServices.length === 0) return;
+      const mappedServices = mapCatalogServices(catalogServices);
+      const requestedServiceId = new URLSearchParams(window.location.search).get('servicio');
+
+      setServices(mappedServices);
+      if (requestedServiceId && mappedServices.some((service) => service.id === requestedServiceId)) {
+        setSelectedServiceId(requestedServiceId);
+      } else if (!mappedServices.some((service) => service.id === selectedServiceId)) {
+        setSelectedServiceId(mappedServices[0].id);
+      }
+    });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   const slots = useMemo(
     () => getOpenSlots(selectedDate, selectedServiceId, selectedVeterinarianId),
