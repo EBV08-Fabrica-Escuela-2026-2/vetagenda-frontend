@@ -1,43 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { BrandHeader } from '../components/BrandHeader';
 import { BackToHomeButton } from '../components/BackToHomeButton';
-
-export type EstadoCita = 'PROGRAMADA' | 'CONFIRMADA' | 'COMPLETADA' | 'CANCELADA';
-
-export interface Profesional {
-  id: string;
-  nombre: string;
-  titulo: string;
-  especialidad: string;
-  numeroLicencia: string;
-  experiencia: string;
-  fotoUrl: string;
-}
-
-export interface Mascota {
-  nombre: string;
-  especieRaza: string;
-  edad: string;
-  avatarBg: string;
-}
-
-export interface Cita {
-  id: string;
-  codigo: string;
-  clienteOwnerId: string;
-  servicio: string;
-  categoriaServicio: string;
-  fecha: string;
-  hora: string;
-  duracion: string;
-  costo: number;
-  estado: EstadoCita;
-  mascota: Mascota;
-  profesional: Profesional;
-  indicacionesPrevias?: string[];
-}
-
-const MOCK_CURRENT_USER_ID = 'USR-001';
+import { DetalleCitaFeedback, DetalleCitaSkeleton } from '../components/DetalleCitaFeedback';
+import { CitaApiError, obtenerDetalleCita, type Cita, type EstadoCita, type TipoErrorCita } from '../services/citasService';
 
 const MOCK_CITAS: Cita[] = [
   {
@@ -131,20 +97,41 @@ const MOCK_CITAS: Cita[] = [
 ];
 
 export const DetalleCitaPage: React.FC = () => {
-  const [selectedCitaId, setSelectedCitaId] = useState<string>('1');
+  const { id: citaId = '' } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const [citaActual, setCitaActual] = useState<Cita | null>(null);
+  const [cargando, setCargando] = useState(true);
+  const [tipoError, setTipoError] = useState<TipoErrorCita | null>(null);
+  const [intento, setIntento] = useState(0);
   const [showProfesionalModal, setShowProfesionalModal] = useState<boolean>(false);
-  const [hasAuthError, setHasAuthError] = useState<boolean>(false);
-
-  const citaActual = MOCK_CITAS.find((c) => c.id === selectedCitaId);
 
   const handleSelectCita = (cita: Cita) => {
-    if (cita.clienteOwnerId !== MOCK_CURRENT_USER_ID) {
-      setHasAuthError(true);
-      return;
-    }
-    setHasAuthError(false);
-    setSelectedCitaId(cita.id);
+    navigate(`/cliente/citas/${encodeURIComponent(cita.id)}`);
   };
+
+  useEffect(() => {
+    let vigente = true;
+    setCargando(true);
+    setCitaActual(null);
+    setTipoError(null);
+
+    const token = localStorage.getItem('vetagenda_token') ?? undefined;
+    obtenerDetalleCita(citaId, token)
+      .then((cita) => {
+        if (vigente) setCitaActual(cita);
+      })
+      .catch((error: unknown) => {
+        if (!vigente) return;
+        setTipoError(error instanceof CitaApiError ? error.tipo : 'NETWORK_ERROR');
+      })
+      .finally(() => {
+        if (vigente) setCargando(false);
+      });
+
+    return () => {
+      vigente = false;
+    };
+  }, [citaId, intento]);
 
   const renderEstadoBadge = (estado: EstadoCita) => {
     const config = {
@@ -189,7 +176,7 @@ export const DetalleCitaPage: React.FC = () => {
       {/* Contenido Principal */}
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 16px' }}>
         <div style={{ marginBottom: '16px' }}>
-          <button style={{ border: 'none', background: 'none', color: '#0d9488', fontWeight: '600', fontSize: '13px', cursor: 'pointer', padding: 0 }}>
+          <button type="button" onClick={() => navigate('/cliente/citas')} style={{ border: 'none', background: 'none', color: '#0d5c75', fontWeight: '600', fontSize: '13px', cursor: 'pointer', padding: 0, minHeight: '44px' }}>
             ‹ Volver a mis citas
           </button>
           <p style={{ margin: '8px 0 2px 0', fontSize: '13px', color: '#64748b' }}>
@@ -205,19 +192,11 @@ export const DetalleCitaPage: React.FC = () => {
           {citaActual && renderEstadoBadge(citaActual.estado)}
         </div>
 
-        {hasAuthError ? (
-          <div style={{ backgroundColor: '#fef2f2', border: '1px solid #fca5a5', borderRadius: '12px', padding: '32px', textAlign: 'center', color: '#991b1b' }}>
-            <h3 style={{ fontSize: '18px', fontWeight: '700', margin: '0 0 8px 0' }}>Acceso denegado</h3>
-            <p style={{ margin: 0, fontSize: '14px' }}>No tienes permisos para consultar la información de esta cita o pertenece a otro cliente.</p>
-            <button onClick={() => setHasAuthError(false)} style={{ marginTop: '16px', padding: '8px 16px', backgroundColor: '#991b1b', color: '#fff', border: 'none', borderRadius: '6px', fontWeight: '600', cursor: 'pointer' }}>
-              Volver a mis citas
-            </button>
-          </div>
-        ) : !citaActual ? (
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '12px', padding: '32px', textAlign: 'center', border: '1px solid #e2e8f0' }}>
-            <p style={{ color: '#64748b', margin: 0 }}>La cita solicitada no fue encontrada o no existe.</p>
-          </div>
-        ) : (
+        {cargando ? (
+          <DetalleCitaSkeleton />
+        ) : tipoError ? (
+          <DetalleCitaFeedback tipoError={tipoError} onReintentar={() => setIntento((actual) => actual + 1)} />
+        ) : citaActual ? (
           <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '24px', alignItems: 'start' }}>
             
             {/* Selector Lateral */}
@@ -227,7 +206,7 @@ export const DetalleCitaPage: React.FC = () => {
 
               <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                 {MOCK_CITAS.map((item) => {
-                  const isSelected = item.id === selectedCitaId;
+                  const isSelected = item.id === citaId;
                   return (
                     <div
                       key={item.id}
@@ -362,9 +341,7 @@ export const DetalleCitaPage: React.FC = () => {
 
               {/* Acciones */}
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px' }}>
-                <button style={{ padding: '10px 20px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#334155', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>
-                  Descargar comprobante
-                </button>
+                
 
                 {citaActual.estado !== 'COMPLETADA' && citaActual.estado !== 'CANCELADA' && (
                   <button style={{ padding: '10px 20px', border: '1px solid #fca5a5', backgroundColor: '#ffffff', color: '#b91c1c', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>
@@ -375,7 +352,7 @@ export const DetalleCitaPage: React.FC = () => {
 
             </div>
           </div>
-        )}
+        ) : null}
       </main>
 
       {/* MODAL DETALLADO DE FIGMA: Ficha del Profesional */}
