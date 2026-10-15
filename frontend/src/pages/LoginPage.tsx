@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BackToHomeButton } from '../components/BackToHomeButton';
+import { Logo } from '../components/Logo';
 import { loginUser } from '../services/api';
 
 export default function LoginPage() {
@@ -33,7 +34,7 @@ export default function LoginPage() {
         <div className="mb-5 flex justify-end">
           <BackToHomeButton />
         </div>
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-600">VetAgenda</p>
+        <Logo />
         <h1 className="mt-4 text-3xl font-black text-slate-900">Iniciar sesión</h1>
         <p className="mt-2 text-sm text-slate-500">
           Debes iniciar sesión para consultar el catálogo de servicios.
