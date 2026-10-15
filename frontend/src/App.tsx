@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import LandingPage from './LandingPage';
 import RegisterPage from './RegisterPage';
 import LoginPage from './pages/LoginPage';
@@ -8,6 +8,7 @@ import { CatalogoServiciosPage } from './pages/CatalogoServiciosPage';
 import { RegisterServicePage } from './pages/RegisterServicePage';
 import { VeterinarianAppointmentsPage } from './pages/VeterinarianAppointmentsPage';
 import { AvailabilityPage } from './pages/AvailabilityPage';
+import { DetalleCitaPage } from './pages/DetalleCitaPage';
 
 function App() {
   return (
@@ -23,6 +24,9 @@ function App() {
         <Route path="/catalogo" element={<CatalogoServiciosPage />} />
         <Route path="/veterinario/agenda" element={<VeterinarianAppointmentsPage />} />
         <Route path="/disponibilidad" element={<AvailabilityPage />} />
+        <Route path="/cliente/citas/:id" element={<DetalleCitaPage />} />
+        <Route path="/detalle-cita/:id" element={<DetalleCitaPage />} />
+        <Route path="/detalle-cita" element={<Navigate to="/cliente/citas/1" replace />} />
       </Routes>
     </BrowserRouter>
   );
