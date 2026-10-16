@@ -150,3 +150,50 @@ VALUES (4, 'Cirugía Cardíaca', 'Procedimiento cardíaco especializado', 250000
 
 INSERT INTO servicio (veterinario_id, nombre, descripcion, precio, duracion_minutos)
 VALUES (4, 'Rehabilitación', 'Terapia física y rehabilitación', 180000.00, 60);
+
+-- =============================================
+-- V8: Disponibilidad del veterinario (días y franjas horarias)
+-- HU: Como veterinario, quiero configurar mis días y franjas horarias
+--     de atención para evitar cruces de agenda.
+-- =============================================
+
+-- Necesaria para la restricción de exclusión que impide franjas solapadas
+CREATE EXTENSION IF NOT EXISTS btree_gist;
+
+CREATE TABLE franja_horaria (
+    id BIGSERIAL PRIMARY KEY,
+    veterinario_id BIGINT NOT NULL,
+    dia_semana VARCHAR(10) NOT NULL,
+    hora_inicio TIME NOT NULL,
+    hora_fin TIME NOT NULL,
+    activo BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_franja_veterinario
+        FOREIGN KEY (veterinario_id)
+        REFERENCES veterinario(id)
+        ON DELETE CASCADE,
+    CONSTRAINT chk_franja_dia
+        CHECK (dia_semana IN ('LUNES', 'MARTES', 'MIERCOLES', 'JUEVES', 'VIERNES', 'SABADO', 'DOMINGO')),
+    -- Escenario: la hora de finalización debe ser posterior a la de inicio
+    CONSTRAINT chk_franja_rango
+        CHECK (hora_fin > hora_inicio),
+    -- Evita cruces de agenda: dos franjas activas del mismo veterinario y día no pueden solaparse
+    CONSTRAINT excl_franja_sin_cruces
+        EXCLUDE USING gist (
+            veterinario_id WITH =,
+            dia_semana WITH =,
+            tsrange(DATE '2000-01-01' + hora_inicio, DATE '2000-01-01' + hora_fin, '[)') WITH &&
+        ) WHERE (activo)
+);
+
+CREATE INDEX idx_franja_veterinario_dia ON franja_horaria(veterinario_id, dia_semana);
+
+-- Datos de prueba: disponibilidad de ejemplo
+INSERT INTO franja_horaria (veterinario_id, dia_semana, hora_inicio, hora_fin) VALUES
+    (1, 'LUNES',     '08:00', '12:00'),
+    (1, 'LUNES',     '14:00', '18:00'),
+    (1, 'MIERCOLES', '08:00', '12:00'),
+    (1, 'VIERNES',   '09:00', '13:00'),
+    (2, 'MARTES',    '09:00', '17:00'),
+    (2, 'JUEVES',    '09:00', '12:00');

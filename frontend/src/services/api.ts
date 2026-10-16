@@ -511,7 +511,7 @@ export type DisponibilidadResultado = {
 };
 
 const AVAILABILITY_STORAGE_KEY = 'vetagenda-disponibilidad';
-const FALLBACK_STATUSES = [404, 405, 501];
+const FALLBACK_STATUSES = [404, 405, 500, 501, 502, 503];
 
 export const generarIdFranja = () => `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
@@ -589,7 +589,7 @@ export async function fetchVetAvailability(veterinarioId: number): Promise<Dispo
   }
 
   if (!response.ok) {
-    throw new Error((await extraerMensaje(response)) || 'No se pudo consultar la disponibilidad del veterinario.');
+    return { dias: getStoredAvailability(veterinarioId), origen: 'local' };
   }
 
   const dias = normalizarDisponibilidad(await response.json());
@@ -627,23 +627,20 @@ export async function saveVetAvailability(
     body: JSON.stringify(payload),
   });
 
-  if (!response) {
+  if (!response || FALLBACK_STATUSES.includes(response.status)) {
     setStoredAvailability(veterinarioId, guardadoLocal);
     return { dias: guardadoLocal, origen: 'local' };
   }
 
   if (!response.ok) {
-    const mensaje = await extraerMensaje(response);
-    if (!mensaje && FALLBACK_STATUSES.includes(response.status)) {
-      setStoredAvailability(veterinarioId, guardadoLocal);
-      return { dias: guardadoLocal, origen: 'local' };
+    if (response.status === 400) {
+      const mensaje = await extraerMensaje(response);
+      throw new Error(
+        mensaje || 'El rango de horario no es válido o existen franjas que se cruzan.',
+      );
     }
-    throw new Error(
-      mensaje ||
-        (response.status === 400
-          ? 'El rango de horario no es válido o existen franjas que se cruzan.'
-          : 'No se pudo guardar la disponibilidad.'),
-    );
+    setStoredAvailability(veterinarioId, guardadoLocal);
+    return { dias: guardadoLocal, origen: 'local' };
   }
 
   // El backend puede devolver la disponibilidad con ids definitivos o solo un mensaje
@@ -669,13 +666,9 @@ export async function deleteAvailabilitySlot(veterinarioId: number, franjaId: st
         { method: 'DELETE', headers: { Accept: 'application/json' } },
       );
 
-  if (!response || (FALLBACK_STATUSES.includes(response.status) && !(await extraerMensaje(response.clone())))) {
+  if (!response || FALLBACK_STATUSES.includes(response.status) || !response.ok) {
     quitarLocal();
     return 'local';
-  }
-
-  if (!response.ok) {
-    throw new Error((await extraerMensaje(response)) || 'No se pudo eliminar la franja horaria.');
   }
 
   quitarLocal();
