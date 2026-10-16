@@ -18,9 +18,11 @@ export default function LoginPage() {
 
     try {
       const response = await loginUser(email, password);
-      const token = response.token;
+      if (!response?.token) {
+        throw new Error('El servidor no devolvió un token de acceso.');
+      }
       localStorage.setItem('vetagenda_session', 'true');
-      localStorage.setItem('vetagenda_token', token);
+      localStorage.setItem('vetagenda_token', response.token);
       setError('');
       navigate('/catalogo');
     } catch (error: unknown) {

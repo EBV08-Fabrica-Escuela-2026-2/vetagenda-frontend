@@ -5,26 +5,21 @@ export type EstadoCita = 'PROGRAMADA' | 'CONFIRMADA' | 'COMPLETADA' | 'CANCELADA
 export interface Profesional {
   id: string;
   nombre: string;
-  titulo: string;
-  especialidad: string;
-  numeroLicencia: string;
-  experiencia: string;
-  fotoUrl: string;
+  especialidad?: string;
+  fotoUrl?: string;
 }
 
 export interface Mascota {
   nombre: string;
   especieRaza: string;
   edad: string;
-  avatarBg: string;
 }
 
 export interface Cita {
   id: string;
   codigo: string;
-  clienteOwnerId: string;
   servicio: string;
-  categoriaServicio: string;
+  categoriaServicio?: string;
   fecha: string;
   hora: string;
   duracion: string;
@@ -45,6 +40,76 @@ export class CitaApiError extends Error {
     super(message);
     this.name = 'CitaApiError';
   }
+}
+
+type CitaDetalleApi = {
+  id: number;
+  codigo: string;
+  estado: string;
+  fechaHoraInicio: string;
+  fechaHoraFin: string;
+  mascota: {
+    nombre: string;
+    especie: string;
+    raza: string;
+    edad: number;
+  };
+  servicio: {
+    nombre: string;
+    categoria?: string;
+    precio: number;
+    duracionMinutos: number;
+    indicacionesPrevias?: string;
+  };
+  profesional: {
+    id: number;
+    nombre: string;
+    especialidad?: string;
+    fotoUrl?: string;
+  };
+};
+
+function normalizarEstado(estado: string): EstadoCita {
+  if (estado === 'ANULADA' || estado.startsWith('CANCELADA')) return 'CANCELADA';
+  if (estado === 'COMPLETADA') return 'COMPLETADA';
+  if (estado === 'PROGRAMADA' || estado === 'PENDIENTE') return 'PROGRAMADA';
+  if (estado === 'CONFIRMADA') return 'CONFIRMADA';
+  throw new Error('El backend devolvió un estado de cita no reconocido.');
+}
+
+function mapearDetalle(datos: CitaDetalleApi): Cita {
+  const inicio = new Date(datos.fechaHoraInicio);
+  const especieRaza = [datos.mascota.especie, datos.mascota.raza, `${datos.mascota.edad} años`]
+    .filter(Boolean)
+    .join(' · ');
+  const indicaciones = datos.servicio.indicacionesPrevias
+    ?.split(/\r?\n/)
+    .map((indicacion) => indicacion.trim())
+    .filter(Boolean);
+
+  return {
+    id: String(datos.id),
+    codigo: datos.codigo,
+    servicio: datos.servicio.nombre,
+    categoriaServicio: datos.servicio.categoria,
+    fecha: new Intl.DateTimeFormat('es-CO', { dateStyle: 'full' }).format(inicio),
+    hora: new Intl.DateTimeFormat('es-CO', { timeStyle: 'short' }).format(inicio),
+    duracion: `${datos.servicio.duracionMinutos} min`,
+    costo: Number(datos.servicio.precio),
+    estado: normalizarEstado(datos.estado),
+    mascota: {
+      nombre: datos.mascota.nombre,
+      especieRaza,
+      edad: `${datos.mascota.edad} años`,
+    },
+    profesional: {
+      id: String(datos.profesional.id),
+      nombre: datos.profesional.nombre,
+      especialidad: datos.profesional.especialidad,
+      fotoUrl: datos.profesional.fotoUrl,
+    },
+    indicacionesPrevias: indicaciones,
+  };
 }
 
 export async function obtenerDetalleCita(citaId: string, token?: string): Promise<Cita> {
@@ -84,7 +149,7 @@ export async function obtenerDetalleCita(citaId: string, token?: string): Promis
       throw new Error('Respuesta inválida');
     }
 
-    return datos as Cita;
+    return mapearDetalle(datos as CitaDetalleApi);
   } catch {
     throw new CitaApiError('NETWORK_ERROR', 'El servidor devolvió una respuesta inválida.');
   }
