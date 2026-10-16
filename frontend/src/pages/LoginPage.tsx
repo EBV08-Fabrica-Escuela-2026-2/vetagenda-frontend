@@ -18,13 +18,13 @@ export default function LoginPage() {
 
     try {
       const response = await loginUser(email, password);
-      const token = response?.token || 'offline-token';
+      const token = response.token;
       localStorage.setItem('vetagenda_session', 'true');
       localStorage.setItem('vetagenda_token', token);
       setError('');
       navigate('/catalogo');
-    } catch {
-      setError('No fue posible iniciar sesión. Intenta nuevamente.');
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'No fue posible iniciar sesión. Intenta nuevamente.');
     }
   };
 

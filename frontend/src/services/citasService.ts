@@ -89,3 +89,149 @@ export async function obtenerDetalleCita(citaId: string, token?: string): Promis
     throw new CitaApiError('NETWORK_ERROR', 'El servidor devolvió una respuesta inválida.');
   }
 }
+
+export interface CitaReprogramacionDetalle {
+  id: number;
+  codigo: string;
+  estado: string;
+  fechaHoraInicio: string;
+  fechaHoraFin: string;
+  puedeCancelarse: boolean;
+  mascota: {
+    id: number;
+    nombre: string;
+    especie: string;
+    raza: string;
+    edad: number;
+    sexo: string;
+  };
+  servicio: {
+    id: number;
+    nombre: string;
+    categoria: string;
+    precio: number;
+    duracionMinutos: number;
+    indicacionesPrevias: string;
+  };
+  profesional: {
+    id: number;
+    nombre: string;
+    especialidad: string;
+    fotoUrl: string | null;
+  };
+}
+
+export interface FranjaHorariaDisponible {
+  horaInicio: string;
+  horaFin: string;
+}
+
+export interface DisponibilidadReprogramacion {
+  servicioId: number;
+  servicioNombre: string;
+  duracionMinutos: number;
+  veterinarioId: number;
+  veterinarioNombre: string;
+  fecha: string;
+  hayDisponibilidad: boolean;
+  horariosDisponibles: FranjaHorariaDisponible[];
+  mensaje: string | null;
+  fechaDisponibleMasCercana: string | null;
+}
+
+export interface ReprogramacionCitaRespuesta {
+  mensaje: string;
+  fechaHoraAnterior: string;
+  cita: {
+    id: number;
+    mascotaNombre: string;
+    veterinarioNombre: string;
+    servicioNombre: string;
+    fechaHoraInicio: string;
+    fechaHoraFin: string;
+    estado: string;
+    etiquetaEstado: string;
+    cupoLiberado: boolean;
+    createdAt: string;
+  };
+}
+
+export class ReprogramacionApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number | null,
+  ) {
+    super(message);
+    this.name = 'ReprogramacionApiError';
+  }
+}
+
+async function solicitarReprogramacionApi<T>(
+  url: string,
+  token: string | undefined,
+  init?: RequestInit,
+): Promise<T> {
+  let response: Response;
+  try {
+    response = await fetch(url, {
+      ...init,
+      headers: {
+        Accept: 'application/json',
+        ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
+        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        ...init?.headers,
+      },
+    });
+  } catch {
+    throw new ReprogramacionApiError('No fue posible conectar con el servidor.', null);
+  }
+
+  const respuesta: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const mensaje =
+      respuesta && typeof respuesta === 'object' && 'mensaje' in respuesta && typeof respuesta.mensaje === 'string'
+        ? respuesta.mensaje
+        : response.status === 401 || response.status === 403
+          ? 'Tu sesión no está autorizada para reprogramar esta cita.'
+          : 'No fue posible completar la operación.';
+    throw new ReprogramacionApiError(mensaje, response.status);
+  }
+
+  if (respuesta === null) {
+    throw new ReprogramacionApiError('El servidor devolvió una respuesta inválida.', response.status);
+  }
+
+  return respuesta as T;
+}
+
+export function obtenerCitaParaReprogramar(citaId: string, token?: string): Promise<CitaReprogramacionDetalle> {
+  return solicitarReprogramacionApi(`${API_BASE_URL}/citas/${encodeURIComponent(citaId)}`, token);
+}
+
+export function consultarDisponibilidadReprogramacion(
+  citaId: string,
+  fecha: string,
+  token?: string,
+): Promise<DisponibilidadReprogramacion> {
+  const query = new URLSearchParams({ fecha });
+  return solicitarReprogramacionApi(
+    `${API_BASE_URL}/citas/${encodeURIComponent(citaId)}/disponibilidad?${query.toString()}`,
+    token,
+  );
+}
+
+export function reprogramarCita(
+  citaId: string,
+  nuevaFecha: string,
+  nuevaHoraInicio: string,
+  token?: string,
+): Promise<ReprogramacionCitaRespuesta> {
+  return solicitarReprogramacionApi(
+    `${API_BASE_URL}/citas/${encodeURIComponent(citaId)}/reprogramar`,
+    token,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ nuevaFecha, nuevaHoraInicio }),
+    },
+  );
+}
