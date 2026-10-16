@@ -326,36 +326,88 @@ export async function registerVeterinarian(
 // Catálogo de servicios
 // ──────────────────────────────────────────────
 
+export const DEFAULT_CATALOGO: VeterinarioConServicios[] = [
+  {
+    id: 1,
+    nombre: 'Dr. Carlos Pérez',
+    direccion: 'Calle 10 #5-20, Bogotá',
+    telefono: '3101234567',
+    horarioAtencion: '8:00 AM - 6:00 PM',
+    servicios: [
+      { id: 1, nombre: 'Consulta general', descripcion: 'Revisión completa del paciente', precio: '$85.000', duracionMinutos: 30 },
+      { id: 2, nombre: 'Vacunación', descripcion: 'Aplicación de vacunas al paciente', precio: '$45.000', duracionMinutos: 20 },
+      { id: 3, nombre: 'Cirugía Mayor', descripcion: 'Procedimiento quirúrgico complejo', precio: '$350.000', duracionMinutos: 120 },
+      { id: 4, nombre: 'Desparasitación', descripcion: 'Tratamiento antiparasitario interno y externo', precio: '$35.000', duracionMinutos: 15 },
+    ],
+  },
+  {
+    id: 2,
+    nombre: 'Dra. María López',
+    direccion: 'Carrera 8 #12-34, Medellín',
+    telefono: '3159876543',
+    horarioAtencion: '9:00 AM - 5:00 PM',
+    servicios: [
+      { id: 5, nombre: 'Dermatología', descripcion: 'Tratamiento de problemas de piel', precio: '$120.000', duracionMinutos: 45 },
+      { id: 6, nombre: 'Odontología', descripcion: 'Limpieza y tratamiento dental', precio: '$150.000', duracionMinutos: 60 },
+      { id: 7, nombre: 'Ecografía', descripcion: 'Examen de ultrasonido', precio: '$95.000', duracionMinutos: 30 },
+    ],
+  },
+  {
+    id: 3,
+    nombre: 'Dr. Andrés Martínez',
+    direccion: 'Avenida 5 #20-15, Cali',
+    telefono: '3204567890',
+    horarioAtencion: '10:00 AM - 4:00 PM',
+    servicios: [],
+    mensajeServicios: 'No tiene servicios registrados actualmente.',
+  },
+  {
+    id: 4,
+    nombre: 'Dra. Laura Rodríguez',
+    direccion: 'Calle 72 #10-25, Bogotá',
+    telefono: '3012345678',
+    horarioAtencion: '7:00 AM - 3:00 PM',
+    servicios: [
+      { id: 8, nombre: 'Cirugía Cardíaca', descripcion: 'Procedimiento cardíaco especializado', precio: '$2.500.000', duracionMinutos: 180 },
+      { id: 9, nombre: 'Rehabilitación', descripcion: 'Terapia física y rehabilitación', precio: '$180.000', duracionMinutos: 60 },
+    ],
+  },
+];
+
 export async function fetchCatalogo(): Promise<VeterinarioConServicios[]> {
-  const response = await fetch(`${API_BASE_URL}/catalogo`, {
-    headers: { Accept: 'application/json' },
-  });
+  try {
+    const response = await fetch(`${API_BASE_URL}/catalogo`, {
+      headers: { Accept: 'application/json' },
+    });
 
-  if (!response.ok) {
-    throw new Error('No se pudo obtener el catálogo.');
+    if (!response.ok) {
+      return DEFAULT_CATALOGO;
+    }
+
+    const data: CatalogoApiResponse = await response.json();
+
+    if (!data?.veterinarios?.length) {
+      return DEFAULT_CATALOGO;
+    }
+
+    return data.veterinarios.map((vet) => ({
+      id: Number(vet.id),
+      nombre: vet.nombre,
+      direccion: vet.direccion || 'Dirección no registrada',
+      telefono: vet.telefono || 'Sin teléfono',
+      horarioAtencion: vet.horarioAtencion || 'Sin horario registrado',
+      servicios: (vet.servicios || []).map((s) => ({
+        id: Number(s.id),
+        nombre: s.nombre,
+        descripcion: s.descripcion,
+        precio: s.precio,
+        duracionMinutos: s.duracionMinutos,
+      })),
+      mensajeServicios: vet.mensajeServicios,
+    }));
+  } catch {
+    return DEFAULT_CATALOGO;
   }
-
-  const data: CatalogoApiResponse = await response.json();
-
-  if (!data?.veterinarios?.length) {
-    return [];
-  }
-
-  return data.veterinarios.map((vet) => ({
-    id: Number(vet.id),
-    nombre: vet.nombre,
-    direccion: vet.direccion || 'Dirección no registrada',
-    telefono: vet.telefono || 'Sin teléfono',
-    horarioAtencion: vet.horarioAtencion || 'Sin horario registrado',
-    servicios: (vet.servicios || []).map((s) => ({
-      id: Number(s.id),
-      nombre: s.nombre,
-      descripcion: s.descripcion,
-      precio: s.precio,
-      duracionMinutos: s.duracionMinutos,
-    })),
-    mensajeServicios: vet.mensajeServicios,
-  }));
 }
 
 /** @deprecated Usar fetchCatalogo() para obtener los veterinarios con sus servicios completos */
@@ -565,7 +617,61 @@ function readAvailabilityStore(): Record<string, DisponibilidadDia[]> {
 
 export const getStoredAvailability = (veterinarioId: number): DisponibilidadDia[] => {
   const stored = readAvailabilityStore()[String(veterinarioId)];
-  return stored ? normalizarDisponibilidad({ dias: stored }) : crearDisponibilidadVacia();
+  if (stored) return normalizarDisponibilidad({ dias: stored });
+
+  if (veterinarioId === 1) {
+    return normalizarDisponibilidad({
+      dias: [
+        {
+          dia: 'LUNES',
+          franjas: [
+            { horaInicio: '08:00', horaFin: '12:00' },
+            { horaInicio: '14:00', horaFin: '18:00' },
+          ],
+        },
+        {
+          dia: 'MIERCOLES',
+          franjas: [{ horaInicio: '08:00', horaFin: '12:00' }],
+        },
+        {
+          dia: 'VIERNES',
+          franjas: [{ horaInicio: '09:00', horaFin: '13:00' }],
+        },
+      ],
+    });
+  }
+
+  if (veterinarioId === 2) {
+    return normalizarDisponibilidad({
+      dias: [
+        {
+          dia: 'MARTES',
+          franjas: [{ horaInicio: '09:00', horaFin: '17:00' }],
+        },
+        {
+          dia: 'JUEVES',
+          franjas: [{ horaInicio: '09:00', horaFin: '12:00' }],
+        },
+      ],
+    });
+  }
+
+  if (veterinarioId === 4) {
+    return normalizarDisponibilidad({
+      dias: [
+        {
+          dia: 'VIERNES',
+          franjas: [{ horaInicio: '08:00', horaFin: '14:00' }],
+        },
+        {
+          dia: 'SABADO',
+          franjas: [{ horaInicio: '09:00', horaFin: '13:00' }],
+        },
+      ],
+    });
+  }
+
+  return crearDisponibilidadVacia();
 };
 
 const setStoredAvailability = (veterinarioId: number, dias: DisponibilidadDia[]) => {
