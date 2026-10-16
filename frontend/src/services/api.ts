@@ -177,22 +177,41 @@ export const setStoredServices = (services: CatalogService[]) => {
 // Autenticación
 // ──────────────────────────────────────────────
 
-export async function loginUser(email: string, password: string) {
-  const response = await fetch(`${API_BASE_URL}/auth/login`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-    body: JSON.stringify({ correo: email, password }),
-  });
+export type LoginResponse = {
+  mensaje: string;
+  token: string;
+  tipoToken: string;
+  expiraEnMs: number;
+};
 
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData?.mensaje || errorData?.message || 'No se pudo autenticar.');
+export async function loginUser(email: string, password: string): Promise<LoginResponse> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify({ correo: email, password }),
+    });
+  } catch {
+    throw new Error('No fue posible conectar con el servidor de autenticación.');
   }
 
-  return response.json();
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const mensaje = data && typeof data === 'object' && 'mensaje' in data && typeof data.mensaje === 'string'
+      ? data.mensaje
+      : 'No se pudo iniciar sesión. Verifica tus credenciales.';
+    throw new Error(mensaje);
+  }
+
+  if (!data || typeof data !== 'object' || !('token' in data) || typeof data.token !== 'string') {
+    throw new Error('El servidor no devolvió un token de acceso válido.');
+  }
+
+  return data as LoginResponse;
 }
 
 // ──────────────────────────────────────────────

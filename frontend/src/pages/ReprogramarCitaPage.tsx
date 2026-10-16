@@ -1,485 +1,383 @@
-import React, { useState } from 'react';
-import { BrandHeader } from '../components/BrandHeader';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { BackToHomeButton } from '../components/BackToHomeButton';
+import { BrandHeader } from '../components/BrandHeader';
+import {
+  consultarDisponibilidadReprogramacion,
+  obtenerCitaParaReprogramar,
+  ReprogramacionApiError,
+  reprogramarCita,
+  type CitaReprogramacionDetalle,
+  type DisponibilidadReprogramacion,
+} from '../services/citasService';
 
-// Interfaces de la HU13
-export interface CitaReprogramable {
-  codigoReserva: string;
-  servicio: string;
-  duracion: string;
-  costo: string;
-  fechaLegible: string;
-  fechaIso: string; // Para calcular las 4 horas de anticipación
-  hora: string;
-  paciente: {
-    nombre: string;
-    especieRaza: string;
-    avatarBg: string;
-  };
-  profesional: {
-    nombre: string;
-    especialidad: string;
-  };
-  estado: 'CONFIRMADA' | 'PROGRAMADA' | 'COMPLETADA' | 'CANCELADA';
+function inicioDelDia(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
 }
 
-// Interfaz para días del calendario
-interface DiaCalendario {
-  numero: number;
-  esMesActual: boolean;
-  tieneHorariosDisponibles: boolean;
+function fechaComoClave(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
 }
 
-export const ReprogramarCitaPage: React.FC = () => {
-  // Estado inicial de la cita basada en la imagen de Figma
-  const [cita, setCita] = useState<CitaReprogramable>({
-    codigoReserva: 'VA-141025-1000',
-    servicio: 'Consulta General Canina',
-    duracion: '30 minutos',
-    costo: '$85.000 COP',
-    fechaLegible: 'Martes, 14 de octubre',
-    fechaIso: '2026-10-14T10:00:00', // Fecha futura válida
-    hora: '10:00 a. m.',
-    paciente: {
-      nombre: 'Max',
-      especieRaza: 'Canino · Labrador',
-      avatarBg: '#ffedd5', // Fondo beige/naranja suave
-    },
-    profesional: {
-      nombre: 'Dr. Camilo Durán',
-      especialidad: 'Medicina veterinaria general',
-    },
-    estado: 'CONFIRMADA',
-  });
+function fechaDesdeClave(value: string) {
+  const [year, month, day] = value.split('-').map(Number);
+  return new Date(year, month - 1, day);
+}
 
-  // Estados para el Modal de Reprogramación
-  const [showModal, setShowModal] = useState<boolean>(false);
-  const [selectedDia, setSelectedDia] = useState<number>(16); // Día seleccionado en la imagen (16 de Octubre)
-  const [selectedHora, setSelectedHora] = useState<string | null>('11:30 a. m.'); // Horario seleccionado en la imagen
-  const [mensajeExito, setMensajeExito] = useState<string | null>(null);
+function fechaLegible(value: string) {
+  return new Intl.DateTimeFormat('es-CO', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  }).format(fechaDesdeClave(value));
+}
 
-  // Tarea 2: Validación de la regla de negocio de 4 horas de anticipación
-  const calcularHorasFaltantes = (fechaIsoStr: string): number => {
-    const fechaCita = new Date(fechaIsoStr).getTime();
-    const ahora = new Date().getTime();
-    const diferenciaMs = fechaCita - ahora;
-    return diferenciaMs / (1000 * 60 * 60);
-  };
-
-  const horasFaltantes = calcularHorasFaltantes(cita.fechaIso);
-  const esReprogramable = horasFaltantes >= 4;
-
-  // Días exactos del calendario de OCTUBRE 2026 (El 1 de Octubre cae Jueves)
-  const diasOctubre: DiaCalendario[] = [
-    // Semana 1 (Septiembre)
-    { numero: 28, esMesActual: false, tieneHorariosDisponibles: false },
-    { numero: 29, esMesActual: false, tieneHorariosDisponibles: false },
-    { numero: 30, esMesActual: false, tieneHorariosDisponibles: false },
-    { numero: 1, esMesActual: true, tieneHorariosDisponibles: false },
-    { numero: 2, esMesActual: true, tieneHorariosDisponibles: false },
-    { numero: 3, esMesActual: true, tieneHorariosDisponibles: false },
-    { numero: 4, esMesActual: true, tieneHorariosDisponibles: false },
-
-    // Semana 2
-    { numero: 5, esMesActual: true, tieneHorariosDisponibles: false },
-    { numero: 6, esMesActual: true, tieneHorariosDisponibles: false },
-    { numero: 7, esMesActual: true, tieneHorariosDisponibles: false },
-    { numero: 8, esMesActual: true, tieneHorariosDisponibles: false },
-    { numero: 9, esMesActual: true, tieneHorariosDisponibles: false },
-    { numero: 10, esMesActual: true, tieneHorariosDisponibles: false },
-    { numero: 11, esMesActual: true, tieneHorariosDisponibles: false },
-
-    // Semana 3
-    { numero: 12, esMesActual: true, tieneHorariosDisponibles: false },
-    { numero: 13, esMesActual: true, tieneHorariosDisponibles: false },
-    { numero: 14, esMesActual: true, tieneHorariosDisponibles: false },
-    { numero: 15, esMesActual: true, tieneHorariosDisponibles: true },
-    { numero: 16, esMesActual: true, tieneHorariosDisponibles: true }, // Seleccionado por defecto
-    { numero: 17, esMesActual: true, tieneHorariosDisponibles: true },
-    { numero: 18, esMesActual: true, tieneHorariosDisponibles: false },
-
-    // Semana 4
-    { numero: 19, esMesActual: true, tieneHorariosDisponibles: false },
-    { numero: 20, esMesActual: true, tieneHorariosDisponibles: true },
-    { numero: 21, esMesActual: true, tieneHorariosDisponibles: true },
-    { numero: 22, esMesActual: true, tieneHorariosDisponibles: false },
-    { numero: 23, esMesActual: true, tieneHorariosDisponibles: true },
-    { numero: 24, esMesActual: true, tieneHorariosDisponibles: false },
-    { numero: 25, esMesActual: true, tieneHorariosDisponibles: false },
-
-    // Semana 5
-    { numero: 26, esMesActual: true, tieneHorariosDisponibles: false },
-    { numero: 27, esMesActual: true, tieneHorariosDisponibles: true },
-    { numero: 28, esMesActual: true, tieneHorariosDisponibles: false },
-    { numero: 29, esMesActual: true, tieneHorariosDisponibles: true },
-    { numero: 30, esMesActual: true, tieneHorariosDisponibles: false },
-    { numero: 31, esMesActual: true, tieneHorariosDisponibles: false },
-    { numero: 1, esMesActual: false, tieneHorariosDisponibles: false },
-  ];
-
-  // Función para determinar si el día seleccionado actualmente tiene turnos
-  const diaSeleccionadoObj = diasOctubre.find(
-    (d) => d.numero === selectedDia && d.esMesActual
+function horaLegible(value: string) {
+  const [hour, minute] = value.split(':').map(Number);
+  return new Intl.DateTimeFormat('es-CO', { timeStyle: 'short' }).format(
+    new Date(2000, 0, 1, hour, minute),
   );
-  const tieneTurnosElDiaSeleccionado = diaSeleccionadoObj?.tieneHorariosDisponibles ?? false;
+}
 
-  // Horarios para el día 16 de Octubre
-  const horariosDia16 = {
-    manana: [
-      { hora: '08:00 a. m.', disponible: true },
-      { hora: '09:00 a. m.', disponible: false }, // Ocupado
-      { hora: '10:30 a. m.', disponible: true },
-      { hora: '11:30 a. m.', disponible: true },
-    ],
-    tarde: [
-      { hora: '02:00 p. m.', disponible: true },
-      { hora: '03:00 p. m.', disponible: true },
-      { hora: '04:30 p. m.', disponible: false }, // Ocupado
-      { hora: '05:00 p. m.', disponible: true },
-    ],
-  };
+function construirDiasMes(month: Date) {
+  const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
+  const leadingDays = (firstDay.getDay() + 6) % 7;
+  const dayCount = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
 
-  const handleSelectDia = (dia: DiaCalendario) => {
-    if (!dia.esMesActual) return;
-    setSelectedDia(dia.numero);
-    // Escenario 3: Si selecciona un día sin disponibilidad, resetea el horario
-    if (!dia.tieneHorariosDisponibles) {
-      setSelectedHora(null);
+  return Array.from({ length: leadingDays + dayCount }, (_, index) => {
+    if (index < leadingDays) return null;
+    return new Date(month.getFullYear(), month.getMonth(), index - leadingDays + 1);
+  });
+}
+
+function mensajeError(error: unknown) {
+  if (error instanceof ReprogramacionApiError) return error.message;
+  return 'Ocurrió un error inesperado. Intenta nuevamente.';
+}
+
+export const ReprogramarCitaPage = () => {
+  const { citaId = '' } = useParams<{ citaId: string }>();
+  const navigate = useNavigate();
+  const hoy = useMemo(() => inicioDelDia(new Date()), []);
+  const hoyClave = fechaComoClave(hoy);
+
+  const [cita, setCita] = useState<CitaReprogramacionDetalle | null>(null);
+  const [cargandoCita, setCargandoCita] = useState(true);
+  const [errorCita, setErrorCita] = useState<string | null>(null);
+  const [intentoCita, setIntentoCita] = useState(0);
+  const [mesVisible, setMesVisible] = useState(() => new Date(hoy.getFullYear(), hoy.getMonth(), 1));
+  const [fechaSeleccionada, setFechaSeleccionada] = useState(hoyClave);
+  const [disponibilidad, setDisponibilidad] = useState<DisponibilidadReprogramacion | null>(null);
+  const [cargandoDisponibilidad, setCargandoDisponibilidad] = useState(false);
+  const [errorDisponibilidad, setErrorDisponibilidad] = useState<string | null>(null);
+  const [intentoDisponibilidad, setIntentoDisponibilidad] = useState(0);
+  const [horaSeleccionada, setHoraSeleccionada] = useState<string | null>(null);
+  const [guardando, setGuardando] = useState(false);
+  const [mensajeExito, setMensajeExito] = useState<string | null>(null);
+  const [errorGuardado, setErrorGuardado] = useState<string | null>(null);
+
+  useEffect(() => {
+    let vigente = true;
+    setCargandoCita(true);
+    setErrorCita(null);
+    setCita(null);
+
+    const token = localStorage.getItem('vetagenda_token') ?? undefined;
+    obtenerCitaParaReprogramar(citaId, token)
+      .then((resultado) => {
+        if (vigente) setCita(resultado);
+      })
+      .catch((error: unknown) => {
+        if (vigente) setErrorCita(mensajeError(error));
+      })
+      .finally(() => {
+        if (vigente) setCargandoCita(false);
+      });
+
+    return () => {
+      vigente = false;
+    };
+  }, [citaId, intentoCita]);
+
+  useEffect(() => {
+    if (!cita) return;
+    let vigente = true;
+    setCargandoDisponibilidad(true);
+    setDisponibilidad(null);
+    setErrorDisponibilidad(null);
+    setHoraSeleccionada(null);
+
+    const token = localStorage.getItem('vetagenda_token') ?? undefined;
+    consultarDisponibilidadReprogramacion(citaId, fechaSeleccionada, token)
+      .then((resultado) => {
+        if (vigente) setDisponibilidad(resultado);
+      })
+      .catch((error: unknown) => {
+        if (vigente) setErrorDisponibilidad(mensajeError(error));
+      })
+      .finally(() => {
+        if (vigente) setCargandoDisponibilidad(false);
+      });
+
+    return () => {
+      vigente = false;
+    };
+  }, [cita?.id, citaId, fechaSeleccionada, intentoDisponibilidad]);
+
+  const diasMes = useMemo(() => construirDiasMes(mesVisible), [mesVisible]);
+  const mesActual = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
+  const puedeIrAlMesAnterior = mesVisible > mesActual;
+  const horasFaltantes = cita
+    ? (new Date(cita.fechaHoraInicio).getTime() - Date.now()) / (60 * 60 * 1000)
+    : 0;
+  const esReprogramable = cita?.estado === 'CONFIRMADA' && horasFaltantes > 4;
+
+  async function confirmarReprogramacion() {
+    if (!cita || !horaSeleccionada || !esReprogramable) return;
+
+    setGuardando(true);
+    setErrorGuardado(null);
+    setMensajeExito(null);
+    const token = localStorage.getItem('vetagenda_token') ?? undefined;
+
+    try {
+      const respuesta = await reprogramarCita(citaId, fechaSeleccionada, horaSeleccionada, token);
+      setCita((actual) => actual
+        ? {
+            ...actual,
+            estado: respuesta.cita.estado,
+            fechaHoraInicio: respuesta.cita.fechaHoraInicio,
+            fechaHoraFin: respuesta.cita.fechaHoraFin,
+          }
+        : actual);
+      setMensajeExito(respuesta.mensaje);
+      setHoraSeleccionada(null);
+      setIntentoDisponibilidad((intento) => intento + 1);
+    } catch (error: unknown) {
+      setErrorGuardado(mensajeError(error));
+      if (error instanceof ReprogramacionApiError && error.status === 409) {
+        setIntentoDisponibilidad((intento) => intento + 1);
+      }
+    } finally {
+      setGuardando(false);
     }
-  };
-
-  const handleConfirmarReprogramacion = () => {
-  if (!selectedHora) return;
-
-  // Mapa de días de la semana según la posición del día en Octubre 2025/2026
-  // (Para Octubre 2026: el día 1 es Jueves, así que calculamos el nombre real del día)
-  const nombresDias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
-  
-  // Asumiendo Octubre de 2026 (o el año actual del calendario)
-  const fechaObjeto = new Date(2026, 9, selectedDia); // Mes 9 es Octubre en JavaScript (0-indexed)
-  const nombreDiaSemana = nombresDias[fechaObjeto.getDay()];
-
-  const nuevaFechaLegible = `${nombreDiaSemana}, ${selectedDia} de octubre`;
-
-  setCita((prev) => ({
-    ...prev,
-    fechaLegible: nuevaFechaLegible,
-    hora: selectedHora,
-  }));
-
-  setShowModal(false);
-  setMensajeExito(`¡Cita reprogramada con éxito para el ${nuevaFechaLegible} a las ${selectedHora}!`);
-};
+  }
 
   return (
-    <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: 'system-ui, sans-serif', padding: '32px 16px' }}>
-      <main style={{ maxWidth: '1000px', margin: '0 auto' }}>
-        <div className="flex items-center justify-between px-5 py-5 md:px-8 md:py-6">
-          <BrandHeader subtitle="Alta de Profesional Veterinario" />
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <span className="inline-block h-2.5 w-2.5 rounded-full bg-emerald-500" />
-              <span className="text-xs font-medium text-slate-500">Sistema activo</span>
-            </div>
+    <main className="min-h-screen bg-slate-50 px-4 py-8 text-slate-800 sm:px-6">
+      <div className="mx-auto max-w-6xl">
+        <header className="mb-6 flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
+          <BrandHeader subtitle="Reprogramar cita" />
+          <div className="flex items-center justify-between gap-4 sm:justify-end">
             <BackToHomeButton />
           </div>
+        </header>
+
+        <button
+          type="button"
+          onClick={() => navigate('/cliente/citas')}
+          className="mb-5 inline-flex min-h-11 items-center text-sm font-semibold text-[#0D5C75] hover:text-[#094356] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0D5C75]"
+        >
+          Volver a mis citas
+        </button>
+
+        <div className="mb-6">
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#0D5C75]">Gestión de cita</p>
+          <h1 className="mt-2 text-2xl font-bold text-slate-900">Reprogramar cita</h1>
+          <p className="mt-1 text-sm text-slate-600">Elige una fecha y una franja disponible para actualizar tu reserva.</p>
         </div>
 
-        <div style={{ marginBottom: '16px' }}>
-          <button style={{ border: 'none', background: 'none', color: '#0d9488', fontWeight: '600', fontSize: '14px', cursor: 'pointer', padding: 0 }}>
-            ‹ Volver a mis citas
-          </button>
-        </div>
-
-        {mensajeExito && (
-          <div style={{ backgroundColor: '#dcfce7', border: '1px solid #86efac', borderRadius: '10px', padding: '14px 20px', color: '#166534', fontSize: '14px', fontWeight: '600', marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span>✓ {mensajeExito}</span>
-            <button onClick={() => setMensajeExito(null)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#166534', fontWeight: 'bold' }}>✕</button>
+        {cargandoCita ? (
+          <div role="status" aria-label="Cargando cita" className="animate-pulse rounded-xl border border-slate-200 bg-white p-6">
+            <div className="h-5 w-44 rounded bg-slate-200" />
+            <div className="mt-5 h-24 rounded bg-slate-100" />
+            <span className="sr-only">Cargando información de la cita...</span>
           </div>
-        )}
-
-        <div style={{ marginBottom: '24px' }}>
-          <span style={{ fontSize: '13px', color: '#64748b', display: 'block', marginBottom: '4px' }}>Detalle de la cita</span>
-          <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a', margin: 0 }}>{cita.servicio}</h1>
-          <span style={{ fontSize: '13px', color: '#64748b', display: 'block', marginTop: '4px' }}>Código de reserva: {cita.codigoReserva}</span>
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: '24px', alignItems: 'start' }}>
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <div style={{ backgroundColor: '#f0fdf4', padding: '20px 24px', borderBottom: '1px solid #dc262600', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div>
-                <span style={{ fontSize: '11px', fontWeight: '800', color: '#0d9488', letterSpacing: '0.5px', textTransform: 'uppercase' }}>
-                  PRÓXIMA CITA
-                </span>
-                <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: '4px 0 2px 0' }}>{cita.fechaLegible}</h2>
-                <span style={{ fontSize: '13px', color: '#64748b' }}>{cita.hora} · {cita.duracion}</span>
+        ) : errorCita ? (
+          <section role="alert" className="rounded-xl border border-red-200 bg-white p-6">
+            <h2 className="font-bold text-slate-900">No se pudo cargar la cita</h2>
+            <p className="mt-2 text-sm text-slate-600">{errorCita}</p>
+            <button
+              type="button"
+              onClick={() => setIntentoCita((intento) => intento + 1)}
+              className="mt-4 min-h-11 rounded-lg bg-[#0D5C75] px-4 text-sm font-semibold text-white hover:bg-[#094356]"
+            >
+              Reintentar
+            </button>
+          </section>
+        ) : cita ? (
+          <>
+            {mensajeExito && (
+              <div role="status" className="mb-5 rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-900">
+                {mensajeExito}
               </div>
-              <span style={{ backgroundColor: '#dcfce7', color: '#15803d', fontSize: '11px', fontWeight: '700', padding: '4px 12px', borderRadius: '12px' }}>
-                • CONFIRMADA
-              </span>
-            </div>
+            )}
 
-            <div style={{ padding: '24px', display: 'flex', flexDirection: 'column', gap: '20px' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                  <div style={{ backgroundColor: cita.paciente.avatarBg, color: '#d97706', width: '44px', height: '44px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '13px' }}>
-                    MX
-                  </div>
-                  <div>
-                    <span style={{ fontSize: '11px', color: '#64748b', display: 'block' }}>Paciente</span>
-                    <strong style={{ fontSize: '14px', color: '#0f172a', display: 'block' }}>{cita.paciente.nombre}</strong>
-                    <span style={{ fontSize: '11px', color: '#64748b' }}>{cita.paciente.especieRaza}</span>
-                  </div>
-                </div>
-
-                <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                  <div style={{ backgroundColor: '#ccfbf1', color: '#0f766e', width: '44px', height: '44px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '18px' }}>
-                    👤
-                  </div>
-                  <div>
-                    <span style={{ fontSize: '11px', color: '#64748b', display: 'block' }}>Profesional asignado</span>
-                    <strong style={{ fontSize: '14px', color: '#0f172a', display: 'block' }}>{cita.profesional.nombre}</strong>
-                    <span style={{ fontSize: '11px', color: '#64748b' }}>{cita.profesional.especialidad}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <button
-                  disabled={!esReprogramable}
-                  onClick={() => setShowModal(true)}
-                  style={{
-                    backgroundColor: esReprogramable ? '#115e59' : '#cbd5e1',
-                    color: '#ffffff',
-                    border: 'none',
-                    padding: '12px 24px',
-                    borderRadius: '8px',
-                    fontWeight: '700',
-                    fontSize: '14px',
-                    cursor: esReprogramable ? 'pointer' : 'not-allowed',
-                  }}
-                >
-                  Reprogramar cita
-                </button>
-
-                {!esReprogramable && (
-                  <p style={{ marginTop: '10px', fontSize: '12px', color: '#b91c1c', backgroundColor: '#fef2f2', padding: '10px', borderRadius: '6px', border: '1px solid #fca5a5' }}>
-                    ⚠️ Por políticas de la clínica no se permiten cambios con menos de 4 horas de antelación. Por favor comunícate telefónicamente.
+            <section className="mb-6 rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+              <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.14em] text-[#0D5C75]">{cita.codigo}</p>
+                  <h2 className="mt-1 text-lg font-bold text-slate-900">{cita.servicio.nombre}</h2>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {cita.mascota.nombre} · {[cita.mascota.especie, cita.mascota.raza].filter(Boolean).join(' · ')}
                   </p>
-                )}
+                </div>
+                <div className="text-sm sm:text-right">
+                  <p className="font-semibold text-slate-800">{cita.profesional.nombre}</p>
+                  {cita.profesional.especialidad && <p className="mt-1 text-slate-600">{cita.profesional.especialidad}</p>}
+                  <p className="mt-2 text-slate-600">
+                    Actual: {new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(cita.fechaHoraInicio))}
+                  </p>
+                </div>
               </div>
-            </div>
-          </div>
+            </section>
 
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', border: '1px solid #e2e8f0', padding: '24px', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
-            <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a', margin: '0 0 16px 0' }}>Información del servicio</h3>
+            {!esReprogramable && (
+              <div role="note" className="mb-6 rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm text-amber-950">
+                Solo puedes cambiar una cita confirmada con más de cuatro horas de anticipación. El backend validará nuevamente esta regla al guardar.
+              </div>
+            )}
 
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-              <div>
-                <span style={{ fontSize: '12px', color: '#64748b', display: 'block' }}>Servicio</span>
-                <strong style={{ fontSize: '14px', color: '#0f172a' }}>{cita.servicio}</strong>
-              </div>
-
-              <div>
-                <span style={{ fontSize: '12px', color: '#64748b', display: 'block' }}>Duración</span>
-                <strong style={{ fontSize: '14px', color: '#0f172a' }}>{cita.duracion}</strong>
-              </div>
-
-              <div>
-                <span style={{ fontSize: '12px', color: '#64748b', display: 'block' }}>Costo estimado</span>
-                <strong style={{ fontSize: '14px', color: '#0f172a' }}>{cita.costo}</strong>
-              </div>
-            </div>
-          </div>
-        </div>
-      </main>
-
-      {showModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.65)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, backdropFilter: 'blur(2px)' }}>
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', maxWidth: '820px', width: '92%', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', padding: '28px' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '20px' }}>
-              <div>
-                <h2 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: 0 }}>Reprogramar Cita Médica</h2>
-                <p style={{ fontSize: '13px', color: '#64748b', margin: '4px 0 0 0' }}>Selecciona una nueva fecha y hora para {cita.paciente.nombre}.</p>
-              </div>
-              <button onClick={() => setShowModal(false)} style={{ border: 'none', background: 'none', fontSize: '18px', cursor: 'pointer', color: '#64748b' }}>
-                ✕
-              </button>
-            </div>
-
-            <div style={{ backgroundColor: '#f0fdf4', borderRadius: '12px', padding: '16px 20px', marginBottom: '24px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '16px' }}>
-              <div>
-                <span style={{ fontSize: '10px', fontWeight: '800', color: '#0d9488', letterSpacing: '0.5px' }}>CITA ACTUAL</span>
-                <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginTop: '4px' }}>Paciente</span>
-                <strong style={{ fontSize: '12px', color: '#0f172a' }}>{cita.paciente.nombre} · {cita.paciente.especieRaza}</strong>
-              </div>
-              <div>
-                <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginTop: '16px' }}>Servicio</span>
-                <strong style={{ fontSize: '12px', color: '#0f172a' }}>{cita.servicio}</strong>
-              </div>
-              <div>
-                <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginTop: '16px' }}>Veterinario asignado</span>
-                <strong style={{ fontSize: '12px', color: '#0f172a' }}>{cita.profesional.nombre}</strong>
-              </div>
-              <div>
-                <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginTop: '16px' }}>Horario actual</span>
-                <strong style={{ fontSize: '12px', color: '#0f172a' }}>{cita.fechaLegible}, {cita.hora}</strong>
-              </div>
-            </div>
-
-            <div style={{ display: 'grid', gridTemplateColumns: '1.1fr 1fr', gap: '20px', marginBottom: '20px' }}>
-              <div style={{ border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+            <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(280px,0.8fr)]">
+              <section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6" aria-labelledby="calendario-heading">
+                <div className="mb-5 flex items-center justify-between gap-3">
                   <div>
-                    <h4 style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', margin: 0 }}>Nueva fecha</h4>
-                    <span style={{ fontSize: '12px', color: '#64748b' }}>Octubre 2025</span>
+                    <h2 id="calendario-heading" className="font-bold text-slate-900">Nueva fecha</h2>
+                    <p className="mt-1 text-sm capitalize text-slate-600">
+                      {new Intl.DateTimeFormat('es-CO', { month: 'long', year: 'numeric' }).format(mesVisible)}
+                    </p>
                   </div>
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#64748b' }}>‹</button>
-                    <button style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#0d9488' }}>›</button>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      aria-label="Mes anterior"
+                      disabled={!puedeIrAlMesAnterior}
+                      onClick={() => setMesVisible(new Date(mesVisible.getFullYear(), mesVisible.getMonth() - 1, 1))}
+                      className="min-h-11 min-w-11 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                    >
+                      ‹
+                    </button>
+                    <button
+                      type="button"
+                      aria-label="Mes siguiente"
+                      onClick={() => setMesVisible(new Date(mesVisible.getFullYear(), mesVisible.getMonth() + 1, 1))}
+                      className="min-h-11 min-w-11 rounded-lg border border-slate-300 text-slate-700 hover:bg-slate-50"
+                    >
+                      ›
+                    </button>
                   </div>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', textAlign: 'center', fontSize: '11px', fontWeight: '600', color: '#94a3b8', marginBottom: '8px' }}>
-                  <span>Lun</span><span>Mar</span><span>Mié</span><span>Jue</span><span>Vie</span><span>Sáb</span><span>Dom</span>
+                <div className="grid grid-cols-7 gap-1 text-center text-xs font-semibold text-slate-500" aria-hidden="true">
+                  {['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map((dia) => <span key={dia} className="py-2">{dia}</span>)}
                 </div>
+                <div className="grid grid-cols-7 gap-1">
+                  {diasMes.map((dia, index) => {
+                    if (!dia) return <span key={`vacio-${index}`} aria-hidden="true" />;
+                    const clave = fechaComoClave(dia);
+                    const delMes = dia.getMonth() === mesVisible.getMonth();
+                    const deshabilitado = !delMes || inicioDelDia(dia) < hoy || !esReprogramable || guardando;
+                    const seleccionado = clave === fechaSeleccionada;
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '4px', textAlign: 'center' }}>
-                  {diasOctubre.map((dia, idx) => {
-                    const isSelected = dia.numero === selectedDia && dia.esMesActual;
                     return (
                       <button
-                        key={idx}
-                        onClick={() => handleSelectDia(dia)}
-                        style={{
-                          padding: '8px 0',
-                          border: 'none',
-                          borderRadius: '8px',
-                          fontSize: '12px',
-                          fontWeight: isSelected ? '800' : '500',
-                          backgroundColor: isSelected ? '#115e59' : 'transparent',
-                          color: isSelected ? '#ffffff' : dia.esMesActual ? '#1e293b' : '#cbd5e1',
-                          cursor: dia.esMesActual ? 'pointer' : 'default',
-                          position: 'relative',
+                        key={clave}
+                        type="button"
+                        disabled={deshabilitado}
+                        aria-label={fechaLegible(clave)}
+                        aria-pressed={seleccionado}
+                        onClick={() => {
+                          setFechaSeleccionada(clave);
+                          setErrorGuardado(null);
                         }}
+                        className={`min-h-11 rounded-lg text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#0D5C75] ${
+                          seleccionado
+                            ? 'bg-[#0D5C75] text-white'
+                            : deshabilitado
+                              ? 'cursor-not-allowed text-slate-300'
+                              : 'text-slate-800 hover:bg-teal-50'
+                        }`}
                       >
-                        {dia.numero}
-                        {dia.tieneHorariosDisponibles && dia.esMesActual && !isSelected && (
-                          <span style={{ position: 'absolute', bottom: '2px', left: '50%', transform: 'translateX(-50%)', width: '3px', height: '3px', backgroundColor: '#0d9488', borderRadius: '50%' }}></span>
-                        )}
+                        {dia.getDate()}
                       </button>
                     );
                   })}
                 </div>
-              </div>
+                <p className="mt-4 border-t border-slate-100 pt-4 text-sm text-slate-600">
+                  Fecha seleccionada: <strong className="capitalize text-slate-900">{fechaLegible(fechaSeleccionada)}</strong>
+                </p>
+              </section>
 
-              {!tieneTurnosElDiaSeleccionado ? (
-                <div style={{ textAlign: 'center', padding: '32px 16px', color: '#64748b' }}>
-                  <p style={{ fontSize: '13px', margin: 0 }}>
-                    ⚠️ No hay horarios libres para esta fecha.
-                  </p>
-                  <span style={{ fontSize: '11px', color: '#94a3b8' }}>
-                    Por favor selecciona un día marcado con un punto en el calendario.
-                  </span>
-                </div>
-              ) : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div>
-                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '8px' }}>Mañana</span>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                      {horariosDia16.manana.map((slot, idx) => {
-                        const isSelected = selectedHora === slot.hora;
-                        return (
-                          <button
-                            key={idx}
-                            disabled={!slot.disponible}
-                            onClick={() => setSelectedHora(slot.hora)}
-                            style={{
-                              padding: '10px',
-                              borderRadius: '8px',
-                              fontSize: '12px',
-                              fontWeight: '700',
-                              border: isSelected ? '2px solid #115e59' : '1px solid #e2e8f0',
-                              backgroundColor: isSelected ? '#115e59' : slot.disponible ? '#ffffff' : '#f8fafc',
-                              color: isSelected ? '#ffffff' : slot.disponible ? '#0f172a' : '#cbd5e1',
-                              textDecoration: slot.disponible ? 'none' : 'line-through',
-                              cursor: slot.disponible ? 'pointer' : 'not-allowed',
-                            }}
-                          >
-                            {slot.hora}
-                          </button>
-                        );
-                      })}
-                    </div>
+              <section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6" aria-labelledby="horarios-heading" aria-live="polite">
+                <h2 id="horarios-heading" className="font-bold text-slate-900">Horarios disponibles</h2>
+                <p className="mt-1 text-sm capitalize text-slate-600">{fechaLegible(fechaSeleccionada)}</p>
+
+                {cargandoDisponibilidad ? (
+                  <div role="status" className="mt-5 grid grid-cols-2 gap-2">
+                    {Array.from({ length: 4 }, (_, index) => <div key={index} className="h-11 animate-pulse rounded-lg bg-slate-100" />)}
+                    <span className="sr-only">Consultando disponibilidad...</span>
                   </div>
-
-                  <div>
-                    <span style={{ fontSize: '12px', fontWeight: '700', color: '#334155', display: 'block', marginBottom: '8px' }}>Tarde</span>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                      {horariosDia16.tarde.map((slot, idx) => {
-                        const isSelected = selectedHora === slot.hora;
-                        return (
-                          <button
-                            key={idx}
-                            disabled={!slot.disponible}
-                            onClick={() => setSelectedHora(slot.hora)}
-                            style={{
-                              padding: '10px',
-                              borderRadius: '8px',
-                              fontSize: '12px',
-                              fontWeight: '700',
-                              border: isSelected ? '2px solid #115e59' : '1px solid #e2e8f0',
-                              backgroundColor: isSelected ? '#115e59' : slot.disponible ? '#ffffff' : '#f8fafc',
-                              color: isSelected ? '#ffffff' : slot.disponible ? '#0f172a' : '#cbd5e1',
-                              textDecoration: slot.disponible ? 'none' : 'line-through',
-                              cursor: slot.disponible ? 'pointer' : 'not-allowed',
-                            }}
-                          >
-                            {slot.hora}
-                          </button>
-                        );
-                      })}
-                    </div>
+                ) : errorDisponibilidad ? (
+                  <div role="alert" className="mt-5 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-900">
+                    <p>{errorDisponibilidad}</p>
+                    <button
+                      type="button"
+                      onClick={() => setIntentoDisponibilidad((intento) => intento + 1)}
+                      className="mt-3 min-h-11 font-semibold underline"
+                    >
+                      Volver a consultar
+                    </button>
                   </div>
-                </div>
-              )}
-            </div>
+                ) : disponibilidad?.horariosDisponibles.length ? (
+                  <div className="mt-5 grid grid-cols-2 gap-2">
+                    {disponibilidad.horariosDisponibles.map((franja) => {
+                      const seleccionada = horaSeleccionada === franja.horaInicio;
+                      return (
+                        <button
+                          key={franja.horaInicio}
+                          type="button"
+                          disabled={!esReprogramable || guardando}
+                          aria-pressed={seleccionada}
+                          onClick={() => {
+                            setHoraSeleccionada(franja.horaInicio);
+                            setErrorGuardado(null);
+                          }}
+                          className={`min-h-11 rounded-lg border px-3 text-sm font-semibold transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0D5C75] ${
+                            seleccionada
+                              ? 'border-[#0D5C75] bg-[#0D5C75] text-white'
+                              : 'border-slate-300 text-slate-800 hover:border-teal-600 hover:bg-teal-50'
+                          }`}
+                        >
+                          {horaLegible(franja.horaInicio)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div role="status" className="mt-5 rounded-lg border border-slate-200 bg-slate-50 p-4 text-sm text-slate-700">
+                    {disponibilidad?.mensaje ?? 'No hay horarios disponibles para esta fecha. Selecciona otra.'}
+                  </div>
+                )}
 
-            <div style={{ backgroundColor: '#fefce8', border: '1px solid #fef08a', borderRadius: '10px', padding: '12px 16px', fontSize: '12px', color: '#854d0e', marginBottom: '24px', display: 'flex', gap: '8px', alignItems: 'center' }}>
-              <span>⚠️</span>
-              <div>
-                <strong>Política de cambios:</strong> Recuerda que solo puedes reprogramar con un mínimo de 4 horas de anticipación a la cita original.
-              </div>
-            </div>
+                {errorGuardado && <p role="alert" className="mt-4 text-sm font-medium text-red-700">{errorGuardado}</p>}
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
-              <button
-                onClick={() => setShowModal(false)}
-                style={{ padding: '10px 20px', border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#334155', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}
-              >
-                Conservar Cita Actual
-              </button>
-
-              <button
-                disabled={!selectedHora}
-                onClick={handleConfirmarReprogramacion}
-                style={{
-                  padding: '10px 20px',
-                  border: 'none',
-                  backgroundColor: selectedHora ? '#115e59' : '#cbd5e1',
-                  color: '#ffffff',
-                  borderRadius: '8px',
-                  fontWeight: '700',
-                  fontSize: '13px',
-                  cursor: selectedHora ? 'pointer' : 'not-allowed',
-                }}
-              >
-                Confirmar Nueva Fecha
-              </button>
+                <button
+                  type="button"
+                  disabled={!esReprogramable || !horaSeleccionada || guardando}
+                  onClick={confirmarReprogramacion}
+                  className="mt-5 min-h-11 w-full rounded-lg bg-[#0D5C75] px-4 text-sm font-bold text-white transition hover:bg-[#094356] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0D5C75] disabled:cursor-not-allowed disabled:bg-slate-300"
+                >
+                  {guardando ? 'Guardando cambio...' : 'Confirmar nueva fecha'}
+                </button>
+              </section>
             </div>
-          </div>
-        </div>
-      )}
-    </div>
+          </>
+        ) : null}
+      </div>
+    </main>
   );
 };

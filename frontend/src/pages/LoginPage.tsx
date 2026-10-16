@@ -25,8 +25,8 @@ export default function LoginPage() {
       localStorage.setItem('vetagenda_token', response.token);
       setError('');
       navigate('/catalogo');
-    } catch {
-      setError('No fue posible iniciar sesión. Intenta nuevamente.');
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : 'No fue posible iniciar sesión. Intenta nuevamente.');
     }
   };
 
