@@ -1,4 +1,5 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import { Icon, type IconName } from './Icon';
 import { Reveal } from './Reveal';
 
@@ -58,6 +59,9 @@ const portals: {
 ];
 
 export function PortalsGrid({ onOpenDemo }: PortalsGridProps) {
+  const navigate = useNavigate();
+  const [citaId, setCitaId] = useState('');
+
   return (
     <section id="portales" className="scroll-mt-28 bg-white px-5 py-16 md:px-10 md:py-24">
       <div className="mx-auto max-w-7xl">
@@ -89,6 +93,42 @@ export function PortalsGrid({ onOpenDemo }: PortalsGridProps) {
                   </li>
                 ))}
               </ul>
+              {portal.id === 'CLIENTE' && (
+                <form
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    const id = citaId.trim();
+                    if (id) navigate(`/cliente/citas/${encodeURIComponent(id)}`);
+                  }}
+                  className="mb-5 rounded-2xl border border-white/80 bg-white/70 p-4"
+                >
+                  <label htmlFor="cita-id" className="text-sm font-bold text-slate-900">
+                    Consultar detalle de cita
+                  </label>
+                  <p className="mt-1 text-xs leading-5 text-slate-600">
+                    Ingresa el identificador de tu cita para revisar sus datos.
+                  </p>
+                  <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                    <input
+                      id="cita-id"
+                      type="text"
+                      value={citaId}
+                      onChange={(event) => setCitaId(event.target.value)}
+                      placeholder="ID de la cita"
+                      required
+                      autoComplete="off"
+                      className="min-h-11 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-500 focus:border-[#0D5C75] focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30"
+                    />
+                    <button
+                      type="submit"
+                      className="inline-flex min-h-11 items-center justify-center gap-2 rounded-lg bg-[#0D5C75] px-4 text-sm font-bold text-white transition hover:bg-[#094356] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488] focus-visible:ring-offset-2"
+                    >
+                      Consultar
+                      <Icon name="arrow" className="h-4 w-4" />
+                    </button>
+                  </div>
+                </form>
+              )}
               <div className="mt-auto rounded-2xl border border-white/80 bg-white/70 p-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <h4 className="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-700">Formularios de registro</h4>

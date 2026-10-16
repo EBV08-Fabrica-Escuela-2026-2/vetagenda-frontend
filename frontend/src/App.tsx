@@ -9,6 +9,7 @@ import { RegisterServicePage } from './pages/RegisterServicePage';
 import { VeterinarianAppointmentsPage } from './pages/VeterinarianAppointmentsPage';
 import { AvailabilityPage } from './pages/AvailabilityPage';
 import { DetalleCitaPage } from './pages/DetalleCitaPage';
+import { ReprogramarCitaPage } from './pages/ReprogramarCitaPage';
 
 function App() {
   return (
@@ -27,6 +28,8 @@ function App() {
         <Route path="/cliente/citas/:id" element={<DetalleCitaPage />} />
         <Route path="/detalle-cita/:id" element={<DetalleCitaPage />} />
         <Route path="/detalle-cita" element={<Navigate to="/cliente/citas/1" replace />} />
+        <Route path="/reprogramar-cita/:citaId" element={<ReprogramarCitaPage />} />
+        <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
   );
