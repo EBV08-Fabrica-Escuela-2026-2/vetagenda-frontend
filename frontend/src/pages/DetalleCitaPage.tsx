@@ -5,97 +5,6 @@ import { BackToHomeButton } from '../components/BackToHomeButton';
 import { DetalleCitaFeedback, DetalleCitaSkeleton } from '../components/DetalleCitaFeedback';
 import { CitaApiError, obtenerDetalleCita, type Cita, type EstadoCita, type TipoErrorCita } from '../services/citasService';
 
-const MOCK_CITAS: Cita[] = [
-  {
-    id: '1',
-    codigo: 'VA-1048',
-    clienteOwnerId: 'USR-001',
-    servicio: 'Vacunación anual',
-    categoriaServicio: 'MEDICINA PREVENTIVA',
-    fecha: 'Miércoles, 14 de octubre de 2026',
-    hora: '11:00 a. m.',
-    duracion: '30 min',
-    costo: 85000,
-    estado: 'CONFIRMADA',
-    mascota: {
-      nombre: 'Luna',
-      especieRaza: 'Perra · Mestiza · 4 años',
-      edad: '4 años',
-      avatarBg: '#fef3c7',
-    },
-    profesional: {
-      id: 'PROF-101',
-      nombre: 'Dra. Laura Méndez',
-      titulo: 'Médica veterinaria',
-      especialidad: 'Medicina general',
-      numeroLicencia: 'MV-CO 18427',
-      experiencia: '8 años de experiencia en consulta preventiva, vacunación y acompañamiento integral de perros y gatos.',
-      fotoUrl: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=300',
-    },
-    indicacionesPrevias: [
-      'Trae el carné de vacunación de Luna.',
-      'Evita alimentarla durante las 2 horas previas.',
-      'Llega 10 minutos antes para realizar el registro.',
-    ],
-  },
-  {
-    id: '2',
-    codigo: 'VA-1012',
-    clienteOwnerId: 'USR-001',
-    servicio: 'Consulta general',
-    categoriaServicio: 'MEDICINA GENERAL',
-    fecha: '18 de septiembre de 2026',
-    hora: '9:30 a. m.',
-    duracion: '45 min',
-    costo: 60000,
-    estado: 'COMPLETADA',
-    mascota: {
-      nombre: 'Luna',
-      especieRaza: 'Perra · Mestiza · 4 años',
-      edad: '4 años',
-      avatarBg: '#fef3c7',
-    },
-    profesional: {
-      id: 'PROF-101',
-      nombre: 'Dra. Laura Méndez',
-      titulo: 'Médica veterinaria',
-      especialidad: 'Medicina general',
-      numeroLicencia: 'MV-CO 18427',
-      experiencia: '8 años de experiencia en consulta preventiva, vacunación y acompañamiento integral de perros y gatos.',
-      fotoUrl: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?auto=format&fit=crop&q=80&w=300',
-    },
-    indicacionesPrevias: ['Trae la historia clínica previa si es la primera consulta.'],
-  },
-  {
-    id: '3',
-    codigo: 'VA-1090',
-    clienteOwnerId: 'USR-001',
-    servicio: 'Consulta Odontológica',
-    categoriaServicio: 'ESPECIALIDADES',
-    fecha: '29 de octubre de 2026',
-    hora: '3:30 p. m.',
-    duracion: '60 min',
-    costo: 120000,
-    estado: 'PROGRAMADA',
-    mascota: {
-      nombre: 'Simón',
-      especieRaza: 'Gato · Persa · 2 años',
-      edad: '2 años',
-      avatarBg: '#e0f2fe',
-    },
-    profesional: {
-      id: 'PROF-102',
-      nombre: 'Dr. Roberto Gómez',
-      titulo: 'Médico veterinario cirujano',
-      especialidad: 'Odontología oral',
-      numeroLicencia: 'MV-CO 20491',
-      experiencia: '10 años de experiencia en tratamientos dentales, limpiezas profilácticas y cirugía maxilofacial.',
-      fotoUrl: 'https://images.unsplash.com/photo-1622253692010-333f2da6031d?auto=format&fit=crop&q=80&w=300',
-    },
-    indicacionesPrevias: [],
-  },
-];
-
 export const DetalleCitaPage: React.FC = () => {
   const { id: citaId = '' } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -103,11 +12,6 @@ export const DetalleCitaPage: React.FC = () => {
   const [cargando, setCargando] = useState(true);
   const [tipoError, setTipoError] = useState<TipoErrorCita | null>(null);
   const [intento, setIntento] = useState(0);
-  const [showProfesionalModal, setShowProfesionalModal] = useState<boolean>(false);
-
-  const handleSelectCita = (cita: Cita) => {
-    navigate(`/cliente/citas/${encodeURIComponent(cita.id)}`);
-  };
 
   useEffect(() => {
     let vigente = true;
@@ -197,56 +101,7 @@ export const DetalleCitaPage: React.FC = () => {
         ) : tipoError ? (
           <DetalleCitaFeedback tipoError={tipoError} onReintentar={() => setIntento((actual) => actual + 1)} />
         ) : citaActual ? (
-          <div style={{ display: 'grid', gridTemplateColumns: '280px 1fr', gap: '24px', alignItems: 'start' }}>
-            
-            {/* Selector Lateral */}
-            <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '16px' }}>
-              <h3 style={{ fontSize: '15px', fontWeight: '700', color: '#1e293b', margin: '0 0 2px 0' }}>Mis citas</h3>
-              <p style={{ fontSize: '12px', color: '#64748b', margin: '0 0 16px 0' }}>Selecciona una para ver el detalle.</p>
-
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                {MOCK_CITAS.map((item) => {
-                  const isSelected = item.id === citaId;
-                  return (
-                    <div
-                      key={item.id}
-                      onClick={() => handleSelectCita(item)}
-                      style={{
-                        padding: '12px',
-                        borderRadius: '10px',
-                        border: isSelected ? '2px solid #0d9488' : '1px solid #e2e8f0',
-                        backgroundColor: isSelected ? '#f0fdf4' : '#ffffff',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        gap: '12px',
-                        alignItems: 'center',
-                      }}
-                    >
-                      <div style={{ backgroundColor: '#f1f5f9', borderRadius: '8px', padding: '6px 10px', textAlign: 'center', minWidth: '40px' }}>
-                        <span style={{ fontSize: '13px', fontWeight: '800', color: '#1e293b', display: 'block' }}>
-                          {item.fecha.split(',')[1]?.trim().split(' ')[0] || '14'}
-                        </span>
-                        <span style={{ fontSize: '9px', fontWeight: '700', color: '#64748b', textTransform: 'uppercase' }}>
-                          {item.fecha.includes('octubre') ? 'OCT' : 'SEP'}
-                        </span>
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <h4 style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b', margin: 0 }}>{item.servicio}</h4>
-                        <p style={{ fontSize: '11px', color: '#64748b', margin: '2px 0 4px 0' }}>
-                          {item.hora} · {item.mascota.nombre}
-                        </p>
-                        {renderEstadoBadge(item.estado)}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-
-              <div style={{ borderTop: '1px solid #f1f5f9', marginTop: '16px', paddingTop: '12px', display: 'flex', alignItems: 'center', gap: '6px', color: '#94a3b8', fontSize: '11px' }}>
-                🔒 Solo tú puedes ver estas citas
-              </div>
-            </div>
-
+          <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '24px', alignItems: 'start' }}>
             {/* Resumen de la Cita */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
               
@@ -280,8 +135,8 @@ export const DetalleCitaPage: React.FC = () => {
                   </div>
 
                   <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
-                    <div style={{ backgroundColor: citaActual.mascota.avatarBg, color: '#d97706', width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '14px' }}>
-                      LU
+                    <div style={{ backgroundColor: '#e0f2fe', color: '#0d5c75', width: '40px', height: '40px', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: '800', fontSize: '14px' }}>
+                      {citaActual.mascota.nombre.trim().slice(0, 2).toLocaleUpperCase('es-CO')}
                     </div>
                     <div>
                       <span style={{ fontSize: '11px', color: '#64748b', display: 'block' }}>Mascota</span>
@@ -295,28 +150,21 @@ export const DetalleCitaPage: React.FC = () => {
               {/* Ficha abreviada del profesional con botón "Ver perfil" */}
               <div style={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                  <img
-                    src={citaActual.profesional.fotoUrl}
-                    alt={citaActual.profesional.nombre}
-                    style={{ width: '48px', height: '48px', borderRadius: '10px', objectFit: 'cover' }}
-                  />
+                  {citaActual.profesional.fotoUrl && (
+                    <img
+                      src={citaActual.profesional.fotoUrl}
+                      alt={citaActual.profesional.nombre}
+                      style={{ width: '48px', height: '48px', borderRadius: '10px', objectFit: 'cover' }}
+                    />
+                  )}
                   <div>
                     <span style={{ fontSize: '11px', color: '#64748b', display: 'block' }}>Profesional asignada</span>
-                    <button
-                      onClick={() => setShowProfesionalModal(true)}
-                      style={{ border: 'none', background: 'none', padding: 0, fontSize: '15px', fontWeight: '700', color: '#0f766e', cursor: 'pointer', textAlign: 'left' }}
-                    >
-                      {citaActual.profesional.nombre} ›
-                    </button>
-                    <span style={{ fontSize: '12px', color: '#64748b', display: 'block' }}>{citaActual.profesional.especialidad}</span>
+                    <strong style={{ fontSize: '15px', fontWeight: '700', color: '#0f172a' }}>{citaActual.profesional.nombre}</strong>
+                    {citaActual.profesional.especialidad && (
+                      <span style={{ fontSize: '12px', color: '#64748b', display: 'block' }}>{citaActual.profesional.especialidad}</span>
+                    )}
                   </div>
                 </div>
-                <button
-                  onClick={() => setShowProfesionalModal(true)}
-                  style={{ border: '1px solid #cbd5e1', backgroundColor: '#ffffff', color: '#334155', padding: '8px 16px', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}
-                >
-                  Ver perfil
-                </button>
               </div>
 
               {/* Indicaciones Previas */}
@@ -339,116 +187,10 @@ export const DetalleCitaPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Acciones */}
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px' }}>
-                
-
-                {citaActual.estado !== 'COMPLETADA' && citaActual.estado !== 'CANCELADA' && (
-                  <button style={{ padding: '10px 20px', border: '1px solid #fca5a5', backgroundColor: '#ffffff', color: '#b91c1c', borderRadius: '8px', fontWeight: '600', fontSize: '13px', cursor: 'pointer' }}>
-                    Cancelar cita
-                  </button>
-                )}
-              </div>
-
             </div>
           </div>
         ) : null}
       </main>
-
-      {/* MODAL DETALLADO DE FIGMA: Ficha del Profesional */}
-      {showProfesionalModal && citaActual && (
-        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(15, 23, 42, 0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ backgroundColor: '#ffffff', borderRadius: '16px', maxWidth: '440px', width: '90%', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)' }}>
-            
-            {/* Cabecera Azul Oscura con Botón Cierre */}
-            <div style={{ backgroundColor: '#0e4a5b', height: '110px', position: 'relative', padding: '16px' }}>
-              <button
-                onClick={() => setShowProfesionalModal(false)}
-                style={{
-                  position: 'absolute',
-                  top: '16px',
-                  right: '16px',
-                  backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: '32px',
-                  height: '32px',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                }}
-              >
-                ✕
-              </button>
-
-              {/* Avatar Flotante Superpuesto */}
-              <div style={{ position: 'absolute', bottom: '-40px', left: '50%', transform: 'translateX(-50%)' }}>
-                <img
-                  src={citaActual.profesional.fotoUrl}
-                  alt={citaActual.profesional.nombre}
-                  style={{
-                    width: '90px',
-                    height: '90px',
-                    borderRadius: '16px',
-                    objectFit: 'cover',
-                    border: '4px solid #ffffff',
-                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
-                  }}
-                />
-              </div>
-            </div>
-
-            {/* Cuerpo del Modal */}
-            <div style={{ paddingTop: '52px', paddingBottom: '28px', paddingLeft: '28px', paddingRight: '28px', textAlign: 'center' }}>
-              <h3 style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', margin: '0 0 4px 0' }}>
-                {citaActual.profesional.nombre}
-              </h3>
-              <p style={{ fontSize: '13px', color: '#0d9488', fontWeight: '600', margin: '0 0 20px 0' }}>
-                {citaActual.profesional.titulo}
-              </p>
-
-              {/* Tarjetas de Especialidad y Licencia Profesional */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '20px' }}>
-                <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '10px', textAlign: 'left' }}>
-                  <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginBottom: '4px' }}>Especialidad</span>
-                  <strong style={{ fontSize: '13px', color: '#0f172a', display: 'block' }}>{citaActual.profesional.especialidad}</strong>
-                </div>
-                <div style={{ backgroundColor: '#f8fafc', padding: '12px', borderRadius: '10px', textAlign: 'left' }}>
-                  <span style={{ fontSize: '11px', color: '#64748b', display: 'block', marginBottom: '4px' }}>Licencia profesional</span>
-                  <strong style={{ fontSize: '13px', color: '#0f172a', display: 'block' }}>{citaActual.profesional.numeroLicencia}</strong>
-                </div>
-              </div>
-
-              {/* Experiencia y Descripción */}
-              <p style={{ fontSize: '13px', color: '#64748b', lineHeight: '1.5', margin: '0 0 24px 0' }}>
-                {citaActual.profesional.experiencia}
-              </p>
-
-              {/* Botón Principal "Cerrar perfil" */}
-              <button
-                onClick={() => setShowProfesionalModal(false)}
-                style={{
-                  width: '100%',
-                  padding: '12px',
-                  backgroundColor: '#0e4a5b',
-                  color: '#ffffff',
-                  border: 'none',
-                  borderRadius: '8px',
-                  fontWeight: '700',
-                  fontSize: '14px',
-                  cursor: 'pointer',
-                }}
-              >
-                Cerrar perfil
-              </button>
-            </div>
-
-          </div>
-        </div>
-      )}
 
     </div>
   );

@@ -5,26 +5,21 @@ export type EstadoCita = 'PROGRAMADA' | 'CONFIRMADA' | 'COMPLETADA' | 'CANCELADA
 export interface Profesional {
   id: string;
   nombre: string;
-  titulo: string;
-  especialidad: string;
-  numeroLicencia: string;
-  experiencia: string;
-  fotoUrl: string;
+  especialidad?: string;
+  fotoUrl?: string;
 }
 
 export interface Mascota {
   nombre: string;
   especieRaza: string;
   edad: string;
-  avatarBg: string;
 }
 
 export interface Cita {
   id: string;
   codigo: string;
-  clienteOwnerId: string;
   servicio: string;
-  categoriaServicio: string;
+  categoriaServicio?: string;
   fecha: string;
   hora: string;
   duracion: string;
@@ -77,8 +72,9 @@ type CitaDetalleApi = {
 function normalizarEstado(estado: string): EstadoCita {
   if (estado === 'ANULADA' || estado.startsWith('CANCELADA')) return 'CANCELADA';
   if (estado === 'COMPLETADA') return 'COMPLETADA';
-  if (estado === 'PROGRAMADA') return 'PROGRAMADA';
-  return 'CONFIRMADA';
+  if (estado === 'PROGRAMADA' || estado === 'PENDIENTE') return 'PROGRAMADA';
+  if (estado === 'CONFIRMADA') return 'CONFIRMADA';
+  throw new Error('El backend devolvió un estado de cita no reconocido.');
 }
 
 function mapearDetalle(datos: CitaDetalleApi): Cita {
@@ -94,9 +90,8 @@ function mapearDetalle(datos: CitaDetalleApi): Cita {
   return {
     id: String(datos.id),
     codigo: datos.codigo,
-    clienteOwnerId: '',
     servicio: datos.servicio.nombre,
-    categoriaServicio: datos.servicio.categoria || 'SERVICIO VETERINARIO',
+    categoriaServicio: datos.servicio.categoria,
     fecha: new Intl.DateTimeFormat('es-CO', { dateStyle: 'full' }).format(inicio),
     hora: new Intl.DateTimeFormat('es-CO', { timeStyle: 'short' }).format(inicio),
     duracion: `${datos.servicio.duracionMinutos} min`,
@@ -106,16 +101,12 @@ function mapearDetalle(datos: CitaDetalleApi): Cita {
       nombre: datos.mascota.nombre,
       especieRaza,
       edad: `${datos.mascota.edad} años`,
-      avatarBg: '#fef3c7',
     },
     profesional: {
       id: String(datos.profesional.id),
       nombre: datos.profesional.nombre,
-      titulo: 'Profesional veterinario',
-      especialidad: datos.profesional.especialidad || 'Medicina veterinaria',
-      numeroLicencia: 'No registrada',
-      experiencia: 'Información profesional no registrada.',
-      fotoUrl: datos.profesional.fotoUrl || '/favicon.svg',
+      especialidad: datos.profesional.especialidad,
+      fotoUrl: datos.profesional.fotoUrl,
     },
     indicacionesPrevias: indicaciones,
   };
