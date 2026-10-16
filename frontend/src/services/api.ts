@@ -178,27 +178,21 @@ export const setStoredServices = (services: CatalogService[]) => {
 // ──────────────────────────────────────────────
 
 export async function loginUser(email: string, password: string) {
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify({ email, password }),
-    });
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify({ correo: email, password }),
+  });
 
-    if (!response.ok) {
-      throw new Error('No se pudo autenticar');
-    }
-
-    return response.json();
-  } catch {
-    return {
-      mensaje: 'Login sin backend disponible',
-      token: 'offline-token',
-    };
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.mensaje || errorData?.message || 'No se pudo autenticar.');
   }
+
+  return response.json();
 }
 
 // ──────────────────────────────────────────────

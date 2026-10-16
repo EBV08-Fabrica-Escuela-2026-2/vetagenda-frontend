@@ -47,6 +47,80 @@ export class CitaApiError extends Error {
   }
 }
 
+type CitaDetalleApi = {
+  id: number;
+  codigo: string;
+  estado: string;
+  fechaHoraInicio: string;
+  fechaHoraFin: string;
+  mascota: {
+    nombre: string;
+    especie: string;
+    raza: string;
+    edad: number;
+  };
+  servicio: {
+    nombre: string;
+    categoria?: string;
+    precio: number;
+    duracionMinutos: number;
+    indicacionesPrevias?: string;
+  };
+  profesional: {
+    id: number;
+    nombre: string;
+    especialidad?: string;
+    fotoUrl?: string;
+  };
+};
+
+function normalizarEstado(estado: string): EstadoCita {
+  if (estado === 'ANULADA' || estado.startsWith('CANCELADA')) return 'CANCELADA';
+  if (estado === 'COMPLETADA') return 'COMPLETADA';
+  if (estado === 'PROGRAMADA') return 'PROGRAMADA';
+  return 'CONFIRMADA';
+}
+
+function mapearDetalle(datos: CitaDetalleApi): Cita {
+  const inicio = new Date(datos.fechaHoraInicio);
+  const especieRaza = [datos.mascota.especie, datos.mascota.raza, `${datos.mascota.edad} años`]
+    .filter(Boolean)
+    .join(' · ');
+  const indicaciones = datos.servicio.indicacionesPrevias
+    ?.split(/\r?\n/)
+    .map((indicacion) => indicacion.trim())
+    .filter(Boolean);
+
+  return {
+    id: String(datos.id),
+    codigo: datos.codigo,
+    clienteOwnerId: '',
+    servicio: datos.servicio.nombre,
+    categoriaServicio: datos.servicio.categoria || 'SERVICIO VETERINARIO',
+    fecha: new Intl.DateTimeFormat('es-CO', { dateStyle: 'full' }).format(inicio),
+    hora: new Intl.DateTimeFormat('es-CO', { timeStyle: 'short' }).format(inicio),
+    duracion: `${datos.servicio.duracionMinutos} min`,
+    costo: Number(datos.servicio.precio),
+    estado: normalizarEstado(datos.estado),
+    mascota: {
+      nombre: datos.mascota.nombre,
+      especieRaza,
+      edad: `${datos.mascota.edad} años`,
+      avatarBg: '#fef3c7',
+    },
+    profesional: {
+      id: String(datos.profesional.id),
+      nombre: datos.profesional.nombre,
+      titulo: 'Profesional veterinario',
+      especialidad: datos.profesional.especialidad || 'Medicina veterinaria',
+      numeroLicencia: 'No registrada',
+      experiencia: 'Información profesional no registrada.',
+      fotoUrl: datos.profesional.fotoUrl || '/favicon.svg',
+    },
+    indicacionesPrevias: indicaciones,
+  };
+}
+
 export async function obtenerDetalleCita(citaId: string, token?: string): Promise<Cita> {
   let response: Response;
 
@@ -84,7 +158,7 @@ export async function obtenerDetalleCita(citaId: string, token?: string): Promis
       throw new Error('Respuesta inválida');
     }
 
-    return datos as Cita;
+    return mapearDetalle(datos as CitaDetalleApi);
   } catch {
     throw new CitaApiError('NETWORK_ERROR', 'El servidor devolvió una respuesta inválida.');
   }
