@@ -76,6 +76,45 @@ export type VeterinarioPayload = {
   horarioAtencion?: string;
 };
 
+export type Cita = {
+  id: number;
+  codigoReserva: string;
+  clienteNombre: string;
+  clienteDocumento: string;
+  mascotaNombre: string;
+  mascotaEspecie: string;
+  mascotaRaza: string;
+  veterinarioNombre: string;
+  servicioNombre: string;
+  fecha: string;
+  hora: string;
+  estado: 'PROGRAMADA' | 'CANCELADA';
+  consultorio: string;
+  precio: string;
+  duracionMinutos?: number;
+  motivoCancelacion?: string;
+  fechaCancelacion?: string;
+};
+
+type CitaClienteApi = {
+  id: number;
+  mascotaNombre: string;
+  veterinarioNombre: string;
+  servicioNombre: string;
+  fechaHoraInicio: string;
+  estado: string;
+};
+
+export type CancelacionCitaApi = {
+  mensaje: string;
+  idCita: number;
+  estado: string;
+  etiquetaEstado: string;
+  cupoLiberado: boolean;
+  fechaHoraInicio: string;
+  fechaHoraFin: string;
+};
+
 // ──────────────────────────────────────────────
 // Configuración base
 // ──────────────────────────────────────────────
@@ -346,4 +385,63 @@ export async function createService(service: ServicePayload): Promise<CatalogSer
   const storedServices = getStoredServices();
   setStoredServices([...storedServices, createdService]);
   return createdService;
+}
+
+// ──────────────────────────────────────────────
+// Citas del cliente
+// ──────────────────────────────────────────────
+
+export async function getCitas(documentoIdentidad: string): Promise<Cita[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/citas?documentoIdentidad=${encodeURIComponent(documentoIdentidad)}`,
+    { headers: { Accept: 'application/json' } },
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.mensaje || errorData?.message || 'No se pudieron consultar las citas.');
+  }
+
+  const citas: CitaClienteApi[] = await response.json();
+  return citas.map((cita) => {
+    const fechaHora = new Date(cita.fechaHoraInicio);
+    const cancelada = cita.estado === 'ANULADA' || cita.estado.startsWith('CANCELADA');
+
+    return {
+      id: Number(cita.id),
+      codigoReserva: `VA-${String(cita.id).padStart(4, '0')}`,
+      clienteNombre: 'Cliente VetAgenda',
+      clienteDocumento: documentoIdentidad,
+      mascotaNombre: cita.mascotaNombre,
+      mascotaEspecie: 'Mascota',
+      mascotaRaza: '',
+      veterinarioNombre: cita.veterinarioNombre,
+      servicioNombre: cita.servicioNombre,
+      fecha: new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(fechaHora),
+      hora: new Intl.DateTimeFormat('es-CO', { timeStyle: 'short' }).format(fechaHora),
+      estado: cancelada ? 'CANCELADA' : 'PROGRAMADA',
+      consultorio: 'Clínica VetAgenda',
+      precio: 'Consultar',
+    };
+  });
+}
+
+export async function cancelarCita(
+  citaId: number,
+  documentoIdentidad: string,
+): Promise<CancelacionCitaApi> {
+  const response = await fetch(
+    `${API_BASE_URL}/citas/${citaId}/cancelar?documentoIdentidad=${encodeURIComponent(documentoIdentidad)}`,
+    {
+      method: 'POST',
+      headers: { Accept: 'application/json' },
+    },
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    throw new Error(errorData?.mensaje || errorData?.message || 'No se pudo cancelar la cita.');
+  }
+
+  return response.json();
 }

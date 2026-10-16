@@ -11,6 +11,7 @@ import { AvailabilityPage } from './pages/AvailabilityPage';
 import { DetalleCitaPage } from './pages/DetalleCitaPage';
 import { ReprogramarCitaPage } from './pages/ReprogramarCitaPage';
 import { ReservarCitaPage } from './pages/ReservarCitaPage';
+import { CancelarCitaPage } from './pages/CancelarCitaPage';
 
 function App() {
   return (
@@ -25,6 +26,7 @@ function App() {
         <Route path="/mascotas/registro" element={<RegistroMascotaPage />} />
         <Route path="/catalogo" element={<CatalogoServiciosPage />} />
         <Route path="/citas/reservar" element={<ReservarCitaPage />} />
+        <Route path="/cliente/citas" element={<CancelarCitaPage />} />
         <Route path="/veterinario/agenda" element={<VeterinarianAppointmentsPage />} />
         <Route path="/disponibilidad" element={<AvailabilityPage />} />
         <Route path="/cliente/citas/:id" element={<DetalleCitaPage />} />
