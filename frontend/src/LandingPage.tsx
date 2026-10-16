@@ -7,6 +7,9 @@ const features = [
   { title: 'Registro de servicio', subtitle: 'Servicio', icon: '🧾', to: '/servicios/registro' },
   { title: 'Registro de mascota', subtitle: 'Mascota', icon: '🐾', to: '/mascotas/registro' },
   { title: 'Catálogo', subtitle: 'Servicios', icon: '📋', to: '/catalogo' },
+
+  // HU12 - Reservar cita
+  { title: 'Reservar cita', subtitle: 'Agendamiento', icon: '📅', to: '/citas/reservar' },
 ];
 
 function LandingPage() {
@@ -23,6 +26,7 @@ function LandingPage() {
               <div className="flex h-9 w-9 items-center justify-center rounded-full bg-gradient-to-br from-sky-600 to-emerald-500 text-base font-black text-white shadow-sm">
                 V
               </div>
+
               <span className="bg-gradient-to-r from-sky-700 via-cyan-600 to-emerald-500 bg-clip-text text-[11px] font-black uppercase tracking-[0.32em] text-transparent">
                 VetAgenda
               </span>
@@ -31,12 +35,14 @@ function LandingPage() {
             <h1 className="text-3xl font-black tracking-tight text-slate-900 md:text-5xl">
               Gestión veterinaria simple y clara.
             </h1>
+
             <p className="mx-auto mt-3 max-w-2xl text-base text-slate-600 md:text-lg">
-              Centraliza las funciones principales de la clínica: registro del cliente, veterinario, mascota, servicio y catálogo.
+              Centraliza las funciones principales de la clínica: registro del
+              cliente, veterinario, mascota, servicio, catálogo y reserva de citas.
             </p>
           </div>
 
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
             {features.map((feature) => (
               <Link
                 key={feature.title}
@@ -46,8 +52,14 @@ function LandingPage() {
                 <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-sky-100 to-cyan-50 text-2xl shadow-inner ring-1 ring-sky-100">
                   {feature.icon}
                 </div>
-                <h3 className="text-lg font-bold text-slate-900">{feature.title}</h3>
-                <p className="mt-2 text-sm text-slate-500">{feature.subtitle}</p>
+
+                <h3 className="text-lg font-bold text-slate-900">
+                  {feature.title}
+                </h3>
+
+                <p className="mt-2 text-sm text-slate-500">
+                  {feature.subtitle}
+                </p>
               </Link>
             ))}
           </div>
@@ -58,4 +70,3 @@ function LandingPage() {
 }
 
 export default LandingPage;
-
