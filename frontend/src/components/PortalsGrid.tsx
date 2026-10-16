@@ -51,6 +51,7 @@ const portals: {
       'Gestiona cancelaciones por imprevistos',
     ],
     forms: [
+      { title: 'Gestionar disponibilidad', description: 'Configurar horarios y turnos', to: '/veterinario/disponibilidad', icon: 'clock' },
       { title: 'Registrar veterinario', description: 'Crear perfil profesional', to: '/veterinarios/registro', icon: 'stethoscope' },
       { title: 'Registrar servicio', description: 'Añadir servicio clínico', to: '/servicios/registro', icon: 'plus' },
     ],

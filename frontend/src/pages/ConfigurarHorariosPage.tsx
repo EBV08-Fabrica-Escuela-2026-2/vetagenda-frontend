@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { BackToHomeButton } from '../components/BackToHomeButton';
 import { BrandHeader } from '../components/BrandHeader';
 import {
@@ -171,12 +172,17 @@ export function ConfigurarHorariosPage() {
     let isMounted = true;
     listVeterinarians()
       .then((data) => {
-        if (isMounted) setVeterinarios(data);
+        if (isMounted) {
+          const list = data && data.length > 0 ? data : DEMO_VETERINARIOS;
+          setVeterinarios(list);
+          setVeterinarioId((prev) => (prev ? prev : String(list[0]?.id ?? '')));
+        }
       })
       .catch(() => {
         if (isMounted) {
           setVeterinarios(DEMO_VETERINARIOS);
           setVetsNotice('No se pudo conectar con el backend. Se muestran veterinarios de ejemplo.');
+          setVeterinarioId((prev) => (prev ? prev : String(DEMO_VETERINARIOS[0]?.id ?? '')));
         }
       })
       .finally(() => {
@@ -368,12 +374,37 @@ export function ConfigurarHorariosPage() {
         <header className="mb-6 flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:flex-row sm:items-center sm:justify-between">
           <BrandHeader subtitle="Gestión de disponibilidad" />
           <div className="flex items-center gap-3">
+            <Link
+              to="/veterinario/agenda"
+              className="inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-bold text-sky-800 transition hover:bg-sky-100"
+            >
+              <span aria-hidden="true">📅</span>
+              <span>Ver citas agendadas</span>
+            </Link>
             <span className="hidden rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 sm:inline">
               Veterinario
             </span>
             <BackToHomeButton />
           </div>
         </header>
+
+        {/* Pestañas de navegación profesional */}
+        <div className="mb-6 flex flex-wrap gap-2 border-b border-slate-200 pb-2">
+          <Link
+            to="/veterinario/agenda"
+            className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:bg-slate-50 hover:text-sky-700"
+          >
+            <span aria-hidden="true">📅</span>
+            <span>Citas agendadas</span>
+          </Link>
+          <button
+            type="button"
+            className="inline-flex items-center gap-2 rounded-xl bg-sky-700 px-4 py-2.5 text-sm font-bold text-white shadow-sm"
+          >
+            <span aria-hidden="true">⏰</span>
+            <span>Gestionar disponibilidad</span>
+          </button>
+        </div>
 
         <div className="mb-6">
           <p className="text-sm font-bold uppercase tracking-[0.2em] text-sky-700">Mi agenda</p>
