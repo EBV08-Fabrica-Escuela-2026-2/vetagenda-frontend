@@ -2,7 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BackToHomeButton } from '../components/BackToHomeButton';
 import { BrandHeader } from '../components/BrandHeader';
-import { listServices, type CatalogService } from '../services/api';
+import {
+  listServices,
+  listVeterinarians,
+  getStoredAvailability,
+  DEMO_VETERINARIOS,
+  type CatalogService,
+  type DiaSemana,
+} from '../services/api';
 
 type AvailabilityService = {
   id: string;
@@ -17,11 +24,21 @@ const fallbackServices: AvailabilityService[] = [
   { id: '3', name: 'Desparasitación', duration: 45, price: '$50.000' },
 ];
 
-const veterinarians = [
+export type VeterinarianOption = { id: string; name: string };
+
+const defaultVeterinarians: VeterinarianOption[] = [
   { id: 'all', name: 'Cualquier profesional' },
-  { id: 'camila', name: 'Dra. Camila Torres' },
-  { id: 'andres', name: 'Dr. Andrés Rojas' },
-  { id: 'laura', name: 'Dra. Laura Méndez' },
+  ...DEMO_VETERINARIOS.map((vet) => ({ id: String(vet.id), name: vet.nombre })),
+];
+
+const DIA_SEMANA_MAP: DiaSemana[] = [
+  'DOMINGO',
+  'LUNES',
+  'MARTES',
+  'MIERCOLES',
+  'JUEVES',
+  'VIERNES',
+  'SABADO',
 ];
 
 const weekdays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
@@ -49,6 +66,36 @@ function addDays(date: Date, days: number) {
 
 function getOpenSlots(dateKey: string, serviceId: string, veterinarianId: string) {
   const date = fromDateKey(dateKey);
+  const diaSemana = DIA_SEMANA_MAP[date.getDay()];
+
+  // Si se seleccionó un profesional específico, consultar su disponibilidad configurada
+  if (veterinarianId && veterinarianId !== 'all') {
+    const config = getStoredAvailability(Number(veterinarianId));
+    const diaConfig = config.find((d) => d.dia === diaSemana);
+    if (diaConfig) {
+      if (!diaConfig.activo || diaConfig.franjas.length === 0) {
+        return [];
+      }
+      const slots: string[] = [];
+      diaConfig.franjas.forEach((franja) => {
+        const [hIni, mIni] = franja.horaInicio.split(':').map(Number);
+        const [hFin, mFin] = franja.horaFin.split(':').map(Number);
+        let cur = hIni * 60 + mIni;
+        const end = hFin * 60 + mFin;
+        while (cur + 30 <= end) {
+          const h = Math.floor(cur / 60);
+          const m = cur % 60;
+          const periodo = h < 12 ? 'a. m.' : 'p. m.';
+          const h12 = h % 12 === 0 ? 12 : h % 12;
+          slots.push(`${h12}:${String(m).padStart(2, '0')} ${periodo}`);
+          cur += 30;
+        }
+      });
+      return slots;
+    }
+  }
+
+  // Fallback para cualquier profesional o días sin configurar
   const seed = [...`${dateKey}-${serviceId}-${veterinarianId}`].reduce(
     (total, character) => total + character.charCodeAt(0),
     0,
@@ -96,7 +143,7 @@ function getInitialAvailabilityFilters() {
     serviceId: serviceId && (/^\d+$/.test(serviceId) || fallbackServices.some((service) => service.id === serviceId))
       ? serviceId
       : fallbackServices[0].id,
-    veterinarianId: veterinarians.find((veterinarian) => veterinarian.id === veterinarianId)?.id ?? veterinarians[0].id,
+    veterinarianId: defaultVeterinarians.find((veterinarian) => veterinarian.id === veterinarianId)?.id ?? defaultVeterinarians[0].id,
     date: isWithinAvailabilityWindow && requestedDate ? requestedDate : toDateKey(today),
   };
 }
@@ -113,6 +160,7 @@ function AvailabilitySkeleton() {
 
 export function AvailabilityPage() {
   const [services, setServices] = useState(fallbackServices);
+  const [veterinarians, setVeterinarians] = useState<VeterinarianOption[]>(defaultVeterinarians);
   const [initialFilters] = useState(getInitialAvailabilityFilters);
   const [selectedServiceId, setSelectedServiceId] = useState(initialFilters.serviceId);
   const [selectedVeterinarianId, setSelectedVeterinarianId] = useState(initialFilters.veterinarianId);
@@ -123,6 +171,21 @@ export function AvailabilityPage() {
     return new Date(initialDate.getFullYear(), initialDate.getMonth(), 1);
   });
   const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    listVeterinarians().then((vets) => {
+      if (!isMounted || !vets?.length) return;
+      const options: VeterinarianOption[] = [
+        { id: 'all', name: 'Cualquier profesional' },
+        ...vets.map((v) => ({ id: String(v.id), name: v.nombre })),
+      ];
+      setVeterinarians(options);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;

@@ -1,13 +1,11 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { CatalogService } from '../services/api';
+import { listVeterinarians, DEMO_VETERINARIOS, type CatalogService } from '../services/api';
 import { Icon } from './Icon';
 
-const veterinarianOptions = [
+const defaultVetOptions = [
   { value: 'all', label: 'Cualquier profesional' },
-  { value: 'camila', label: 'Dra. Camila Torres' },
-  { value: 'andres', label: 'Dr. Andrés Rojas' },
-  { value: 'laura', label: 'Dra. Laura Méndez' },
+  ...DEMO_VETERINARIOS.map((vet) => ({ value: String(vet.id), label: vet.nombre })),
 ];
 
 function getTodayDate() {
@@ -25,8 +23,23 @@ type HeroSearchProps = {
 export function HeroSearch({ services, isLoading }: HeroSearchProps) {
   const navigate = useNavigate();
   const [service, setService] = useState('');
-  const [veterinarian, setVeterinarian] = useState(veterinarianOptions[0].value);
+  const [vetOptions, setVetOptions] = useState(defaultVetOptions);
+  const [veterinarian, setVeterinarian] = useState(defaultVetOptions[0].value);
   const [date, setDate] = useState(getTodayDate);
+
+  useEffect(() => {
+    let isMounted = true;
+    listVeterinarians().then((vets) => {
+      if (!isMounted || !vets?.length) return;
+      setVetOptions([
+        { value: 'all', label: 'Cualquier profesional' },
+        ...vets.map((v) => ({ value: String(v.id), label: v.nombre })),
+      ]);
+    });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -76,7 +89,7 @@ export function HeroSearch({ services, isLoading }: HeroSearchProps) {
                 onChange={(event) => setVeterinarian(event.target.value)}
                 className="w-full rounded-lg border-0 bg-white px-0 py-1 text-sm font-semibold text-slate-800 outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488]"
               >
-                {veterinarianOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+                {vetOptions.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
               </select>
             </label>
 

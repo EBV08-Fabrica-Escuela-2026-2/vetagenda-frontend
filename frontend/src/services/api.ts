@@ -39,6 +39,13 @@ export type VeterinarioListaItem = {
   nombre: string;
 };
 
+export const DEMO_VETERINARIOS: VeterinarioListaItem[] = [
+  { id: 1, nombre: 'Dr. Carlos Pérez' },
+  { id: 2, nombre: 'Dra. María López' },
+  { id: 3, nombre: 'Dr. Andrés Martínez' },
+  { id: 4, nombre: 'Dra. Laura Rodríguez' },
+];
+
 export type ServicePayload = {
   veterinarioId: number;
   nombre: string;
@@ -273,15 +280,20 @@ export async function registerPet(payload: PetPayload, documentoIdentidad: strin
 // ──────────────────────────────────────────────
 
 export async function listVeterinarians(): Promise<VeterinarioListaItem[]> {
-  const response = await fetch(`${API_BASE_URL}/veterinarios`, {
-    headers: { Accept: 'application/json' },
-  });
+  try {
+    const response = await fetch(`${API_BASE_URL}/veterinarios`, {
+      headers: { Accept: 'application/json' },
+    });
 
-  if (!response.ok) {
-    throw new Error('No se pudo obtener la lista de veterinarios.');
+    if (!response.ok) {
+      return DEMO_VETERINARIOS;
+    }
+
+    const data = await response.json();
+    return Array.isArray(data) && data.length > 0 ? data : DEMO_VETERINARIOS;
+  } catch {
+    return DEMO_VETERINARIOS;
   }
-
-  return response.json();
 }
 
 export async function registerVeterinarian(

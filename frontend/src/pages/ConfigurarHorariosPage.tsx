@@ -14,15 +14,8 @@ import {
   listVeterinarians,
   saveVetAvailability,
   VeterinarioListaItem,
+  DEMO_VETERINARIOS,
 } from '../services/api';
-
-// Veterinarios de ejemplo (mismos de docker/init.sql) para cuando el backend no está activo
-const DEMO_VETERINARIOS: VeterinarioListaItem[] = [
-  { id: 1, nombre: 'Dr. Carlos Pérez' },
-  { id: 2, nombre: 'Dra. María López' },
-  { id: 3, nombre: 'Dr. Andrés Martínez' },
-  { id: 4, nombre: 'Dra. Laura Rodríguez' },
-];
 
 const DURACION_TURNO_MINUTOS = 30;
 const RANGO_INVALIDO = 'El rango de horario no es válido: la hora de finalización debe ser posterior a la de inicio.';
