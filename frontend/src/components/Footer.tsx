@@ -7,7 +7,7 @@ export function Footer() {
       <div className="mx-auto max-w-7xl">
         <div className="grid gap-10 border-b border-slate-700 pb-10 md:grid-cols-[1.5fr_1fr_1fr]">
           <div>
-          <Logo variant="light" />
+            <Logo variant="light" />
             <p className="mt-4 max-w-md text-sm leading-6 text-slate-300">
               Organiza el cuidado de tus mascotas, consulta servicios y encuentra horarios disponibles en un solo lugar.
             </p>
@@ -19,10 +19,10 @@ export function Footer() {
           <nav aria-label="Explorar VetAgenda">
             <h2 className="text-xs font-bold uppercase text-slate-400">Explorar</h2>
             <div className="mt-4 flex flex-col items-start gap-3 text-sm text-slate-200">
-              <a href="#como-funciona" className="transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300">Cómo funciona</a>
-              <a href="#servicios" className="transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300">Servicios</a>
-              <a href="#portales" className="transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300">Portales</a>
-              <a href="#faq" className="transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300">Preguntas frecuentes</a>
+              <Link to="/#como-funciona" className="transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300">Cómo funciona</Link>
+              <Link to="/#servicios" className="transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300">Servicios</Link>
+              <Link to="/#portales" className="transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300">Portales</Link>
+              <Link to="/#faq" className="transition-colors hover:text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-300">Preguntas frecuentes</Link>
             </div>
           </nav>
 
@@ -36,9 +36,13 @@ export function Footer() {
           </nav>
         </div>
 
-        <div className="flex flex-col gap-2 pt-6 text-xs text-slate-400 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-4 pt-6 text-xs text-slate-400 lg:flex-row lg:items-center lg:justify-between">
           <p>© {new Date().getFullYear()} VetAgenda.</p>
-          <p>Proyecto académico de Fábrica Escuela.</p>
+          <nav aria-label="Información legal" className="flex flex-wrap gap-x-5 gap-y-2">
+            <Link to="/privacidad" className="transition-colors hover:text-white">Privacidad y Habeas Data</Link>
+            <Link to="/terminos" className="transition-colors hover:text-white">Términos de uso</Link>
+            <Link to="/contacto" className="transition-colors hover:text-white">Contacto</Link>
+          </nav>
         </div>
       </div>
     </footer>

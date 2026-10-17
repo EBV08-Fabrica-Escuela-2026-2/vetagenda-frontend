@@ -13,6 +13,7 @@ import { ReprogramarCitaPage } from './pages/ReprogramarCitaPage';
 import { ReservarCitaPage } from './pages/ReservarCitaPage';
 import { CancelarCitaPage } from './pages/CancelarCitaPage';
 import { ConfigurarHorariosPage } from './pages/ConfigurarHorariosPage';
+import { ContactPage, PrivacyPage, TermsPage } from './pages/InformationPages';
 
 function App() {
   return (
@@ -38,6 +39,9 @@ function App() {
         <Route path="/detalle-cita/:id" element={<DetalleCitaPage />} />
         <Route path="/detalle-cita" element={<Navigate to="/cliente/citas/1" replace />} />
         <Route path="/reprogramar-cita/:citaId" element={<ReprogramarCitaPage />} />
+        <Route path="/privacidad" element={<PrivacyPage />} />
+        <Route path="/terminos" element={<TermsPage />} />
+        <Route path="/contacto" element={<ContactPage />} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
