@@ -10,16 +10,6 @@ export type DemoProfile = {
   icon: string;
 };
 
-export const CLIENT_DEMO_PROFILE: DemoProfile = {
-  id: 'cliente-demo-carolina',
-  nombre: 'Carolina Restrepo',
-  rol: 'CLIENTE',
-  email: 'carolina.restrepo@vetagenda.com',
-  destination: '/cliente/citas',
-  description: 'Rocky · Canino, Golden Retriever',
-  icon: '🐕',
-};
-
 export const VETERINARIAN_DEMO_PROFILE: DemoProfile = {
   id: 'veterinario-demo-camilo',
   nombre: 'Dr. Camilo Durán',
@@ -30,7 +20,7 @@ export const VETERINARIAN_DEMO_PROFILE: DemoProfile = {
   icon: '🩺',
 };
 
-const profiles: DemoProfile[] = [CLIENT_DEMO_PROFILE, VETERINARIAN_DEMO_PROFILE];
+const profiles: DemoProfile[] = [VETERINARIAN_DEMO_PROFILE];
 
 type MockRoleSwitcherProps = {
   isOpen: boolean;
@@ -111,7 +101,7 @@ export function MockRoleSwitcher({ isOpen, onClose, onSwitchRole, preferredRole 
               Elegir perfil de demostración
             </h2>
             <p id="mock-login-description" className="mt-2 text-sm leading-6 text-slate-600">
-              Cambia entre los perfiles de cliente y veterinario para explorar las funciones disponibles.
+              Explora las funciones disponibles para el equipo veterinario.
             </p>
           </div>
           <button

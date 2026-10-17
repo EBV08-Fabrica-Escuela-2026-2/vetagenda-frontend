@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { HeroSearch } from './components/HeroSearch';
 import { ClientAccessModal } from './components/ClientAccessModal';
-import { CLIENT_DEMO_PROFILE, MockRoleSwitcher, type DemoProfile } from './components/MockRoleSwitcher';
+import { MockRoleSwitcher, type DemoProfile } from './components/MockRoleSwitcher';
 import { Navbar } from './components/Navbar';
 import { PortalsGrid } from './components/PortalsGrid';
 import { Footer } from './components/Footer';
@@ -193,8 +193,6 @@ function LandingPage() {
       <ClientAccessModal
         isOpen={isClientAccessOpen}
         onClose={() => setIsClientAccessOpen(false)}
-        onStartDemo={startDemo}
-        demoProfile={CLIENT_DEMO_PROFILE}
       />
     </main>
   );

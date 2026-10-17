@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCurrentClient, loginUser, saveClientSession } from '../services/api';
-import type { DemoProfile } from './MockRoleSwitcher';
+
+const DEMO_EMAIL = 'carolina.restrepo@vetagenda.com';
+const DEMO_PASSWORD = 'Demo2026!';
 
 type ClientAccessModalProps = {
   isOpen: boolean;
   onClose: () => void;
-  onStartDemo: (profile: DemoProfile) => void;
-  demoProfile: DemoProfile;
 };
 
-export function ClientAccessModal({ isOpen, onClose, onStartDemo, demoProfile }: ClientAccessModalProps) {
+export function ClientAccessModal({ isOpen, onClose }: ClientAccessModalProps) {
   const navigate = useNavigate();
   const dialogRef = useRef<HTMLDivElement>(null);
   const emailRef = useRef<HTMLInputElement>(null);
@@ -74,6 +74,22 @@ export function ClientAccessModal({ isOpen, onClose, onStartDemo, demoProfile }:
       navigate('/cliente/citas');
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : 'No fue posible iniciar sesión.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  async function handleDemoLogin() {
+    setIsSubmitting(true);
+    setError('');
+    try {
+      const auth = await loginUser(DEMO_EMAIL, DEMO_PASSWORD);
+      const profile = await getCurrentClient(auth.token);
+      saveClientSession(profile, auth.token);
+      onClose();
+      navigate('/cliente/citas');
+    } catch (loginError) {
+      setError(loginError instanceof Error ? loginError.message : 'No fue posible cargar el perfil de Carolina.');
     } finally {
       setIsSubmitting(false);
     }
@@ -164,10 +180,11 @@ export function ClientAccessModal({ isOpen, onClose, onStartDemo, demoProfile }:
 
         <button
           type="button"
-          onClick={() => onStartDemo(demoProfile)}
+          onClick={handleDemoLogin}
+          disabled={isSubmitting}
           className="mt-3 w-full px-4 py-2 text-sm font-semibold text-slate-600 underline decoration-slate-300 underline-offset-4 hover:text-[#0D5C75]"
         >
-          Explorar con Carolina (modo demo)
+          {isSubmitting ? 'Cargando perfil…' : 'Explorar con Carolina (modo demo)'}
         </button>
       </div>
     </div>

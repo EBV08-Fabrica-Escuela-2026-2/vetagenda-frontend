@@ -114,7 +114,16 @@ type CitaClienteApi = {
   veterinarioNombre: string;
   servicioNombre: string;
   fechaHoraInicio: string;
+  fechaHoraFin: string;
   estado: string;
+  motivoCancelacion?: string;
+  canceladaAt?: string;
+};
+
+type MascotaApi = {
+  nombre: string;
+  especie: string;
+  raza: string;
 };
 
 export type CancelacionCitaApi = {
@@ -749,27 +758,56 @@ export async function reservarCita(payload: ReservarCitaPayload): Promise<Reserv
 
 export async function getCitas(documentoIdentidad: string): Promise<Cita[]> {
   const localCitas = getCitasLocales(documentoIdentidad);
+  const token = localStorage.getItem('vetagenda_token');
+  const hasRealSession = Boolean(token && token !== 'mock-jwt-token');
+  let clienteNombre = 'Cliente VetAgenda';
+
+  try {
+    const session = JSON.parse(localStorage.getItem('vetagenda_user') || 'null');
+    if (session?.nombre) clienteNombre = session.nombre;
+  } catch {
+    // La sesión dañada no debe impedir consultar las citas.
+  }
 
   try {
     const response = await fetch(
       `${API_BASE_URL}/citas?documentoIdentidad=${encodeURIComponent(documentoIdentidad)}`,
-      { headers: { Accept: 'application/json' } },
+      {
+        headers: {
+          Accept: 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      },
     );
 
     if (response.ok) {
       const citas: CitaClienteApi[] = await response.json();
+      let mascotas: MascotaApi[] = [];
+      try {
+        const mascotasResponse = await fetch(
+          `${API_BASE_URL}/mascotas?documentoIdentidad=${encodeURIComponent(documentoIdentidad)}`,
+          { headers: { Accept: 'application/json' } },
+        );
+        if (mascotasResponse.ok) mascotas = await mascotasResponse.json();
+      } catch {
+        // Las citas siguen siendo utilizables aunque no cargue el detalle de mascotas.
+      }
+
       const apiCitas: Cita[] = citas.map((cita) => {
         const fechaHora = new Date(cita.fechaHoraInicio);
+        const fechaHoraFin = new Date(cita.fechaHoraFin);
         const cancelada = cita.estado === 'ANULADA' || cita.estado.startsWith('CANCELADA');
+        const mascota = mascotas.find((item) => item.nombre === cita.mascotaNombre);
+        const duracionMinutos = Math.max(0, Math.round((fechaHoraFin.getTime() - fechaHora.getTime()) / 60_000));
 
         return {
           id: Number(cita.id),
           codigoReserva: `VA-${String(cita.id).padStart(4, '0')}`,
-          clienteNombre: 'Cliente VetAgenda',
+          clienteNombre,
           clienteDocumento: documentoIdentidad,
           mascotaNombre: cita.mascotaNombre,
-          mascotaEspecie: 'Mascota',
-          mascotaRaza: '',
+          mascotaEspecie: mascota?.especie || 'Mascota',
+          mascotaRaza: mascota?.raza || '',
           veterinarioNombre: cita.veterinarioNombre,
           servicioNombre: cita.servicioNombre,
           fecha: new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(fechaHora),
@@ -777,8 +815,15 @@ export async function getCitas(documentoIdentidad: string): Promise<Cita[]> {
           estado: cancelada ? 'CANCELADA' : 'PROGRAMADA',
           consultorio: 'Clínica VetAgenda',
           precio: 'Consultar',
+          duracionMinutos,
+          motivoCancelacion: cita.motivoCancelacion,
+          fechaCancelacion: cita.canceladaAt
+            ? new Intl.DateTimeFormat('es-CO').format(new Date(cita.canceladaAt))
+            : undefined,
         };
       });
+
+      if (hasRealSession) return apiCitas;
 
       const ids = new Set(apiCitas.map((c) => c.id));
       return [...apiCitas, ...localCitas.filter((c) => !ids.has(c.id))];
