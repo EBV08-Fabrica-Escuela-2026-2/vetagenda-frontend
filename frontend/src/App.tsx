@@ -1,4 +1,4 @@
-import type { ReactElement } from 'react';
+import { useEffect, type ReactElement } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import LandingPage from './LandingPage';
 import RegisterPage from './RegisterPage';
@@ -17,6 +17,26 @@ import { ConfigurarHorariosPage } from './pages/ConfigurarHorariosPage';
 import { ContactPage, PrivacyPage, TermsPage } from './pages/InformationPages';
 import { hasAuthenticatedClientSession } from './services/api';
 
+function HashScrollHandler() {
+  const { hash, pathname } = useLocation();
+
+  useEffect(() => {
+    if (!hash) return undefined;
+
+    const sectionId = decodeURIComponent(hash.slice(1));
+    const frameId = window.requestAnimationFrame(() => {
+      document.getElementById(sectionId)?.scrollIntoView({
+        behavior: 'smooth',
+        block: 'start',
+      });
+    });
+
+    return () => window.cancelAnimationFrame(frameId);
+  }, [hash, pathname]);
+
+  return null;
+}
+
 function ClientProtectedRoute({ children }: { children: ReactElement }) {
   const location = useLocation();
 
@@ -31,6 +51,7 @@ function ClientProtectedRoute({ children }: { children: ReactElement }) {
 function App() {
   return (
     <BrowserRouter>
+      <HashScrollHandler />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
