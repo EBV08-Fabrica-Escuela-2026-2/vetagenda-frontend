@@ -180,14 +180,6 @@ function LandingPage() {
 
       <FaqSection />
 
-      <section id="nosotros" className="scroll-mt-28 bg-white px-5 py-10 md:px-10">
-        <div className="mx-auto max-w-7xl border-t border-slate-100 pt-8 text-xs leading-5 text-slate-500">
-          <p><strong className="text-slate-700">Sobre VetAgenda:</strong> una plataforma que conecta a las familias con sus equipos veterinarios y hace más sencilla la organización de cada visita.</p>
-          <p id="privacidad" className="mt-2">Los perfiles de esta demostración son de ejemplo. No introduzcas datos personales reales.</p>
-          <p id="terminos" className="mt-1">El acceso demo es temporal y no representa una cuenta autenticada.</p>
-        </div>
-      </section>
-
       <Footer />
 
       <MockRoleSwitcher
