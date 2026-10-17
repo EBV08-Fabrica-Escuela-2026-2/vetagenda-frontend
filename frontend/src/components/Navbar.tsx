@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { Icon } from './Icon';
 import { Logo } from './Logo';
 
@@ -19,13 +18,6 @@ export function Navbar({ onOpenRoleSwitcher }: NavbarProps) {
 
   return (
     <header className="sticky top-0 z-40">
-      <Link
-        to="/disponibilidad"
-        className="block bg-[#0D5C75] px-4 py-2 text-center text-xs font-semibold text-white transition hover:bg-[#094356] sm:text-sm"
-      >
-        Consulta la disponibilidad y agenda tu cita →
-      </Link>
-
       <div className="border-b border-slate-100 bg-white/90 backdrop-blur-md">
         <div className="mx-auto flex min-h-[72px] max-w-7xl items-center justify-between gap-4 px-5 md:px-10">
           <Logo />
