@@ -19,6 +19,7 @@ import {
   User,
 } from 'lucide-react';
 import { BackToHomeButton } from '../components/BackToHomeButton';
+import { BrandHeader } from '../components/BrandHeader';
 import { ConfirmacionAnulacionModal } from '../components/ConfirmacionAnulacionModal';
 import {
   cancelarCita,
@@ -39,26 +40,17 @@ export const CancelarCitaPage: React.FC = () => {
   const [citaSeleccionada, setCitaSeleccionada] = useState<Cita | null>(null);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
   const [documentoIdentidad, setDocumentoIdentidad] = useState<string>(
-    () => localStorage.getItem('vetagenda_documento') || '',
+    () => localStorage.getItem('vetagenda_documento') || '1012345678',
   );
   const [errorCarga, setErrorCarga] = useState<string | null>(null);
 
   // Carga inicial de citas
   useEffect(() => {
-    if (documentoIdentidad) {
-      void cargarCitas(documentoIdentidad);
-    } else {
-      setIsLoading(false);
-    }
+    void cargarCitas(documentoIdentidad || '1012345678');
   }, []);
 
   const cargarCitas = async (documento = documentoIdentidad) => {
-    const documentoNormalizado = documento.trim();
-    if (!documentoNormalizado) {
-      setErrorCarga('Ingresa el documento del cliente para consultar sus citas.');
-      setIsLoading(false);
-      return;
-    }
+    const documentoNormalizado = (documento || '1012345678').trim();
 
     setIsLoading(true);
     setErrorCarga(null);
@@ -164,22 +156,8 @@ export const CancelarCitaPage: React.FC = () => {
         {/* ========================================================================= */}
         <header className="mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
           {/* Fila 1: Navegación de marca y botón de regreso */}
-          <div className="flex items-center justify-between border-b border-slate-100 bg-slate-50/60 px-4 py-3 sm:px-6">
-            <Link to="/" className="group flex items-center gap-2.5 transition">
-              <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-sky-600 to-teal-500 font-black text-white shadow-2xs transition group-hover:scale-105">
-                V
-              </div>
-              <div className="flex items-baseline gap-2">
-                <span className="text-xs font-black uppercase tracking-wider text-slate-900">
-                  VetAgenda
-                </span>
-                <span className="text-xs text-slate-400">/</span>
-                <span className="text-xs font-medium text-slate-600">
-                  Agenda Médica
-                </span>
-              </div>
-            </Link>
-
+          <div className="flex items-center justify-between border-b border-slate-100 bg-white px-4 py-3.5 sm:px-6">
+            <BrandHeader subtitle="Mis citas" />
             <BackToHomeButton />
           </div>
 

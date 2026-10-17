@@ -66,16 +66,12 @@ export const DetalleCitaPage: React.FC = () => {
   return (
     <div style={{ backgroundColor: '#f8fafc', minHeight: '100vh', fontFamily: 'system-ui, sans-serif' }}>
       {/* Navbar Superior */}
-      <header style={{ backgroundColor: '#ffffff', borderBottom: '1px solid #e2e8f0', padding: '12px 32px' }}>
-        <div style={{ maxWidth: '1200px', margin: '0 auto', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '900px' }}>
-            <BrandHeader subtitle="Mis citas" />
-            <div className="flex items-center gap-3">                        
-            <BackToHomeButton />
-            </div>
-            </div>
+      <header className="border-b border-slate-200 bg-white px-4 py-3.5 sm:px-8">
+        <div className="mx-auto flex max-w-6xl items-center justify-between">
+          <BrandHeader subtitle="Detalle de cita" />
+          <BackToHomeButton />
         </div>
-     </header>
+      </header>
 
       {/* Contenido Principal */}
       <main style={{ maxWidth: '1200px', margin: '0 auto', padding: '24px 16px' }}>

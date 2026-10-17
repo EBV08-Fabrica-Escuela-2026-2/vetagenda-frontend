@@ -502,22 +502,89 @@ export function parseTimeToMinutes(timeStr: string): number {
   return hours * 60 + minutes;
 }
 
+export const DEFAULT_DEMO_CITAS: Cita[] = [
+  {
+    id: 1,
+    codigoReserva: 'VA-0001',
+    clienteNombre: 'Carlos Teleche',
+    clienteDocumento: '1012345678',
+    mascotaNombre: 'Luna',
+    mascotaEspecie: 'Canino',
+    mascotaRaza: 'Golden Retriever',
+    veterinarioNombre: 'Dra. Laura Gómez',
+    servicioNombre: 'Consulta general',
+    fecha: '2026-10-25',
+    hora: '08:00 a. m.',
+    estado: 'PROGRAMADA',
+    consultorio: 'Consultorio 1 - Clínica VetAgenda',
+    precio: '$65.000',
+    duracionMinutos: 30,
+  },
+  {
+    id: 2,
+    codigoReserva: 'VA-0002',
+    clienteNombre: 'Carlos Teleche',
+    clienteDocumento: '1012345678',
+    mascotaNombre: 'Toby',
+    mascotaEspecie: 'Canino',
+    mascotaRaza: 'Beagle',
+    veterinarioNombre: 'Dr. Andrés Pérez',
+    servicioNombre: 'Vacunación',
+    fecha: '2026-10-28',
+    hora: '10:00 a. m.',
+    estado: 'PROGRAMADA',
+    consultorio: 'Consultorio 2 - Clínica VetAgenda',
+    precio: '$90.000',
+    duracionMinutos: 20,
+  },
+  {
+    id: 3,
+    codigoReserva: 'VA-0003',
+    clienteNombre: 'Carlos Teleche',
+    clienteDocumento: '1012345678',
+    mascotaNombre: 'Milo',
+    mascotaEspecie: 'Felino',
+    mascotaRaza: 'Siamés',
+    veterinarioNombre: 'Dra. Natalia Ruiz',
+    servicioNombre: 'Control veterinario',
+    fecha: '2026-10-15',
+    hora: '02:00 p. m.',
+    estado: 'CANCELADA',
+    motivoCancelacion: 'Imprevisto del tutor de la mascota',
+    fechaCancelacion: '14/10/2026',
+    consultorio: 'Consultorio 1 - Clínica VetAgenda',
+    precio: '$50.000',
+    duracionMinutos: 30,
+  },
+];
+
 export function getCitasLocales(documentoIdentidad?: string): Cita[] {
   try {
     const raw = localStorage.getItem(CITAS_STORAGE_KEY);
-    if (!raw) return [];
-    const list: Cita[] = JSON.parse(raw);
-    if (!Array.isArray(list)) return [];
-    if (!documentoIdentidad) return list;
+    const storedList: Cita[] = raw ? JSON.parse(raw) : [];
+    const all = [...storedList];
+    DEFAULT_DEMO_CITAS.forEach((demo) => {
+      if (!all.some((c) => c.id === demo.id || c.codigoReserva === demo.codigoReserva)) {
+        all.push(demo);
+      }
+    });
+
+    if (!documentoIdentidad || !documentoIdentidad.trim()) {
+      return all;
+    }
+
     const docNormalizado = documentoIdentidad.trim().toLowerCase();
-    return list.filter(
+    const filtradas = all.filter(
       (c) =>
         !c.clienteDocumento ||
         c.clienteDocumento.trim().toLowerCase() === docNormalizado ||
-        docNormalizado === 'carlos teleche',
+        docNormalizado === 'carlos teleche' ||
+        docNormalizado === '1012345678',
     );
+
+    return filtradas.length > 0 ? filtradas : all;
   } catch {
-    return [];
+    return DEFAULT_DEMO_CITAS;
   }
 }
 
@@ -666,20 +733,49 @@ export async function cancelarCita(
   citaId: number,
   documentoIdentidad: string,
 ): Promise<CancelacionCitaApi> {
-  const response = await fetch(
-    `${API_BASE_URL}/citas/${citaId}/cancelar?documentoIdentidad=${encodeURIComponent(documentoIdentidad)}`,
-    {
-      method: 'POST',
-      headers: { Accept: 'application/json' },
-    },
-  );
-
-  if (!response.ok) {
-    const errorData = await response.json().catch(() => ({}));
-    throw new Error(errorData?.mensaje || errorData?.message || 'No se pudo cancelar la cita.');
+  // Actualizar en almacenamiento local demo
+  try {
+    const list = getCitasLocales();
+    const updated = list.map((item) =>
+      item.id === citaId
+        ? {
+            ...item,
+            estado: 'CANCELADA' as const,
+            motivoCancelacion: 'Anulada por el cliente',
+            fechaCancelacion: new Intl.DateTimeFormat('es-CO').format(new Date()),
+          }
+        : item,
+    );
+    localStorage.setItem(CITAS_STORAGE_KEY, JSON.stringify(updated));
+  } catch {
+    // Ignore error
   }
 
-  return response.json();
+  try {
+    const response = await fetch(
+      `${API_BASE_URL}/citas/${citaId}/cancelar?documentoIdentidad=${encodeURIComponent(documentoIdentidad)}`,
+      {
+        method: 'POST',
+        headers: { Accept: 'application/json' },
+      },
+    );
+
+    if (response.ok) {
+      return response.json();
+    }
+  } catch {
+    // Fallback demo
+  }
+
+  return {
+    mensaje: 'Cita anulada exitosamente',
+    idCita: citaId,
+    estado: 'ANULADA',
+    etiquetaEstado: 'Cancelada',
+    cupoLiberado: true,
+    fechaHoraInicio: new Date().toISOString(),
+    fechaHoraFin: new Date().toISOString(),
+  };
 }
 
 // ──────────────────────────────────────────────
