@@ -2,10 +2,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BackToHomeButton } from '../components/BackToHomeButton';
 import { BrandHeader } from '../components/BrandHeader';
+import { Icon } from '../components/Icon';
 import {
   listServices,
   fetchCatalogo,
   getStoredAvailability,
+  hasAuthenticatedClientSession,
   DEFAULT_CATALOGO,
   type CatalogService,
   type VeterinarioConServicios,
@@ -361,6 +363,30 @@ export function AvailabilityPage() {
     setSelectedSlot(null);
   }
 
+  function buildReservationPath() {
+    if (!selectedSlot) return '/citas/reservar';
+
+    const query = new URLSearchParams({
+      servicio: selectedService.name,
+      servicioId: String(selectedService.id),
+      fecha: selectedDate,
+      horario: selectedSlot.time,
+      profesional: selectedSlot.veterinarioNombre,
+      veterinarioId: String(selectedSlot.veterinarioId),
+    });
+    return `/citas/reservar?${query.toString()}`;
+  }
+
+  function continueToReservation() {
+    const reservationPath = buildReservationPath();
+    if (!hasAuthenticatedClientSession()) {
+      navigate(`/login?returnTo=${encodeURIComponent(reservationPath)}`);
+      return;
+    }
+
+    navigate(reservationPath);
+  }
+
   return (
     <main className="min-h-screen bg-sky-50 px-4 py-8 text-slate-800 md:px-8">
       <div className="mx-auto max-w-6xl">
@@ -368,10 +394,13 @@ export function AvailabilityPage() {
           <BrandHeader subtitle="Consulta de disponibilidad" />
           <div className="flex flex-wrap items-center gap-3">
             <Link
-              to="/citas/reservar"
+              to={hasAuthenticatedClientSession()
+                ? '/citas/reservar'
+                : `/login?returnTo=${encodeURIComponent('/citas/reservar')}`}
               className="inline-flex items-center gap-1.5 rounded-full bg-sky-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-sky-700"
             >
-              <span>📅</span> Agendar cita
+              <Icon name={hasAuthenticatedClientSession() ? 'calendar' : 'user'} className="h-4 w-4" />
+              {hasAuthenticatedClientSession() ? 'Agendar cita' : 'Iniciar sesión'}
             </Link>
             <BackToHomeButton />
           </div>
@@ -675,33 +704,19 @@ export function AvailabilityPage() {
                         <button
                           type="button"
                           id="btn-agendar-cita"
-                          onClick={() => {
-                            const query = new URLSearchParams({
-                              servicio: selectedService.name,
-                              servicioId: String(selectedService.id),
-                              fecha: selectedDate,
-                              horario: selectedSlot.time,
-                              profesional: selectedSlot.veterinarioNombre,
-                              veterinarioId: String(selectedSlot.veterinarioId),
-                            });
-                            navigate(`/citas/reservar?${query.toString()}`, {
-                              state: {
-                                servicio: selectedService.name,
-                                servicioId: selectedService.id,
-                                fecha: selectedDate,
-                                horario: selectedSlot.time,
-                                profesional: selectedSlot.veterinarioNombre,
-                                veterinarioId: selectedSlot.veterinarioId,
-                              },
-                            });
-                          }}
+                          onClick={continueToReservation}
                           className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-emerald-700 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
                         >
-                          <span>📅</span> Agendar cita con este horario
+                          <Icon name={hasAuthenticatedClientSession() ? 'calendar' : 'user'} className="h-5 w-5" />
+                          {hasAuthenticatedClientSession()
+                            ? 'Agendar cita con este horario'
+                            : 'Inicia sesión para agendar'}
                         </button>
                       </div>
                       <p className="mt-2 text-xs text-emerald-700">
-                        Tu selección está lista para continuar con la reserva.
+                        {hasAuthenticatedClientSession()
+                          ? 'Tu selección está lista para continuar con la reserva.'
+                          : 'Guardaremos esta selección mientras inicias sesión.'}
                       </p>
                     </div>
                   )}

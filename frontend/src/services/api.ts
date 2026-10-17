@@ -291,6 +291,22 @@ export function saveClientSession(profile: ClientProfile, token: string) {
   localStorage.setItem('vetagenda_documento', profile.documentoIdentidad);
 }
 
+export function hasAuthenticatedClientSession(): boolean {
+  const token = localStorage.getItem('vetagenda_token');
+  const sessionActive = localStorage.getItem('vetagenda_session') === 'true';
+
+  if (!token || !sessionActive) {
+    return false;
+  }
+
+  try {
+    const user = JSON.parse(localStorage.getItem('vetagenda_user') || 'null');
+    return user?.rol === 'CLIENTE' && typeof user?.documentoIdentidad === 'string';
+  } catch {
+    return false;
+  }
+}
+
 // ──────────────────────────────────────────────
 // Clientes
 // ──────────────────────────────────────────────
@@ -670,6 +686,11 @@ export function guardarCitaLocal(cita: Cita): void {
 
 export async function reservarCita(payload: ReservarCitaPayload): Promise<ReservarCitaResponse> {
   const documento = payload.documentoIdentidad || localStorage.getItem('vetagenda_documento') || '1012345678';
+  const token = localStorage.getItem('vetagenda_token');
+
+  if (!token) {
+    throw new Error('Debes iniciar sesión para agendar una cita.');
+  }
 
   // Intentar con backend si es posible
   try {
@@ -687,6 +708,7 @@ export async function reservarCita(payload: ReservarCitaPayload): Promise<Reserv
         headers: {
           'Content-Type': 'application/json',
           Accept: 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify({
           mascotaId: payload.mascotaId,

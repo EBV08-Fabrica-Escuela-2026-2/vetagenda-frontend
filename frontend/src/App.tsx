@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import type { ReactElement } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import LandingPage from './LandingPage';
 import RegisterPage from './RegisterPage';
 import LoginPage from './pages/LoginPage';
@@ -14,6 +15,18 @@ import { ReservarCitaPage } from './pages/ReservarCitaPage';
 import { CancelarCitaPage } from './pages/CancelarCitaPage';
 import { ConfigurarHorariosPage } from './pages/ConfigurarHorariosPage';
 import { ContactPage, PrivacyPage, TermsPage } from './pages/InformationPages';
+import { hasAuthenticatedClientSession } from './services/api';
+
+function ClientProtectedRoute({ children }: { children: ReactElement }) {
+  const location = useLocation();
+
+  if (hasAuthenticatedClientSession()) {
+    return children;
+  }
+
+  const returnTo = `${location.pathname}${location.search}`;
+  return <Navigate to={`/login?returnTo=${encodeURIComponent(returnTo)}`} replace />;
+}
 
 function App() {
   return (
@@ -27,7 +40,14 @@ function App() {
         <Route path="/servicios/registro" element={<RegisterServicePage />} />
         <Route path="/mascotas/registro" element={<RegistroMascotaPage />} />
         <Route path="/catalogo" element={<CatalogoServiciosPage />} />
-        <Route path="/citas/reservar" element={<ReservarCitaPage />} />
+        <Route
+          path="/citas/reservar"
+          element={(
+            <ClientProtectedRoute>
+              <ReservarCitaPage />
+            </ClientProtectedRoute>
+          )}
+        />
         <Route path="/cliente/citas" element={<CancelarCitaPage />} />
         <Route path="/mis-citas" element={<Navigate to="/cliente/citas" replace />} />
         <Route path="/citas/consultar" element={<Navigate to="/cliente/citas" replace />} />

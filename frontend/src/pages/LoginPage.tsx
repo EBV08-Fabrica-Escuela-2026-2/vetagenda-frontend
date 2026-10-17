@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { BackToHomeButton } from '../components/BackToHomeButton';
 import { Logo } from '../components/Logo';
 import { getCurrentClient, loginUser, saveClientSession } from '../services/api';
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -24,7 +25,11 @@ export default function LoginPage() {
       const profile = await getCurrentClient(response.token);
       saveClientSession(profile, response.token);
       setError('');
-      navigate('/cliente/citas');
+      const requestedReturn = searchParams.get('returnTo');
+      const returnTo = requestedReturn?.startsWith('/') && !requestedReturn.startsWith('//')
+        ? requestedReturn
+        : '/cliente/citas';
+      navigate(returnTo, { replace: true });
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'No fue posible iniciar sesión. Intenta nuevamente.');
     }
@@ -39,7 +44,7 @@ export default function LoginPage() {
         <Logo />
         <h1 className="mt-4 text-3xl font-black text-slate-900">Iniciar sesión</h1>
         <p className="mt-2 text-sm text-slate-500">
-          Debes iniciar sesión para consultar el catálogo de servicios.
+          Inicia sesión para agendar y gestionar las citas de tus mascotas.
         </p>
 
         <div className="mt-8 space-y-4">
