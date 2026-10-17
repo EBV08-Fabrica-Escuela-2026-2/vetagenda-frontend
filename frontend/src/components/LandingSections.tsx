@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
 import { Icon, type IconName } from './Icon';
 import { Reveal } from './Reveal';
 
@@ -82,34 +81,6 @@ export function FaqSection() {
           })}
         </div>
       </div>
-    </section>
-  );
-}
-
-export function CtaBanner() {
-  return (
-    <section className="bg-white px-5 py-16 md:px-10 md:py-20">
-      <Reveal>
-        <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[2rem] bg-gradient-to-br from-[#0D5C75] via-[#0b7a86] to-[#0D9488] px-7 py-14 text-center text-white md:px-16 md:py-20">
-          <div className="absolute -left-10 -top-10 h-48 w-48 rounded-full bg-white/10" aria-hidden="true" />
-          <div className="absolute -bottom-16 -right-10 h-64 w-64 rounded-full bg-white/10" aria-hidden="true" />
-          <div className="relative">
-            <h2 className="mx-auto max-w-2xl text-3xl font-black tracking-tight md:text-5xl">Tu mascota merece el mejor cuidado. Empieza hoy.</h2>
-            <p className="mx-auto mt-4 max-w-xl text-base text-white/85">Consulta la disponibilidad y organiza tu próxima visita.</p>
-            <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Link to="/citas/reservar" className="inline-flex min-h-12 items-center gap-2 rounded-full bg-white px-7 text-sm font-bold text-[#0D5C75] shadow-lg transition hover:-translate-y-0.5 hover:bg-[#F0F7F7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D5C75]">
-                Agendar mi cita <Icon name="arrow" className="h-4 w-4" />
-              </Link>
-              <Link to="/cliente/citas" className="inline-flex min-h-12 items-center rounded-full border border-white/80 bg-white/10 px-7 text-sm font-bold text-white transition hover:bg-white/20">
-                Consultar mis citas
-              </Link>
-              <Link to="/catalogo" className="inline-flex min-h-12 items-center rounded-full border border-white/50 px-7 text-sm font-bold text-white transition hover:bg-white/10">
-                Ver servicios
-              </Link>
-            </div>
-          </div>
-        </div>
-      </Reveal>
     </section>
   );
 }
