@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { BackToHomeButton } from '../components/BackToHomeButton';
+import { CalendarDays, LogIn } from 'lucide-react';
 import { BrandHeader } from '../components/BrandHeader';
-import { fetchCatalogo, VeterinarioConServicios } from '../services/api';
+import { fetchCatalogo, hasAuthenticatedClientSession, VeterinarioConServicios } from '../services/api';
 
 const currencyFormatter = new Intl.NumberFormat('es-CO', {
   style: 'currency',
@@ -59,6 +59,7 @@ export function CatalogoServiciosPage() {
   const [selectedVetId, setSelectedVetId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const isAuthenticated = hasAuthenticatedClientSession();
 
   useEffect(() => {
     let isMounted = true;
@@ -125,12 +126,13 @@ export function CatalogoServiciosPage() {
       <div className="mx-auto max-w-7xl">
         <header className="mb-8 flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 md:flex-row md:items-center md:justify-between">
           <BrandHeader subtitle="Catálogo de servicios" />
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-700">
-              Moneda: COP
-            </div>
-            <BackToHomeButton />
-          </div>
+          <Link
+            to={isAuthenticated ? '/cliente/citas' : '/login?returnTo=%2Fcatalogo'}
+            className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-xl bg-[#0D5C75] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#094356] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488] focus-visible:ring-offset-2 md:self-auto"
+          >
+            {isAuthenticated ? <CalendarDays className="h-4 w-4" /> : <LogIn className="h-4 w-4" />}
+            {isAuthenticated ? 'Mis citas' : 'Ingresar'}
+          </Link>
         </header>
 
         {veterinarios.length === 0 ? (
@@ -193,7 +195,7 @@ export function CatalogoServiciosPage() {
               })}
             </section>
 
-            <aside className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
+            <aside className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 lg:sticky lg:top-6 lg:max-h-[calc(100vh-3rem)] lg:self-start lg:overflow-y-auto">
               {!selectedVet ? (
                 <div className="rounded-2xl bg-slate-50 p-5 text-slate-500">
                   Selecciona un veterinario para ver su detalle.
