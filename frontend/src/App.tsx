@@ -28,6 +28,8 @@ function App() {
         <Route path="/catalogo" element={<CatalogoServiciosPage />} />
         <Route path="/citas/reservar" element={<ReservarCitaPage />} />
         <Route path="/cliente/citas" element={<CancelarCitaPage />} />
+        <Route path="/mis-citas" element={<Navigate to="/cliente/citas" replace />} />
+        <Route path="/citas/consultar" element={<Navigate to="/cliente/citas" replace />} />
         <Route path="/veterinario/agenda" element={<VeterinarianAppointmentsPage />} />
         <Route path="/veterinario/disponibilidad" element={<ConfigurarHorariosPage />} />
         <Route path="/veterinarios/horarios" element={<ConfigurarHorariosPage />} />

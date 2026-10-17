@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   Calendar,
   Clock,
@@ -17,6 +17,9 @@ import {
   CalendarCheck,
   CalendarX,
   User,
+  Eye,
+  RefreshCw,
+  CalendarPlus,
 } from 'lucide-react';
 import { BackToHomeButton } from '../components/BackToHomeButton';
 import { BrandHeader } from '../components/BrandHeader';
@@ -31,6 +34,7 @@ type FiltroEstado = 'TODAS' | 'PROGRAMADA' | 'CANCELADA';
 type ModoVista = 'lista' | 'tarjetas';
 
 export const CancelarCitaPage: React.FC = () => {
+  const [searchParams] = useSearchParams();
   const [citas, setCitas] = useState<Cita[]>([]);
   const [filtroTexto, setFiltroTexto] = useState<string>('');
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>('TODAS');
@@ -39,14 +43,17 @@ export const CancelarCitaPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [citaSeleccionada, setCitaSeleccionada] = useState<Cita | null>(null);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
-  const [documentoIdentidad, setDocumentoIdentidad] = useState<string>(
-    () => localStorage.getItem('vetagenda_documento') || '1012345678',
-  );
+  const [documentoIdentidad, setDocumentoIdentidad] = useState<string>(() => {
+    const fromParam = searchParams.get('documento');
+    if (fromParam) return fromParam;
+    return localStorage.getItem('vetagenda_documento') || '1012345678';
+  });
   const [errorCarga, setErrorCarga] = useState<string | null>(null);
 
   // Carga inicial de citas
   useEffect(() => {
-    void cargarCitas(documentoIdentidad || '1012345678');
+    const doc = searchParams.get('documento') || documentoIdentidad || '1012345678';
+    void cargarCitas(doc);
   }, []);
 
   const cargarCitas = async (documento = documentoIdentidad) => {
@@ -164,9 +171,14 @@ export const CancelarCitaPage: React.FC = () => {
           {/* Fila 2: Título de sección y métricas en vivo */}
           <div className="border-b border-slate-100 bg-white px-4 py-3.5 sm:px-6">
             <div className="flex flex-col gap-2.5 sm:flex-row sm:items-center sm:justify-between">
-              <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
-                Anulación y Liberación de Turnos
-              </h1>
+              <div>
+                <h1 className="text-xl font-bold tracking-tight text-slate-900 sm:text-2xl">
+                  Mis Citas Médicas · Consulta y Gestión
+                </h1>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Consulta tus citas activas e históricas, accede a los detalles clínicos, reprograma fechas o libera cupos.
+                </p>
+              </div>
 
               {/* Contadores integrados */}
               <div className="flex items-center gap-2 shrink-0">
@@ -178,6 +190,13 @@ export const CancelarCitaPage: React.FC = () => {
                   <CalendarX className="h-4 w-4 text-rose-600" />
                   <span>{totalCanceladas} Anuladas</span>
                 </div>
+                <Link
+                  to="/citas/reservar"
+                  className="hidden sm:inline-flex items-center gap-1.5 rounded-xl bg-sky-700 px-3.5 py-1.5 text-xs font-bold text-white shadow-2xs transition hover:bg-sky-800"
+                >
+                  <CalendarPlus className="h-3.5 w-3.5" />
+                  <span>Nueva cita</span>
+                </Link>
               </div>
             </div>
           </div>
@@ -276,28 +295,66 @@ export const CancelarCitaPage: React.FC = () => {
           </div>
         </header>
 
-        <form
-          onSubmit={handleConsultarCitas}
-          className="mb-5 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs sm:flex-row sm:items-end"
-        >
-          <label className="flex-1 text-xs font-bold uppercase tracking-wider text-slate-600">
-            Documento del cliente
-            <input
-              type="text"
-              value={documentoIdentidad}
-              onChange={(event) => setDocumentoIdentidad(event.target.value)}
-              placeholder="Ej. 1020304050"
-              className="mt-1.5 w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-normal text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="rounded-xl bg-sky-700 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+        {/* Sección de consulta por documento con accesos rápidos */}
+        <section className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
+          <form
+            onSubmit={handleConsultarCitas}
+            className="flex flex-col gap-3 sm:flex-row sm:items-end"
           >
-            Consultar citas
-          </button>
-        </form>
+            <label className="flex-1 text-xs font-bold uppercase tracking-wider text-slate-600">
+              Consultar citas por documento de identidad
+              <input
+                type="text"
+                value={documentoIdentidad}
+                onChange={(event) => setDocumentoIdentidad(event.target.value)}
+                placeholder="Ingresa tu cédula o documento (ej. 1012345678, 1020304050)"
+                className="mt-1.5 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-normal text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
+              />
+            </label>
+            <div className="flex items-center gap-2">
+              <button
+                type="submit"
+                disabled={isLoading}
+                className="inline-flex items-center gap-2 rounded-xl bg-sky-700 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+              >
+                <Search className="h-4 w-4" />
+                <span>{isLoading ? 'Consultando...' : 'Consultar citas'}</span>
+              </button>
+              <Link
+                to="/citas/reservar"
+                className="inline-flex sm:hidden items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-100"
+              >
+                <CalendarPlus className="h-4 w-4" />
+                <span>Reservar</span>
+              </Link>
+            </div>
+          </form>
+
+          {/* Accesos rápidos de prueba */}
+          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
+            <span className="font-semibold text-slate-600">Consultar perfiles de ejemplo:</span>
+            <button
+              type="button"
+              onClick={() => {
+                setDocumentoIdentidad('1012345678');
+                void cargarCitas('1012345678');
+              }}
+              className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-semibold text-sky-800 transition hover:bg-sky-50 hover:border-sky-300"
+            >
+              Carolina Restrepo (1012345678)
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setDocumentoIdentidad('1020304050');
+                void cargarCitas('1020304050');
+              }}
+              className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-semibold text-slate-700 transition hover:bg-slate-100 hover:border-slate-300"
+            >
+              Paciente Demo (1020304050)
+            </button>
+          </div>
+        </section>
 
         {errorCarga && (
           <div className="mb-5 rounded-2xl border border-rose-200 bg-rose-50 p-3.5 text-sm font-medium text-rose-800">
@@ -340,15 +397,24 @@ export const CancelarCitaPage: React.FC = () => {
             <p className="mx-auto mt-1 max-w-md text-xs text-slate-500">
               No hay citas que coincidan con la búsqueda o el filtro seleccionado.
             </p>
-            {filtroTexto && (
-              <button
-                type="button"
-                onClick={() => setFiltroTexto('')}
-                className="mt-3 rounded-xl bg-sky-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-sky-700 shadow-2xs"
+            <div className="mt-4 flex flex-wrap items-center justify-center gap-2.5">
+              {filtroTexto && (
+                <button
+                  type="button"
+                  onClick={() => setFiltroTexto('')}
+                  className="rounded-xl bg-sky-600 px-3.5 py-1.5 text-xs font-semibold text-white transition hover:bg-sky-700 shadow-2xs"
+                >
+                  Limpiar búsqueda
+                </button>
+              )}
+              <Link
+                to="/citas/reservar"
+                className="inline-flex items-center gap-1.5 rounded-xl border border-sky-300 bg-sky-50 px-3.5 py-1.5 text-xs font-bold text-sky-800 transition hover:bg-sky-100 shadow-2xs"
               >
-                Limpiar búsqueda
-              </button>
-            )}
+                <CalendarPlus className="h-3.5 w-3.5 text-sky-600" />
+                <span>Agendar nueva cita</span>
+              </Link>
+            </div>
           </div>
         ) : modoVista === 'lista' ? (
           /* ========================================================================= */
@@ -365,7 +431,7 @@ export const CancelarCitaPage: React.FC = () => {
                     <th className="py-3 px-4">Servicio & Especialista</th>
                     <th className="py-3 px-4">Fecha, Hora & Lugar</th>
                     <th className="py-3 px-4 w-[100px]">Valor</th>
-                    <th className="py-3 px-4 text-right w-[140px]">Acción</th>
+                    <th className="py-3 px-4 text-right min-w-[220px]">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
@@ -473,23 +539,46 @@ export const CancelarCitaPage: React.FC = () => {
                           </span>
                         </td>
 
-                        {/* Columna: Acción */}
+                        {/* Columna: Acciones de Consulta y Gestión */}
                         <td className="py-3.5 px-4 align-top text-right">
-                          {estaCancelada ? (
-                            <div className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/80 px-2.5 py-1.5 text-xs font-semibold text-slate-500 whitespace-nowrap">
-                              <CheckCircle2 className="h-3.5 w-3.5 text-slate-400" />
-                              <span>Cupo liberado</span>
-                            </div>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => setCitaSeleccionada(cita)}
-                              className="group inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50/80 px-3.5 py-1.5 text-xs font-bold text-rose-700 transition hover:border-rose-400 hover:bg-rose-600 hover:text-white shadow-2xs whitespace-nowrap"
+                          <div className="flex flex-wrap items-center justify-end gap-1.5">
+                            <Link
+                              to={`/cliente/citas/${cita.id}`}
+                              className="inline-flex items-center gap-1 rounded-xl border border-sky-200 bg-sky-50 px-2.5 py-1.5 text-xs font-bold text-sky-800 transition hover:bg-sky-100 hover:border-sky-300 shadow-2xs"
+                              title="Consultar detalles completos de la cita"
                             >
-                              <Trash2 className="h-3.5 w-3.5 text-rose-600 group-hover:text-white transition" />
-                              <span>Anular cita</span>
-                            </button>
-                          )}
+                              <Eye className="h-3.5 w-3.5 text-sky-600" />
+                              <span>Detalle</span>
+                            </Link>
+
+                            {!estaCancelada && (
+                              <Link
+                                to={`/reprogramar-cita/${cita.id}`}
+                                className="inline-flex items-center gap-1 rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-bold text-amber-800 transition hover:bg-amber-100 hover:border-amber-300 shadow-2xs"
+                                title="Reprogramar fecha y hora"
+                              >
+                                <RefreshCw className="h-3.5 w-3.5 text-amber-600" />
+                                <span>Reprogramar</span>
+                              </Link>
+                            )}
+
+                            {estaCancelada ? (
+                              <div className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/80 px-2.5 py-1.5 text-xs font-semibold text-slate-500 whitespace-nowrap">
+                                <CheckCircle2 className="h-3.5 w-3.5 text-slate-400" />
+                                <span>Liberado</span>
+                              </div>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => setCitaSeleccionada(cita)}
+                                className="group inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50/80 px-2.5 py-1.5 text-xs font-bold text-rose-700 transition hover:border-rose-400 hover:bg-rose-600 hover:text-white shadow-2xs whitespace-nowrap"
+                                title="Anular cita y liberar turno"
+                              >
+                                <Trash2 className="h-3.5 w-3.5 text-rose-600 group-hover:text-white transition" />
+                                <span>Anular</span>
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -566,22 +655,42 @@ export const CancelarCitaPage: React.FC = () => {
                       </div>
                     )}
 
-                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-2.5">
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-2.5">
                       <span className={`text-xs font-bold ${estaCancelada ? 'line-through text-slate-400' : 'text-slate-800'}`}>
                         {cita.precio}
                       </span>
-                      {estaCancelada ? (
-                        <span className="text-xs font-semibold text-slate-400">Turno liberado</span>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={() => setCitaSeleccionada(cita)}
-                          className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-600 hover:text-white shadow-2xs"
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <Link
+                          to={`/cliente/citas/${cita.id}`}
+                          className="inline-flex items-center gap-1 rounded-xl border border-sky-200 bg-sky-50 px-2.5 py-1.5 text-xs font-bold text-sky-800 hover:bg-sky-100"
+                          title="Ver detalle"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          <span>Anular</span>
-                        </button>
-                      )}
+                          <Eye className="h-3.5 w-3.5 text-sky-600" />
+                          <span>Detalle</span>
+                        </Link>
+                        {!estaCancelada && (
+                          <Link
+                            to={`/reprogramar-cita/${cita.id}`}
+                            className="inline-flex items-center gap-1 rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-bold text-amber-800 hover:bg-amber-100"
+                            title="Reprogramar cita"
+                          >
+                            <RefreshCw className="h-3.5 w-3.5 text-amber-600" />
+                            <span>Reprogramar</span>
+                          </Link>
+                        )}
+                        {estaCancelada ? (
+                          <span className="text-[11px] font-semibold text-slate-400">Cupo liberado</span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setCitaSeleccionada(cita)}
+                            className="inline-flex items-center gap-1 rounded-xl border border-rose-200 bg-rose-50 px-2.5 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-600 hover:text-white shadow-2xs"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            <span>Anular</span>
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -700,27 +809,44 @@ export const CancelarCitaPage: React.FC = () => {
                   </div>
 
                   <div className="mt-4 border-t border-slate-100 pt-3">
-                    {estaCancelada ? (
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-medium text-slate-400">Cupo disponible en clínica</span>
-                        <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
-                          <CheckCircle2 className="h-3 w-3 text-slate-400" />
-                          Turno liberado
-                        </span>
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <Link
+                        to={`/cliente/citas/${cita.id}`}
+                        className="inline-flex items-center gap-1.5 rounded-xl border border-sky-200 bg-sky-50 px-3 py-1.5 text-xs font-bold text-sky-800 transition hover:bg-sky-100"
+                        title="Ver detalle de la cita"
+                      >
+                        <Eye className="h-3.5 w-3.5 text-sky-600" />
+                        <span>Ver detalle</span>
+                      </Link>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        {!estaCancelada && (
+                          <Link
+                            to={`/reprogramar-cita/${cita.id}`}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 transition hover:bg-amber-100"
+                            title="Reprogramar fecha y hora"
+                          >
+                            <RefreshCw className="h-3.5 w-3.5 text-amber-600" />
+                            <span>Reprogramar</span>
+                          </Link>
+                        )}
+                        {estaCancelada ? (
+                          <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
+                            <CheckCircle2 className="h-3 w-3 text-slate-400" />
+                            Turno liberado
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setCitaSeleccionada(cita)}
+                            className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-600 hover:text-white transition shadow-2xs"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            <span>Anular cita</span>
+                          </button>
+                        )}
                       </div>
-                    ) : (
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="text-xs text-slate-500">¿No podrás asistir?</span>
-                        <button
-                          type="button"
-                          onClick={() => setCitaSeleccionada(cita)}
-                          className="inline-flex items-center gap-1.5 rounded-xl border border-rose-200 bg-rose-50 px-3.5 py-1.5 text-xs font-bold text-rose-700 hover:bg-rose-600 hover:text-white transition shadow-2xs"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          <span>Anular cita</span>
-                        </button>
-                      </div>
-                    )}
+                    </div>
                   </div>
                 </article>
               );

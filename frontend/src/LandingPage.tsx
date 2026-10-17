@@ -91,13 +91,22 @@ function LandingPage() {
       rol: profile.rol,
       email: profile.email,
       token: 'mock-jwt-token',
-      ...(profile.rol === 'CLIENTE' ? { mascota: { nombre: 'Rocky', especie: 'Canino', raza: 'Golden Retriever' } } : {}),
+      ...(profile.rol === 'CLIENTE'
+        ? {
+            documento: '1012345678',
+            documentoIdentidad: '1012345678',
+            mascota: { nombre: 'Rocky', especie: 'Canino', raza: 'Golden Retriever' },
+          }
+        : {}),
     };
 
     localStorage.setItem('vetagenda_user', JSON.stringify(session));
     localStorage.setItem('vetagenda_session', 'true');
     localStorage.setItem('vetagenda_role', profile.rol === 'CLIENTE' ? 'Cliente' : 'Veterinario');
     localStorage.setItem('vetagenda_token', session.token);
+    if (profile.rol === 'CLIENTE') {
+      localStorage.setItem('vetagenda_documento', '1012345678');
+    }
     closeLogin();
     setToastMessage(`Has iniciado sesión en modo demostración como ${profile.rol === 'CLIENTE' ? 'Cliente' : 'Veterinario'}.`);
     window.setTimeout(() => navigate(profile.destination), 1600);

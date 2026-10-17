@@ -33,6 +33,7 @@ const portals: {
       'Consulta el detalle de tu cita',
     ],
     forms: [
+      { title: 'Consultar mis citas', description: 'Revisa historial, estados y detalles', to: '/cliente/citas', icon: 'clipboard' },
       { title: 'Reservar cita', description: 'Agendar cita para tu mascota', to: '/citas/reservar', icon: 'calendar' },
       { title: 'Registrar cliente', description: 'Crear perfil de cliente', to: '/registro', icon: 'user' },
       { title: 'Registrar mascota', description: 'Añadir un paciente', to: '/mascotas/registro', icon: 'paw' },
@@ -116,7 +117,7 @@ export function PortalsGrid({ onOpenDemo }: PortalsGridProps) {
                       type="text"
                       value={citaId}
                       onChange={(event) => setCitaId(event.target.value)}
-                      placeholder="ID de la cita"
+                      placeholder="ID o código (ej. 1, VA-0001)"
                       required
                       autoComplete="off"
                       className="min-h-11 min-w-0 flex-1 rounded-lg border border-slate-300 bg-white px-3 text-sm text-slate-900 placeholder:text-slate-500 focus:border-[#0D5C75] focus:outline-none focus:ring-2 focus:ring-[#0D9488]/30"
@@ -128,6 +129,14 @@ export function PortalsGrid({ onOpenDemo }: PortalsGridProps) {
                       Consultar
                       <Icon name="arrow" className="h-4 w-4" />
                     </button>
+                  </div>
+                  <div className="mt-3 border-t border-slate-200/60 pt-2.5">
+                    <Link
+                      to="/cliente/citas"
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-[#0D5C75] hover:text-[#094356] hover:underline"
+                    >
+                      <span>📋</span> ¿No tienes el ID? Consulta todas tus citas con tu documento de identidad →
+                    </Link>
                   </div>
                 </form>
               )}

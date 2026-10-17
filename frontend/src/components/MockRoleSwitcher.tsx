@@ -16,7 +16,7 @@ const profiles: DemoProfile[] = [
     nombre: 'Carolina Restrepo',
     rol: 'CLIENTE',
     email: 'carolina.restrepo@vetagenda.com',
-    destination: '/disponibilidad',
+    destination: '/cliente/citas',
     description: 'Rocky · Canino, Golden Retriever',
     icon: '🐕',
   },

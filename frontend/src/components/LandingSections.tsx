@@ -100,6 +100,9 @@ export function CtaBanner() {
               <Link to="/citas/reservar" className="inline-flex min-h-12 items-center gap-2 rounded-full bg-white px-7 text-sm font-bold text-[#0D5C75] shadow-lg transition hover:-translate-y-0.5 hover:bg-[#F0F7F7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D5C75]">
                 Agendar mi cita <Icon name="arrow" className="h-4 w-4" />
               </Link>
+              <Link to="/cliente/citas" className="inline-flex min-h-12 items-center rounded-full border border-white/80 bg-white/10 px-7 text-sm font-bold text-white transition hover:bg-white/20">
+                Consultar mis citas
+              </Link>
               <Link to="/catalogo" className="inline-flex min-h-12 items-center rounded-full border border-white/50 px-7 text-sm font-bold text-white transition hover:bg-white/10">
                 Ver servicios
               </Link>

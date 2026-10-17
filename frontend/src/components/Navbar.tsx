@@ -43,6 +43,14 @@ export function Navbar({ onOpenRoleSwitcher }: NavbarProps) {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
+            <Link
+              to="/cliente/citas"
+              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-[#0D5C75] shadow-2xs transition hover:border-[#0D5C75] hover:bg-[#F0F7F7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488] sm:px-4 sm:text-sm"
+              title="Consultar historial y estado de citas"
+            >
+              <Icon name="clipboard" className="h-4 w-4 text-[#0D9488]" />
+              <span>Mis citas</span>
+            </Link>
             <button
               type="button"
               onClick={onOpenRoleSwitcher}
@@ -85,6 +93,14 @@ export function Navbar({ onOpenRoleSwitcher }: NavbarProps) {
                 {link.label}
               </a>
             ))}
+            <Link
+              to="/cliente/citas"
+              onClick={() => setOpen(false)}
+              className="flex items-center gap-2 rounded-xl px-3 py-3 text-left text-sm font-bold text-[#0D5C75] hover:bg-[#F0F7F7]"
+            >
+              <Icon name="clipboard" className="h-4 w-4 text-[#0D9488]" />
+              <span>Consultar mis citas</span>
+            </Link>
             <button
               type="button"
               onClick={() => {
