@@ -111,7 +111,7 @@ export function HeroSearch({ services, isLoading }: HeroSearchProps) {
               disabled={isLoading || services.length === 0}
               className="min-h-12 w-full rounded-full bg-[#0D5C75] px-5 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#094356] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488] focus-visible:ring-offset-2 sm:col-span-2"
             >
-              {isLoading ? 'Cargando servicios...' : 'Consultar disponibilidad'}
+              {isLoading ? 'Cargando servicios...' : 'Buscar horarios'}
             </button>
           </form>
           <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-slate-600">
