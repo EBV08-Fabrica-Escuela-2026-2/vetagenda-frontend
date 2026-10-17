@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { listVeterinarians, DEMO_VETERINARIOS, type CatalogService } from '../services/api';
 import { Icon } from './Icon';
 
@@ -114,14 +114,6 @@ export function HeroSearch({ services, isLoading }: HeroSearchProps) {
               {isLoading ? 'Cargando servicios...' : 'Buscar horarios'}
             </button>
           </form>
-          <div className="mt-6 flex flex-wrap items-center gap-x-6 gap-y-3 text-sm text-slate-600">
-            <span className="flex items-center gap-1.5"><Icon name="calendar" className="h-4 w-4 text-[#0D9488]" /> Agenda en línea</span>
-            <Link to="/cliente/citas" className="flex items-center gap-1.5 font-bold text-[#0D5C75] transition hover:text-[#0D9488]">
-              <Icon name="clipboard" className="h-4 w-4 text-[#0D9488]" /> Consultar mis citas
-            </Link>
-            <span className="flex items-center gap-1.5"><Icon name="paw" className="h-4 w-4 text-[#0D9488]" /> Registro de mascotas</span>
-            <span className="flex items-center gap-1.5"><Icon name="stethoscope" className="h-4 w-4 text-[#0D9488]" /> Portal para veterinarios</span>
-          </div>
         </div>
 
         <div className="relative mx-auto w-full max-w-[560px]">
