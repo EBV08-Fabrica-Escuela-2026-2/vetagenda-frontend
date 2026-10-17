@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { BrandHeader } from '../components/BrandHeader';
-import { BackToHomeButton } from '../components/BackToHomeButton';
+import { ClientSessionActions } from '../components/ClientSessionActions';
 import {
   listServices,
   reservarCita,
@@ -165,7 +165,7 @@ export function ReservarCitaPage() {
       <div className="mx-auto max-w-4xl">
         <header className="mb-8 flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 md:flex-row md:items-center md:justify-between">
           <BrandHeader subtitle="Reservar cita" />
-          <BackToHomeButton />
+          <ClientSessionActions />
         </header>
 
         <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 md:p-8">

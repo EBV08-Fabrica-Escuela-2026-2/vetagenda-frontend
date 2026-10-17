@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { BackToHomeButton } from '../components/BackToHomeButton';
 import { BrandHeader } from '../components/BrandHeader';
+import { ClientSessionActions } from '../components/ClientSessionActions';
 import {
   consultarDisponibilidadReprogramacion,
   obtenerCitaParaReprogramar,
@@ -173,7 +173,7 @@ export const ReprogramarCitaPage = () => {
         <header className="mb-6 flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
           <BrandHeader subtitle="Reprogramar cita" />
           <div className="flex items-center justify-between gap-4 sm:justify-end">
-            <BackToHomeButton />
+            <ClientSessionActions />
           </div>
         </header>
 

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { BrandHeader } from '../components/BrandHeader';
-import { BackToHomeButton } from '../components/BackToHomeButton';
+import { ClientSessionActions } from '../components/ClientSessionActions';
 import { DetalleCitaFeedback, DetalleCitaSkeleton } from '../components/DetalleCitaFeedback';
 import { CitaApiError, obtenerDetalleCita, type Cita, type EstadoCita, type TipoErrorCita } from '../services/citasService';
 
@@ -69,7 +69,7 @@ export const DetalleCitaPage: React.FC = () => {
       <header className="border-b border-slate-200 bg-white px-4 py-3.5 sm:px-8">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
           <BrandHeader subtitle="Detalle de cita" />
-          <BackToHomeButton />
+          <ClientSessionActions />
         </div>
       </header>
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { BackToHomeButton } from '../components/BackToHomeButton';
 import { BrandHeader } from '../components/BrandHeader';
+import { ClientSessionActions } from '../components/ClientSessionActions';
 import { Icon } from '../components/Icon';
 import {
   listServices,
@@ -392,18 +392,7 @@ export function AvailabilityPage() {
       <div className="mx-auto max-w-6xl">
         <header className="mb-6 flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:flex-row sm:items-center sm:justify-between">
           <BrandHeader subtitle="Consulta de disponibilidad" />
-          <div className="flex flex-wrap items-center gap-3">
-            <Link
-              to={hasAuthenticatedClientSession()
-                ? '/citas/reservar'
-                : `/login?returnTo=${encodeURIComponent('/citas/reservar')}`}
-              className="inline-flex items-center gap-1.5 rounded-full bg-sky-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-sky-700"
-            >
-              <Icon name={hasAuthenticatedClientSession() ? 'calendar' : 'user'} className="h-4 w-4" />
-              {hasAuthenticatedClientSession() ? 'Agendar cita' : 'Iniciar sesión'}
-            </Link>
-            <BackToHomeButton />
-          </div>
+          <ClientSessionActions />
         </header>
 
         <section className="mb-6 flex gap-3 rounded-2xl border border-sky-200 bg-sky-100/60 p-4 text-sm text-sky-950" role="note">

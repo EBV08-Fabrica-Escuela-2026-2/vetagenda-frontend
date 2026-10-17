@@ -21,8 +21,8 @@ import {
   RefreshCw,
   CalendarPlus,
 } from 'lucide-react';
-import { BackToHomeButton } from '../components/BackToHomeButton';
 import { BrandHeader } from '../components/BrandHeader';
+import { ClientSessionActions } from '../components/ClientSessionActions';
 import { ConfirmacionAnulacionModal } from '../components/ConfirmacionAnulacionModal';
 import {
   cancelarCita,
@@ -158,7 +158,7 @@ export const CancelarCitaPage: React.FC = () => {
           {/* Fila 1: Navegación de marca y botón de regreso */}
           <div className="flex items-center justify-between border-b border-slate-100 bg-white px-4 py-3.5 sm:px-6">
             <BrandHeader subtitle="Mis citas" />
-            <BackToHomeButton />
+            <ClientSessionActions showAppointmentsLink={false} />
           </div>
 
           {/* Fila 2: Título de sección y métricas en vivo */}

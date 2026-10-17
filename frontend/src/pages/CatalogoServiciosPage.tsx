@@ -1,8 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { CalendarDays, LogIn } from 'lucide-react';
 import { BrandHeader } from '../components/BrandHeader';
-import { fetchCatalogo, hasAuthenticatedClientSession, VeterinarioConServicios } from '../services/api';
+import { ClientSessionActions } from '../components/ClientSessionActions';
+import { fetchCatalogo, VeterinarioConServicios } from '../services/api';
 
 const currencyFormatter = new Intl.NumberFormat('es-CO', {
   style: 'currency',
@@ -59,7 +58,6 @@ export function CatalogoServiciosPage() {
   const [selectedVetId, setSelectedVetId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const isAuthenticated = hasAuthenticatedClientSession();
 
   useEffect(() => {
     let isMounted = true;
@@ -126,13 +124,7 @@ export function CatalogoServiciosPage() {
       <div className="mx-auto max-w-7xl">
         <header className="mb-8 flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 md:flex-row md:items-center md:justify-between">
           <BrandHeader subtitle="Catálogo de servicios" />
-          <Link
-            to={isAuthenticated ? '/cliente/citas' : '/login?returnTo=%2Fcatalogo'}
-            className="inline-flex min-h-11 items-center justify-center gap-2 self-start rounded-xl bg-[#0D5C75] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:bg-[#094356] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488] focus-visible:ring-offset-2 md:self-auto"
-          >
-            {isAuthenticated ? <CalendarDays className="h-4 w-4" /> : <LogIn className="h-4 w-4" />}
-            {isAuthenticated ? 'Mis citas' : 'Ingresar'}
-          </Link>
+          <ClientSessionActions />
         </header>
 
         {veterinarios.length === 0 ? (

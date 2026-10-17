@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { ClientSessionActions } from './ClientSessionActions';
 import { Icon } from './Icon';
 import { Logo } from './Logo';
 
@@ -35,13 +36,7 @@ export function Navbar({ onOpenRoleSwitcher }: NavbarProps) {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            <button
-              type="button"
-              onClick={onOpenRoleSwitcher}
-              className="hidden rounded-full px-4 py-2 text-sm font-bold text-[#0D5C75] transition hover:bg-[#F0F7F7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488] sm:inline-flex"
-            >
-              Ingresar
-            </button>
+            <ClientSessionActions onOpenLogin={onOpenRoleSwitcher} className="hidden sm:flex" />
             <button
               type="button"
               aria-label={open ? 'Cerrar menú' : 'Abrir menú'}
@@ -71,16 +66,12 @@ export function Navbar({ onOpenRoleSwitcher }: NavbarProps) {
                 {link.label}
               </a>
             ))}
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                onOpenRoleSwitcher();
-              }}
-              className="mt-1 rounded-xl px-3 py-3 text-left text-sm font-bold text-[#0D5C75] hover:bg-[#F0F7F7]"
-            >
-              Ingresar
-            </button>
+            <ClientSessionActions
+              onOpenLogin={onOpenRoleSwitcher}
+              onAction={() => setOpen(false)}
+              className="mt-1"
+              stacked
+            />
           </div>
         </nav>
       </div>

@@ -205,6 +205,26 @@ export type LoginResponse = {
   expiraEnMs: number;
 };
 
+export type ClientSession = {
+  id: number;
+  nombre: string;
+  rol: 'CLIENTE';
+  email: string;
+  documento: string;
+  documentoIdentidad: string;
+  token: string;
+};
+
+export const CLIENT_SESSION_EVENT = 'vetagenda-session-changed';
+
+const CLIENT_SESSION_KEYS = [
+  'vetagenda_user',
+  'vetagenda_session',
+  'vetagenda_role',
+  'vetagenda_token',
+  'vetagenda_documento',
+];
+
 export async function loginUser(email: string, password: string): Promise<LoginResponse> {
   let response: Response;
   try {
@@ -274,7 +294,7 @@ export async function getCurrentClient(token: string): Promise<ClientProfile> {
 }
 
 export function saveClientSession(profile: ClientProfile, token: string) {
-  const session = {
+  const session: ClientSession = {
     id: profile.id,
     nombre: profile.nombre,
     rol: 'CLIENTE',
@@ -289,22 +309,50 @@ export function saveClientSession(profile: ClientProfile, token: string) {
   localStorage.setItem('vetagenda_role', 'Cliente');
   localStorage.setItem('vetagenda_token', token);
   localStorage.setItem('vetagenda_documento', profile.documentoIdentidad);
+  window.dispatchEvent(new Event(CLIENT_SESSION_EVENT));
 }
 
-export function hasAuthenticatedClientSession(): boolean {
+export function getClientSession(): ClientSession | null {
   const token = localStorage.getItem('vetagenda_token');
   const sessionActive = localStorage.getItem('vetagenda_session') === 'true';
 
   if (!token || !sessionActive) {
-    return false;
+    return null;
   }
 
   try {
-    const user = JSON.parse(localStorage.getItem('vetagenda_user') || 'null');
-    return user?.rol === 'CLIENTE' && typeof user?.documentoIdentidad === 'string';
+    const user = JSON.parse(localStorage.getItem('vetagenda_user') || 'null') as Partial<ClientSession> | null;
+
+    if (
+      user?.rol !== 'CLIENTE'
+      || typeof user.id !== 'number'
+      || typeof user.nombre !== 'string'
+      || typeof user.documentoIdentidad !== 'string'
+    ) {
+      return null;
+    }
+
+    return {
+      id: user.id,
+      nombre: user.nombre,
+      rol: 'CLIENTE',
+      email: typeof user.email === 'string' ? user.email : '',
+      documento: typeof user.documento === 'string' ? user.documento : user.documentoIdentidad,
+      documentoIdentidad: user.documentoIdentidad,
+      token,
+    };
   } catch {
-    return false;
+    return null;
   }
+}
+
+export function hasAuthenticatedClientSession(): boolean {
+  return getClientSession() !== null;
+}
+
+export function clearClientSession() {
+  CLIENT_SESSION_KEYS.forEach((key) => localStorage.removeItem(key));
+  window.dispatchEvent(new Event(CLIENT_SESSION_EVENT));
 }
 
 // ──────────────────────────────────────────────
