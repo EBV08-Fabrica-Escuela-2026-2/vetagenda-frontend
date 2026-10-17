@@ -65,7 +65,7 @@ export function HeroSearch({ services, isLoading }: HeroSearchProps) {
 
           <form
             onSubmit={handleSubmit}
-            className="mt-8 grid gap-3 rounded-3xl border border-slate-100 bg-white p-4 shadow-xl shadow-slate-200/50 sm:grid-cols-2 lg:grid-cols-[1.15fr_1fr_0.9fr_auto] lg:items-end lg:gap-2"
+            className="mt-8 grid grid-cols-1 gap-3 rounded-3xl border border-slate-100 bg-white p-4 shadow-xl shadow-slate-200/50 sm:grid-cols-2"
           >
             <label className="block min-w-0 px-2 py-1">
               <span className="mb-2 block text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-500">Especialidad o servicio</span>
@@ -82,7 +82,7 @@ export function HeroSearch({ services, isLoading }: HeroSearchProps) {
               </select>
             </label>
 
-            <label className="block min-w-0 border-slate-100 px-2 py-1 sm:border-l">
+            <label className="block min-w-0 border-t border-slate-100 px-2 py-3 sm:border-l sm:border-t-0 sm:py-1">
               <span className="mb-2 block text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-500">Veterinario</span>
               <select
                 value={veterinarian}
@@ -93,7 +93,7 @@ export function HeroSearch({ services, isLoading }: HeroSearchProps) {
               </select>
             </label>
 
-            <label className="block min-w-0 border-slate-100 px-2 py-1 sm:border-l">
+            <label className="block min-w-0 border-t border-slate-100 px-2 py-3 sm:col-span-2">
               <span className="mb-2 block text-[10px] font-extrabold uppercase tracking-[0.12em] text-slate-500">Fecha deseada</span>
               <input
                 aria-label="Fecha deseada"
@@ -109,7 +109,7 @@ export function HeroSearch({ services, isLoading }: HeroSearchProps) {
             <button
               type="submit"
               disabled={isLoading || services.length === 0}
-              className="min-h-12 rounded-full bg-[#0D5C75] px-5 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#094356] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488] focus-visible:ring-offset-2"
+              className="min-h-12 w-full rounded-full bg-[#0D5C75] px-5 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:bg-[#094356] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488] focus-visible:ring-offset-2 sm:col-span-2"
             >
               {isLoading ? 'Cargando servicios...' : 'Consultar disponibilidad'}
             </button>

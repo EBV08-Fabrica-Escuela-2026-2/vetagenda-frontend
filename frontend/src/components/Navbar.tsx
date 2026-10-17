@@ -45,7 +45,7 @@ export function Navbar({ onOpenRoleSwitcher }: NavbarProps) {
           <div className="flex items-center gap-2 sm:gap-3">
             <Link
               to="/cliente/citas"
-              className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-[#0D5C75] shadow-2xs transition hover:border-[#0D5C75] hover:bg-[#F0F7F7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488] sm:px-4 sm:text-sm"
+              className="hidden items-center gap-1.5 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-bold text-[#0D5C75] shadow-2xs transition hover:border-[#0D5C75] hover:bg-[#F0F7F7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488] sm:inline-flex"
               title="Consultar historial y estado de citas"
             >
               <Icon name="clipboard" className="h-4 w-4 text-[#0D9488]" />
@@ -60,7 +60,7 @@ export function Navbar({ onOpenRoleSwitcher }: NavbarProps) {
             </button>
             <Link
               to="/citas/reservar"
-              className="rounded-full bg-[#0D5C75] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#094356] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488] focus-visible:ring-offset-2 sm:px-5 sm:text-sm"
+              className="hidden rounded-full bg-[#0D5C75] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#094356] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488] focus-visible:ring-offset-2 sm:block"
             >
               Agendar cita
             </Link>
