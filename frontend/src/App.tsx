@@ -48,7 +48,14 @@ function App() {
             </ClientProtectedRoute>
           )}
         />
-        <Route path="/cliente/citas" element={<CancelarCitaPage />} />
+        <Route
+          path="/cliente/citas"
+          element={(
+            <ClientProtectedRoute>
+              <CancelarCitaPage />
+            </ClientProtectedRoute>
+          )}
+        />
         <Route path="/mis-citas" element={<Navigate to="/cliente/citas" replace />} />
         <Route path="/citas/consultar" element={<Navigate to="/cliente/citas" replace />} />
         <Route path="/veterinario/agenda" element={<VeterinarianAppointmentsPage />} />

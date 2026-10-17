@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   Calendar,
   Clock,
@@ -34,7 +34,6 @@ type FiltroEstado = 'TODAS' | 'PROGRAMADA' | 'CANCELADA';
 type ModoVista = 'lista' | 'tarjetas';
 
 export const CancelarCitaPage: React.FC = () => {
-  const [searchParams] = useSearchParams();
   const [citas, setCitas] = useState<Cita[]>([]);
   const [filtroTexto, setFiltroTexto] = useState<string>('');
   const [filtroEstado, setFiltroEstado] = useState<FiltroEstado>('TODAS');
@@ -43,39 +42,33 @@ export const CancelarCitaPage: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [citaSeleccionada, setCitaSeleccionada] = useState<Cita | null>(null);
   const [mensajeExito, setMensajeExito] = useState<string | null>(null);
-  const [documentoIdentidad, setDocumentoIdentidad] = useState<string>(() => {
-    const fromParam = searchParams.get('documento');
-    if (fromParam) return fromParam;
-    return localStorage.getItem('vetagenda_documento') || '1012345678';
-  });
+  const documentoIdentidad = useMemo(() => {
+    try {
+      const user = JSON.parse(localStorage.getItem('vetagenda_user') || 'null');
+      return user?.documentoIdentidad || localStorage.getItem('vetagenda_documento') || '';
+    } catch {
+      return localStorage.getItem('vetagenda_documento') || '';
+    }
+  }, []);
   const [errorCarga, setErrorCarga] = useState<string | null>(null);
 
   // Carga inicial de citas
   useEffect(() => {
-    const doc = searchParams.get('documento') || documentoIdentidad || '1012345678';
-    void cargarCitas(doc);
+    void cargarCitas();
   }, []);
 
-  const cargarCitas = async (documento = documentoIdentidad) => {
-    const documentoNormalizado = (documento || '1012345678').trim();
-
+  const cargarCitas = async () => {
     setIsLoading(true);
     setErrorCarga(null);
     try {
-      const data = await getCitas(documentoNormalizado);
+      const data = await getCitas(documentoIdentidad);
       setCitas(data);
-      localStorage.setItem('vetagenda_documento', documentoNormalizado);
     } catch (e) {
       setCitas([]);
       setErrorCarga(e instanceof Error ? e.message : 'No se pudieron consultar las citas.');
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const handleConsultarCitas = (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    void cargarCitas();
   };
 
   // Filtrado reactivo en memoria
@@ -294,67 +287,6 @@ export const CancelarCitaPage: React.FC = () => {
             </div>
           </div>
         </header>
-
-        {/* Sección de consulta por documento con accesos rápidos */}
-        <section className="mb-5 rounded-2xl border border-slate-200 bg-white p-4 shadow-xs">
-          <form
-            onSubmit={handleConsultarCitas}
-            className="flex flex-col gap-3 sm:flex-row sm:items-end"
-          >
-            <label className="flex-1 text-xs font-bold uppercase tracking-wider text-slate-600">
-              Consultar citas por documento de identidad
-              <input
-                type="text"
-                value={documentoIdentidad}
-                onChange={(event) => setDocumentoIdentidad(event.target.value)}
-                placeholder="Ingresa tu cédula o documento (ej. 1012345678, 1020304050)"
-                className="mt-1.5 w-full rounded-xl border border-slate-200 px-3.5 py-2.5 text-sm font-normal text-slate-800 outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
-              />
-            </label>
-            <div className="flex items-center gap-2">
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="inline-flex items-center gap-2 rounded-xl bg-sky-700 px-5 py-2.5 text-sm font-bold text-white transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-              >
-                <Search className="h-4 w-4" />
-                <span>{isLoading ? 'Consultando...' : 'Consultar citas'}</span>
-              </button>
-              <Link
-                to="/citas/reservar"
-                className="inline-flex sm:hidden items-center gap-1.5 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-100"
-              >
-                <CalendarPlus className="h-4 w-4" />
-                <span>Reservar</span>
-              </Link>
-            </div>
-          </form>
-
-          {/* Accesos rápidos de prueba */}
-          <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-100 pt-3 text-xs text-slate-500">
-            <span className="font-semibold text-slate-600">Consultar perfiles de ejemplo:</span>
-            <button
-              type="button"
-              onClick={() => {
-                setDocumentoIdentidad('1012345678');
-                void cargarCitas('1012345678');
-              }}
-              className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-semibold text-sky-800 transition hover:bg-sky-50 hover:border-sky-300"
-            >
-              Carolina Restrepo (1012345678)
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                setDocumentoIdentidad('1020304050');
-                void cargarCitas('1020304050');
-              }}
-              className="rounded-lg border border-slate-200 bg-slate-50 px-2.5 py-1 font-semibold text-slate-700 transition hover:bg-slate-100 hover:border-slate-300"
-            >
-              Paciente Demo (1020304050)
-            </button>
-          </div>
-        </section>
 
         {errorCarga && (
           <div className="mb-5 rounded-2xl border border-rose-200 bg-rose-50 p-3.5 text-sm font-medium text-rose-800">
