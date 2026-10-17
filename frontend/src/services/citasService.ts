@@ -112,8 +112,64 @@ function mapearDetalle(datos: CitaDetalleApi): Cita {
   };
 }
 
+export function buscarCitaLocal(citaId: string): Cita | null {
+  try {
+    const raw = localStorage.getItem('vetagenda_citas_locales');
+    if (!raw) return null;
+    const list = JSON.parse(raw);
+    if (!Array.isArray(list)) return null;
+
+    const query = citaId.trim().toLowerCase();
+    const querySinPrefijo = query.replace(/^va-0*/i, '');
+
+    const encontrado = list.find((item: any) => {
+      const idStr = String(item.id || '').toLowerCase();
+      const idSinPrefijo = idStr.replace(/^va-0*/i, '');
+      const codStr = String(item.codigoReserva || item.codigo || '').toLowerCase();
+      const codSinPrefijo = codStr.replace(/^va-0*/i, '');
+
+      return (
+        idStr === query ||
+        codStr === query ||
+        (querySinPrefijo && (idSinPrefijo === querySinPrefijo || codSinPrefijo === querySinPrefijo))
+      );
+    });
+
+    if (!encontrado) return null;
+
+    return {
+      id: String(encontrado.id),
+      codigo: encontrado.codigoReserva || `VA-${String(encontrado.id).padStart(4, '0')}`,
+      servicio: encontrado.servicioNombre || encontrado.servicio || 'Consulta general',
+      categoriaServicio: 'Atención médica',
+      fecha: encontrado.fecha || 'Fecha programada',
+      hora: encontrado.hora || '08:00 a. m.',
+      duracion: '30 min',
+      costo: 65000,
+      estado: (encontrado.estado === 'CANCELADA' ? 'CANCELADA' : 'CONFIRMADA') as EstadoCita,
+      mascota: {
+        nombre: encontrado.mascotaNombre || 'Mascota',
+        especieRaza: encontrado.mascotaEspecie ? `${encontrado.mascotaEspecie} · Canino` : 'Canino',
+        edad: '3 años',
+      },
+      profesional: {
+        id: String(encontrado.veterinarioId || '1'),
+        nombre: encontrado.veterinarioNombre || 'Veterinario asignado',
+        especialidad: 'Medicina Veterinaria',
+      },
+      indicacionesPrevias: [
+        'Presentar carné de vacunación al llegar',
+        'Llegar 10 minutos antes de la hora fijada',
+        'Mantener a la mascota con correa o en transportadora',
+      ],
+    };
+  } catch {
+    return null;
+  }
+}
+
 export async function obtenerDetalleCita(citaId: string, token?: string): Promise<Cita> {
-  let response: Response;
+  let response: Response | null = null;
 
   try {
     response = await fetch(`${API_BASE_URL}/citas/${encodeURIComponent(citaId)}`, {
@@ -122,37 +178,37 @@ export async function obtenerDetalleCita(citaId: string, token?: string): Promis
         ...(token ? { Authorization: `Bearer ${token}` } : {}),
       },
     });
-  } catch {
-    throw new CitaApiError('NETWORK_ERROR', 'No fue posible conectar con el servidor.');
+
+    if (response.ok) {
+      const respuesta: unknown = await response.json();
+      if (respuesta && typeof respuesta === 'object') {
+        const datos = 'cita' in respuesta ? respuesta.cita : respuesta;
+        if (datos && typeof datos === 'object') {
+          return mapearDetalle(datos as CitaDetalleApi);
+        }
+      }
+    }
+
+    if (response.status === 401 || response.status === 403) {
+      throw new CitaApiError('UNAUTHORIZED', 'No tienes permisos para consultar esta cita.');
+    }
+  } catch (error) {
+    if (error instanceof CitaApiError) {
+      throw error;
+    }
   }
 
-  if (response.status === 404) {
+  // Fallback a cita creada localmente (HU12)
+  const citaLocal = buscarCitaLocal(citaId);
+  if (citaLocal) {
+    return citaLocal;
+  }
+
+  if (response && response.status === 404) {
     throw new CitaApiError('NOT_FOUND', 'La cita no existe o fue cancelada.');
   }
 
-  if (response.status === 401 || response.status === 403) {
-    throw new CitaApiError('UNAUTHORIZED', 'No tienes permisos para consultar esta cita.');
-  }
-
-  if (!response.ok) {
-    throw new CitaApiError('NETWORK_ERROR', 'El servidor no pudo completar la solicitud.');
-  }
-
-  try {
-    const respuesta: unknown = await response.json();
-    if (!respuesta || typeof respuesta !== 'object') {
-      throw new Error('Respuesta inválida');
-    }
-
-    const datos = 'cita' in respuesta ? respuesta.cita : respuesta;
-    if (!datos || typeof datos !== 'object') {
-      throw new Error('Respuesta inválida');
-    }
-
-    return mapearDetalle(datos as CitaDetalleApi);
-  } catch {
-    throw new CitaApiError('NETWORK_ERROR', 'El servidor devolvió una respuesta inválida.');
-  }
+  throw new CitaApiError('NOT_FOUND', 'La cita no existe o fue cancelada.');
 }
 
 export interface CitaReprogramacionDetalle {

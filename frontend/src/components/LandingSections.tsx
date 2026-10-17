@@ -97,7 +97,7 @@ export function CtaBanner() {
             <h2 className="mx-auto max-w-2xl text-3xl font-black tracking-tight md:text-5xl">Tu mascota merece el mejor cuidado. Empieza hoy.</h2>
             <p className="mx-auto mt-4 max-w-xl text-base text-white/85">Consulta la disponibilidad y organiza tu próxima visita.</p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <Link to="/disponibilidad" className="inline-flex min-h-12 items-center gap-2 rounded-full bg-white px-7 text-sm font-bold text-[#0D5C75] shadow-lg transition hover:-translate-y-0.5 hover:bg-[#F0F7F7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D5C75]">
+              <Link to="/citas/reservar" className="inline-flex min-h-12 items-center gap-2 rounded-full bg-white px-7 text-sm font-bold text-[#0D5C75] shadow-lg transition hover:-translate-y-0.5 hover:bg-[#F0F7F7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D5C75]">
                 Agendar mi cita <Icon name="arrow" className="h-4 w-4" />
               </Link>
               <Link to="/catalogo" className="inline-flex min-h-12 items-center rounded-full border border-white/50 px-7 text-sm font-bold text-white transition hover:bg-white/10">

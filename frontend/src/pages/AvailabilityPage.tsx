@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { BackToHomeButton } from '../components/BackToHomeButton';
 import { BrandHeader } from '../components/BrandHeader';
 import {
@@ -194,6 +194,7 @@ function AvailabilitySkeleton() {
 }
 
 export function AvailabilityPage() {
+  const navigate = useNavigate();
   const [catalogo, setCatalogo] = useState<VeterinarioConServicios[]>(DEFAULT_CATALOGO);
   const [services, setServices] = useState<AvailabilityService[]>(() => extractServicesFromCatalog(DEFAULT_CATALOGO));
 
@@ -365,7 +366,15 @@ export function AvailabilityPage() {
       <div className="mx-auto max-w-6xl">
         <header className="mb-6 flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:flex-row sm:items-center sm:justify-between">
           <BrandHeader subtitle="Consulta de disponibilidad" />
-          <BackToHomeButton />
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              to="/citas/reservar"
+              className="inline-flex items-center gap-1.5 rounded-full bg-sky-600 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-sky-700"
+            >
+              <span>📅</span> Agendar cita
+            </Link>
+            <BackToHomeButton />
+          </div>
         </header>
 
         <section className="mb-6 flex gap-3 rounded-2xl border border-sky-200 bg-sky-100/60 p-4 text-sm text-sky-950" role="note">
@@ -653,13 +662,44 @@ export function AvailabilityPage() {
 
                   {selectedSlot && (
                     <div className="mt-5 rounded-2xl border border-emerald-200 bg-emerald-50 p-4" role="status">
-                      <p className="font-bold text-emerald-900">Horario seleccionado</p>
-                      <p className="mt-1 text-sm text-emerald-800">
-                        {selectedService.name} · {formatLongDate(selectedDate)} · {selectedSlot.time}
-                      </p>
-                      <p className="mt-1 text-xs font-semibold text-emerald-700">
-                        Atiende: {selectedSlot.veterinarioNombre}
-                      </p>
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <p className="font-bold text-emerald-900">Horario seleccionado</p>
+                          <p className="mt-1 text-sm text-emerald-800">
+                            {selectedService.name} · {formatLongDate(selectedDate)} · {selectedSlot.time}
+                          </p>
+                          <p className="mt-1 text-xs font-semibold text-emerald-700">
+                            Atiende: {selectedSlot.veterinarioNombre}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          id="btn-agendar-cita"
+                          onClick={() => {
+                            const query = new URLSearchParams({
+                              servicio: selectedService.name,
+                              servicioId: String(selectedService.id),
+                              fecha: selectedDate,
+                              horario: selectedSlot.time,
+                              profesional: selectedSlot.veterinarioNombre,
+                              veterinarioId: String(selectedSlot.veterinarioId),
+                            });
+                            navigate(`/citas/reservar?${query.toString()}`, {
+                              state: {
+                                servicio: selectedService.name,
+                                servicioId: selectedService.id,
+                                fecha: selectedDate,
+                                horario: selectedSlot.time,
+                                profesional: selectedSlot.veterinarioNombre,
+                                veterinarioId: selectedSlot.veterinarioId,
+                              },
+                            });
+                          }}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-emerald-700 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                        >
+                          <span>📅</span> Agendar cita con este horario
+                        </button>
+                      </div>
                       <p className="mt-2 text-xs text-emerald-700">
                         Tu selección está lista para continuar con la reserva.
                       </p>
@@ -697,9 +737,20 @@ export function AvailabilityPage() {
           </section>
         </div>
 
-        <footer className="mt-6 text-center text-sm text-slate-500">
-          ¿Quieres explorar primero?{' '}
-          <Link to="/catalogo" className="font-semibold text-sky-700 hover:text-sky-900">Ver catálogo de servicios</Link>
+        <footer className="mt-6 flex flex-wrap items-center justify-center gap-4 text-center text-sm text-slate-500">
+          <span>
+            ¿Prefieres agendar directamente?{' '}
+            <Link to="/citas/reservar" className="font-semibold text-sky-700 hover:text-sky-900">
+              Ir al formulario de reserva
+            </Link>
+          </span>
+          <span>·</span>
+          <span>
+            ¿Quieres explorar primero?{' '}
+            <Link to="/catalogo" className="font-semibold text-sky-700 hover:text-sky-900">
+              Ver catálogo de servicios
+            </Link>
+          </span>
         </footer>
       </div>
     </main>

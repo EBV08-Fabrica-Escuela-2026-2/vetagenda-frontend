@@ -51,7 +51,7 @@ export function Navbar({ onOpenRoleSwitcher }: NavbarProps) {
               Ingresar
             </button>
             <Link
-              to="/disponibilidad"
+              to="/citas/reservar"
               className="rounded-full bg-[#0D5C75] px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-[#094356] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488] focus-visible:ring-offset-2 sm:px-5 sm:text-sm"
             >
               Agendar cita
@@ -95,6 +95,13 @@ export function Navbar({ onOpenRoleSwitcher }: NavbarProps) {
             >
               Ingresar (demo)
             </button>
+            <Link
+              to="/citas/reservar"
+              onClick={() => setOpen(false)}
+              className="mt-3 rounded-xl bg-[#0D5C75] px-4 py-3 text-center text-sm font-bold text-white shadow-sm hover:bg-[#094356]"
+            >
+              Agendar cita
+            </Link>
           </div>
         </nav>
       </div>

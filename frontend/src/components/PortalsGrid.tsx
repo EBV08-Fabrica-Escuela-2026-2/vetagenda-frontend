@@ -33,6 +33,7 @@ const portals: {
       'Consulta el detalle de tu cita',
     ],
     forms: [
+      { title: 'Reservar cita', description: 'Agendar cita para tu mascota', to: '/citas/reservar', icon: 'calendar' },
       { title: 'Registrar cliente', description: 'Crear perfil de cliente', to: '/registro', icon: 'user' },
       { title: 'Registrar mascota', description: 'Añadir un paciente', to: '/mascotas/registro', icon: 'paw' },
     ],
@@ -133,7 +134,7 @@ export function PortalsGrid({ onOpenDemo }: PortalsGridProps) {
               <div className="mt-auto rounded-2xl border border-white/80 bg-white/70 p-4">
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <h4 className="text-xs font-extrabold uppercase tracking-[0.14em] text-slate-700">Formularios de registro</h4>
-                  <span className="rounded-full bg-[#E8F4F1] px-2.5 py-1 text-[10px] font-bold text-[#0D5C75]">2 disponibles</span>
+                  <span className="rounded-full bg-[#E8F4F1] px-2.5 py-1 text-[10px] font-bold text-[#0D5C75]">{portal.forms.length} disponibles</span>
                 </div>
                 <div className="grid gap-2 sm:grid-cols-2">
                   {portal.forms.map((form) => (
