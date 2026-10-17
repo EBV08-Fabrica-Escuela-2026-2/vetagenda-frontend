@@ -47,7 +47,7 @@ export function ReservarCitaPage() {
     }
   }, []);
 
-  const nombreCliente = userSession?.nombre || 'Carlos Teleche';
+  const nombreCliente = userSession?.nombre || 'Carolina Restrepo';
 
   const [serviciosDisponibles, setServiciosDisponibles] = useState<string[]>([
     'Consulta general',

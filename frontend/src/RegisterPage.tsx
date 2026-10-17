@@ -1,7 +1,14 @@
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { BackToHomeButton } from './components/BackToHomeButton';
 import { BrandHeader } from './components/BrandHeader';
-import { registerClient } from './services/api';
+import {
+  getCurrentClient,
+  loginUser,
+  registerClient,
+  registerClientCredentials,
+  saveClientSession,
+} from './services/api';
 
 type FormState = {
   fullName: string;
@@ -24,10 +31,13 @@ const initialState: FormState = {
 };
 
 function App() {
+  const navigate = useNavigate();
   const [form, setForm] = useState<FormState>(initialState);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [backendError, setBackendError] = useState<string | null>(null);
+  const [registrationStage, setRegistrationStage] = useState<'profile' | 'credentials' | 'complete'>('profile');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -100,20 +110,41 @@ function App() {
       return;
     }
 
+    setIsSubmitting(true);
     try {
-      await registerClient({
-        nombre: form.fullName.trim(),
-        documentoIdentidad: form.documentIdentidad,
-        telefono: form.phone,
-        correo: form.email.trim(),
-        direccion: form.address.trim() || 'Dirección no registrada',
-      });
+      let nextStage = registrationStage;
+      if (nextStage === 'profile') {
+        await registerClient({
+          nombre: form.fullName.trim(),
+          documentoIdentidad: form.documentIdentidad,
+          telefono: form.phone,
+          correo: form.email.trim(),
+          direccion: form.address.trim() || 'Dirección no registrada',
+        });
+        nextStage = 'credentials';
+        setRegistrationStage(nextStage);
+      }
+
+      if (nextStage === 'credentials') {
+        await registerClientCredentials({
+          correo: form.email.trim(),
+          documentoIdentidad: form.documentIdentidad,
+          password: form.password,
+        });
+        nextStage = 'complete';
+        setRegistrationStage(nextStage);
+      }
+
+      const auth = await loginUser(form.email.trim(), form.password);
+      const profile = await getCurrentClient(auth.token);
+      saveClientSession(profile, auth.token);
       setShowSuccessModal(true);
-      setForm(initialState);
     } catch (err) {
       setBackendError(
         err instanceof Error ? err.message : 'No se pudo completar el registro. Intenta nuevamente.',
       );
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -121,6 +152,9 @@ function App() {
     setShowSuccessModal(false);
     setErrors({});
     setBackendError(null);
+    setForm(initialState);
+    setRegistrationStage('profile');
+    navigate('/cliente/citas');
   };
 
   return (
@@ -281,16 +315,17 @@ function App() {
 
               <button
                 type="submit"
-                className="mt-2 w-full rounded-xl bg-[#0ea5e9] px-5 py-3 text-base font-semibold text-white shadow-[0_8px_20px_rgba(14,165,233,0.25)] transition hover:bg-[#0284c7]"
+                disabled={isSubmitting}
+                className="mt-2 w-full rounded-xl bg-[#0ea5e9] px-5 py-3 text-base font-semibold text-white shadow-[0_8px_20px_rgba(14,165,233,0.25)] transition hover:bg-[#0284c7] disabled:cursor-wait disabled:opacity-70"
               >
-                Crear cuenta de cliente
+                {isSubmitting ? 'Creando cuenta…' : 'Crear cuenta de cliente'}
               </button>
 
               <div className="pt-1 text-center text-sm text-slate-500">
                 ¿Ya tienes una cuenta?
-                <a href="#" className="ml-1 font-semibold text-sky-700 underline-offset-4 hover:underline">
+                <Link to="/login" className="ml-1 font-semibold text-sky-700 underline-offset-4 hover:underline">
                   Inicia sesión
-                </a>
+                </Link>
               </div>
 
               <p className="pt-2 text-center text-xs text-slate-400">
@@ -312,13 +347,13 @@ function App() {
             </div>
             <h3 className="mb-2 text-lg font-bold text-slate-900">Registro guardado correctamente</h3>
             <p className="mb-6 text-sm text-slate-500">
-              La cuenta del cliente se ha registrado correctamente en el sistema.
+              Tu cuenta está lista y ya has iniciado sesión.
             </p>
             <button
               onClick={handleCloseModal}
               className="w-full rounded-xl bg-[#0ea5e9] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0284c7]"
             >
-              Aceptar
+              Ir a mis citas
             </button>
           </div>
         </div>

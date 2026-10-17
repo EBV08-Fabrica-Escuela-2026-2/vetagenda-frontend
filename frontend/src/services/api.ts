@@ -62,6 +62,11 @@ export type ClientPayload = {
   direccion?: string;
 };
 
+export type ClientProfile = ClientPayload & {
+  id: number;
+  activo: boolean;
+};
+
 export type PetPayload = {
   nombre: string;
   especie: string;
@@ -219,6 +224,62 @@ export async function loginUser(email: string, password: string): Promise<LoginR
   }
 
   return data as LoginResponse;
+}
+
+export async function registerClientCredentials(payload: {
+  correo: string;
+  documentoIdentidad: string;
+  password: string;
+}): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/auth/register`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const data: unknown = await response.json().catch(() => null);
+    const mensaje = data && typeof data === 'object' && 'mensaje' in data && typeof data.mensaje === 'string'
+      ? data.mensaje
+      : 'El cliente fue creado, pero no fue posible habilitar su acceso.';
+    throw new Error(mensaje);
+  }
+}
+
+export async function getCurrentClient(token: string): Promise<ClientProfile> {
+  const response = await fetch(`${API_BASE_URL}/auth/me`, {
+    headers: {
+      Accept: 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('No fue posible cargar el perfil del cliente.');
+  }
+
+  return response.json();
+}
+
+export function saveClientSession(profile: ClientProfile, token: string) {
+  const session = {
+    id: profile.id,
+    nombre: profile.nombre,
+    rol: 'CLIENTE',
+    email: profile.correo,
+    documento: profile.documentoIdentidad,
+    documentoIdentidad: profile.documentoIdentidad,
+    token,
+  };
+
+  localStorage.setItem('vetagenda_user', JSON.stringify(session));
+  localStorage.setItem('vetagenda_session', 'true');
+  localStorage.setItem('vetagenda_role', 'Cliente');
+  localStorage.setItem('vetagenda_token', token);
+  localStorage.setItem('vetagenda_documento', profile.documentoIdentidad);
 }
 
 // ──────────────────────────────────────────────
@@ -506,9 +567,9 @@ export const DEFAULT_DEMO_CITAS: Cita[] = [
   {
     id: 1,
     codigoReserva: 'VA-0001',
-    clienteNombre: 'Carlos Teleche',
+    clienteNombre: 'Carolina Restrepo',
     clienteDocumento: '1012345678',
-    mascotaNombre: 'Luna',
+    mascotaNombre: 'Rocky',
     mascotaEspecie: 'Canino',
     mascotaRaza: 'Golden Retriever',
     veterinarioNombre: 'Dra. Laura Gómez',
@@ -523,11 +584,11 @@ export const DEFAULT_DEMO_CITAS: Cita[] = [
   {
     id: 2,
     codigoReserva: 'VA-0002',
-    clienteNombre: 'Carlos Teleche',
+    clienteNombre: 'Carolina Restrepo',
     clienteDocumento: '1012345678',
-    mascotaNombre: 'Toby',
+    mascotaNombre: 'Rocky',
     mascotaEspecie: 'Canino',
-    mascotaRaza: 'Beagle',
+    mascotaRaza: 'Golden Retriever',
     veterinarioNombre: 'Dr. Andrés Pérez',
     servicioNombre: 'Vacunación',
     fecha: '2026-10-28',
@@ -540,11 +601,11 @@ export const DEFAULT_DEMO_CITAS: Cita[] = [
   {
     id: 3,
     codigoReserva: 'VA-0003',
-    clienteNombre: 'Carlos Teleche',
+    clienteNombre: 'Carolina Restrepo',
     clienteDocumento: '1012345678',
-    mascotaNombre: 'Milo',
-    mascotaEspecie: 'Felino',
-    mascotaRaza: 'Siamés',
+    mascotaNombre: 'Rocky',
+    mascotaEspecie: 'Canino',
+    mascotaRaza: 'Golden Retriever',
     veterinarioNombre: 'Dra. Natalia Ruiz',
     servicioNombre: 'Control veterinario',
     fecha: '2026-10-15',
@@ -578,7 +639,7 @@ export function getCitasLocales(documentoIdentidad?: string): Cita[] {
       (c) =>
         !c.clienteDocumento ||
         c.clienteDocumento.trim().toLowerCase() === docNormalizado ||
-        docNormalizado === 'carlos teleche' ||
+        docNormalizado === 'carolina restrepo' ||
         docNormalizado === '1012345678',
     );
 
@@ -633,7 +694,7 @@ export async function reservarCita(payload: ReservarCitaPayload): Promise<Reserv
         guardarCitaLocal({
           id,
           codigoReserva: codigo,
-          clienteNombre: payload.clienteNombre || 'Carlos Teleche',
+          clienteNombre: payload.clienteNombre || 'Carolina Restrepo',
           clienteDocumento: documento,
           mascotaNombre: payload.mascotaNombre,
           mascotaEspecie: 'Mascota',
@@ -665,7 +726,7 @@ export async function reservarCita(payload: ReservarCitaPayload): Promise<Reserv
   guardarCitaLocal({
     id,
     codigoReserva: codigo,
-    clienteNombre: payload.clienteNombre || 'Carlos Teleche',
+    clienteNombre: payload.clienteNombre || 'Carolina Restrepo',
     clienteDocumento: documento,
     mascotaNombre: payload.mascotaNombre,
     mascotaEspecie: 'Mascota',

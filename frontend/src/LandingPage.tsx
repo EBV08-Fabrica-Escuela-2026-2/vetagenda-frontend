@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { HeroSearch } from './components/HeroSearch';
-import { MockRoleSwitcher, type DemoProfile } from './components/MockRoleSwitcher';
+import { ClientAccessModal } from './components/ClientAccessModal';
+import { CLIENT_DEMO_PROFILE, MockRoleSwitcher, type DemoProfile } from './components/MockRoleSwitcher';
 import { Navbar } from './components/Navbar';
 import { PortalsGrid } from './components/PortalsGrid';
 import { Footer } from './components/Footer';
@@ -64,8 +65,8 @@ function formatServiceDuration(service: CatalogService) {
 function LandingPage() {
   const navigate = useNavigate();
   const [isLoginOpen, setIsLoginOpen] = useState(false);
+  const [isClientAccessOpen, setIsClientAccessOpen] = useState(false);
   const [preferredRole, setPreferredRole] = useState<DemoProfile['rol'] | null>(null);
-  const [toastMessage, setToastMessage] = useState('');
   const [catalogServices, setCatalogServices] = useState<CatalogService[]>([]);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
   const closeLogin = useCallback(() => setIsLoginOpen(false), []);
@@ -108,16 +109,13 @@ function LandingPage() {
       localStorage.setItem('vetagenda_documento', '1012345678');
     }
     closeLogin();
-    setToastMessage(`Has iniciado sesión en modo demostración como ${profile.rol === 'CLIENTE' ? 'Cliente' : 'Veterinario'}.`);
-    window.setTimeout(() => navigate(profile.destination), 1600);
-    window.setTimeout(() => setToastMessage(''), 3500);
+    navigate(profile.destination);
   }
 
   return (
     <main className="min-h-screen bg-white text-slate-900">
       <Navbar onOpenRoleSwitcher={() => {
-        setPreferredRole(null);
-        setIsLoginOpen(true);
+        setIsClientAccessOpen(true);
       }} />
 
       <HeroSearch services={catalogServices} isLoading={isCatalogLoading} />
@@ -174,6 +172,10 @@ function LandingPage() {
       </section>
 
       <PortalsGrid onOpenDemo={(role) => {
+        if (role === 'CLIENTE') {
+          setIsClientAccessOpen(true);
+          return;
+        }
         setPreferredRole(role);
         setIsLoginOpen(true);
       }} />
@@ -188,15 +190,12 @@ function LandingPage() {
         onSwitchRole={startDemo}
         preferredRole={preferredRole}
       />
-      <div
-        role="status"
-        aria-live="polite"
-        className={`fixed bottom-5 left-1/2 z-50 -translate-x-1/2 rounded-full bg-slate-900 px-5 py-3 text-center text-sm font-semibold text-white shadow-xl transition-all duration-300 ${
-          toastMessage ? 'translate-y-0 opacity-100' : 'pointer-events-none translate-y-4 opacity-0'
-        }`}
-      >
-        {toastMessage}
-      </div>
+      <ClientAccessModal
+        isOpen={isClientAccessOpen}
+        onClose={() => setIsClientAccessOpen(false)}
+        onStartDemo={startDemo}
+        demoProfile={CLIENT_DEMO_PROFILE}
+      />
     </main>
   );
 }

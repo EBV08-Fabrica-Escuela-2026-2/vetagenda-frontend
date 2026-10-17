@@ -2,12 +2,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { BackToHomeButton } from '../components/BackToHomeButton';
 import { Logo } from '../components/Logo';
-import { loginUser } from '../services/api';
+import { getCurrentClient, loginUser, saveClientSession } from '../services/api';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const [email, setEmail] = useState('cliente@vetagenda.com');
-  const [password, setPassword] = useState('12345678');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
 
   const handleLogin = async () => {
@@ -21,10 +21,10 @@ export default function LoginPage() {
       if (!response?.token) {
         throw new Error('El servidor no devolvió un token de acceso.');
       }
-      localStorage.setItem('vetagenda_session', 'true');
-      localStorage.setItem('vetagenda_token', response.token);
+      const profile = await getCurrentClient(response.token);
+      saveClientSession(profile, response.token);
       setError('');
-      navigate('/catalogo');
+      navigate('/cliente/citas');
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'No fue posible iniciar sesión. Intenta nuevamente.');
     }

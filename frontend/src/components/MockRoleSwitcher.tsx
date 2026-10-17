@@ -10,26 +10,27 @@ export type DemoProfile = {
   icon: string;
 };
 
-const profiles: DemoProfile[] = [
-  {
-    id: 'cliente-demo-carolina',
-    nombre: 'Carolina Restrepo',
-    rol: 'CLIENTE',
-    email: 'carolina.restrepo@vetagenda.com',
-    destination: '/cliente/citas',
-    description: 'Rocky · Canino, Golden Retriever',
-    icon: '🐕',
-  },
-  {
-    id: 'veterinario-demo-camilo',
-    nombre: 'Dr. Camilo Durán',
-    rol: 'VETERINARIO',
-    email: 'camilo.duran@vetagenda.com',
-    destination: '/veterinario/agenda',
-    description: 'Especialista en Medicina Interna',
-    icon: '🩺',
-  },
-];
+export const CLIENT_DEMO_PROFILE: DemoProfile = {
+  id: 'cliente-demo-carolina',
+  nombre: 'Carolina Restrepo',
+  rol: 'CLIENTE',
+  email: 'carolina.restrepo@vetagenda.com',
+  destination: '/cliente/citas',
+  description: 'Rocky · Canino, Golden Retriever',
+  icon: '🐕',
+};
+
+export const VETERINARIAN_DEMO_PROFILE: DemoProfile = {
+  id: 'veterinario-demo-camilo',
+  nombre: 'Dr. Camilo Durán',
+  rol: 'VETERINARIO',
+  email: 'camilo.duran@vetagenda.com',
+  destination: '/veterinario/agenda',
+  description: 'Especialista en Medicina Interna',
+  icon: '🩺',
+};
+
+const profiles: DemoProfile[] = [CLIENT_DEMO_PROFILE, VETERINARIAN_DEMO_PROFILE];
 
 type MockRoleSwitcherProps = {
   isOpen: boolean;

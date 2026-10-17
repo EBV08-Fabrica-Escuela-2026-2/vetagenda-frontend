@@ -29,7 +29,7 @@ const portals: {
       'Registra tus mascotas',
       'Consulta el detalle de tu cita',
     ],
-    action: 'Ingresar como Cliente Demo',
+    action: 'Ingresar como cliente',
   },
   {
     id: 'VETERINARIO',

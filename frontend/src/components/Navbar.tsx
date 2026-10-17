@@ -87,7 +87,7 @@ export function Navbar({ onOpenRoleSwitcher }: NavbarProps) {
               }}
               className="mt-1 rounded-xl px-3 py-3 text-left text-sm font-bold text-[#0D5C75] hover:bg-[#F0F7F7]"
             >
-              Ingresar (demo)
+              Ingresar
             </button>
           </div>
         </nav>
