@@ -154,7 +154,7 @@ function App() {
     setBackendError(null);
     setForm(initialState);
     setRegistrationStage('profile');
-    navigate('/cliente/citas');
+    navigate('/cliente');
   };
 
   return (

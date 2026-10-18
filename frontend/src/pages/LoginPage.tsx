@@ -28,7 +28,7 @@ export default function LoginPage() {
       const requestedReturn = searchParams.get('returnTo');
       const returnTo = requestedReturn?.startsWith('/') && !requestedReturn.startsWith('//')
         ? requestedReturn
-        : '/cliente/citas';
+        : '/cliente';
       navigate(returnTo, { replace: true });
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'No fue posible iniciar sesión. Intenta nuevamente.');

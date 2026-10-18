@@ -157,8 +157,8 @@ export const CancelarCitaPage: React.FC = () => {
         <header className="mb-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xs">
           {/* Fila 1: Navegación de marca y botón de regreso */}
           <div className="flex items-center justify-between border-b border-slate-100 bg-white px-4 py-3.5 sm:px-6">
-            <BrandHeader subtitle="Mis citas" />
-            <ClientSessionActions showAppointmentsLink={false} />
+            <BrandHeader subtitle="Mis citas" homePath="/cliente" />
+            <ClientSessionActions />
           </div>
 
           {/* Fila 2: Título de sección y métricas en vivo */}

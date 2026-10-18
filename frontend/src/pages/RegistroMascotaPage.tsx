@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { BrandHeader } from '../components/BrandHeader';
-import { BackToHomeButton } from '../components/BackToHomeButton';
-import { registerPet } from '../services/api';
+import { ClientPortalHeader } from '../components/ClientPortalHeader';
+import { getClientSession, registerPet } from '../services/api';
 
 export function RegistroMascotaPage() {
+  const session = getClientSession();
   const [form, setForm] = useState({
     nombre: '',
     especie: 'Perro',
@@ -11,7 +11,7 @@ export function RegistroMascotaPage() {
     raza: '',
     edad: '',
     observaciones: '',
-    documentoIdentidad: '',
+    documentoIdentidad: session?.documentoIdentidad || '',
   });
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [error, setError] = useState('');
@@ -46,7 +46,15 @@ export function RegistroMascotaPage() {
 
       setShowSuccessModal(true);
       setError('');
-      setForm({ nombre: '', especie: 'Perro', sexo: 'Macho', raza: '', edad: '', observaciones: '', documentoIdentidad: '' });
+      setForm({
+        nombre: '',
+        especie: 'Perro',
+        sexo: 'Macho',
+        raza: '',
+        edad: '',
+        observaciones: '',
+        documentoIdentidad: session?.documentoIdentidad || '',
+      });
     } catch {
       setError('No se pudo guardar la mascota en este momento.');
     }
@@ -57,30 +65,22 @@ export function RegistroMascotaPage() {
   };
 
   return (
-    <main className="min-h-screen bg-[#edf7ff] px-4 py-10 text-slate-800 md:px-8">
-      <div className="mx-auto max-w-[960px] rounded-[24px] border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
-        <div className="px-5 py-5 md:px-8 md:py-6">
-          <div className="mb-4 flex items-center justify-between gap-3">
-            <BrandHeader subtitle="Registro de mascota" />
-            <BackToHomeButton />
-          </div>
-        </div>
+    <div className="min-h-screen bg-[#edf7ff] text-slate-800">
+      <ClientPortalHeader />
+      <main className="px-4 py-8 md:px-8 md:py-10">
+        <div className="mx-auto max-w-[960px] rounded-lg border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
 
-        <section className="px-5 pb-8 md:px-10 md:pb-10">
+        <section className="px-5 py-8 md:px-10 md:py-10">
           <div className="mx-auto max-w-[580px]">
             <h1 className="text-[2.1rem] font-black leading-tight text-slate-900 md:text-[2.7rem]">Registro de mascota</h1>
             <p className="mt-2 text-base text-slate-500">Ingrese la información principal de la mascota.</p>
 
             <form className="mt-7 space-y-5" onSubmit={handleSubmit}>
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-slate-700">Documento del cliente</label>
-                <input
-                  name="documentoIdentidad"
-                  value={form.documentoIdentidad}
-                  onChange={handleChange}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-base text-slate-800 shadow-sm outline-none transition focus:border-sky-400 focus:ring-4 focus:ring-sky-100"
-                  placeholder="Ej. 1234567890"
-                />
+              <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+                <p className="text-xs font-bold uppercase text-emerald-700">Cuenta asociada</p>
+                <p className="mt-1 text-sm font-semibold text-emerald-950">
+                  {session?.nombre} · documento terminado en {form.documentoIdentidad.slice(-4)}
+                </p>
               </div>
 
               <div className="space-y-2">
@@ -155,7 +155,8 @@ export function RegistroMascotaPage() {
             </form>
           </div>
         </section>
-      </div>
+        </div>
+      </main>
 
       {showSuccessModal && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/50">
@@ -174,6 +175,6 @@ export function RegistroMascotaPage() {
           </div>
         </div>
       )}
-    </main>
+    </div>
   );
 }

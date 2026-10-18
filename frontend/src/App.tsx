@@ -15,6 +15,7 @@ import { ReservarCitaPage } from './pages/ReservarCitaPage';
 import { CancelarCitaPage } from './pages/CancelarCitaPage';
 import { ConfigurarHorariosPage } from './pages/ConfigurarHorariosPage';
 import { ContactPage, PrivacyPage, TermsPage } from './pages/InformationPages';
+import { ClientPortalPage } from './pages/ClientPortalPage';
 import { hasAuthenticatedClientSession } from './services/api';
 
 function HashScrollHandler() {
@@ -74,7 +75,22 @@ function App() {
         <Route path="/registro" element={<RegisterPage />} />
         <Route path="/veterinarios/registro" element={<RegisterVeterinarianPage />} />
         <Route path="/servicios/registro" element={<RegisterServicePage />} />
-        <Route path="/mascotas/registro" element={<RegistroMascotaPage />} />
+        <Route
+          path="/cliente"
+          element={(
+            <ClientProtectedRoute>
+              <ClientPortalPage />
+            </ClientProtectedRoute>
+          )}
+        />
+        <Route
+          path="/mascotas/registro"
+          element={(
+            <ClientProtectedRoute>
+              <RegistroMascotaPage />
+            </ClientProtectedRoute>
+          )}
+        />
         <Route path="/catalogo" element={<CatalogoServiciosPage />} />
         <Route
           path="/citas/reservar"
@@ -98,10 +114,31 @@ function App() {
         <Route path="/veterinario/disponibilidad" element={<ConfigurarHorariosPage />} />
         <Route path="/veterinarios/horarios" element={<ConfigurarHorariosPage />} />
         <Route path="/disponibilidad" element={<AvailabilityPage />} />
-        <Route path="/cliente/citas/:id" element={<DetalleCitaPage />} />
-        <Route path="/detalle-cita/:id" element={<DetalleCitaPage />} />
+        <Route
+          path="/cliente/citas/:id"
+          element={(
+            <ClientProtectedRoute>
+              <DetalleCitaPage />
+            </ClientProtectedRoute>
+          )}
+        />
+        <Route
+          path="/detalle-cita/:id"
+          element={(
+            <ClientProtectedRoute>
+              <DetalleCitaPage />
+            </ClientProtectedRoute>
+          )}
+        />
         <Route path="/detalle-cita" element={<Navigate to="/cliente/citas/1" replace />} />
-        <Route path="/reprogramar-cita/:citaId" element={<ReprogramarCitaPage />} />
+        <Route
+          path="/reprogramar-cita/:citaId"
+          element={(
+            <ClientProtectedRoute>
+              <ReprogramarCitaPage />
+            </ClientProtectedRoute>
+          )}
+        />
         <Route path="/privacidad" element={<PrivacyPage />} />
         <Route path="/terminos" element={<TermsPage />} />
         <Route path="/contacto" element={<ContactPage />} />

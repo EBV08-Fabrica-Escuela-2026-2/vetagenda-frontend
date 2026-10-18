@@ -16,13 +16,14 @@ type LogoProps = {
   /** "dark" para fondos claros, "light" para fondos oscuros (footer). */
   variant?: 'dark' | 'light';
   className?: string;
+  to?: string;
 };
 
-export function Logo({ subtitle, variant = 'dark', className = '' }: LogoProps) {
+export function Logo({ subtitle, variant = 'dark', className = '', to = '/' }: LogoProps) {
   const isLight = variant === 'light';
   return (
     <Link
-      to="/"
+      to={to}
       aria-label="VetAgenda, inicio"
       className={`group inline-flex items-center gap-2 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488] focus-visible:ring-offset-2 ${className}`}
     >

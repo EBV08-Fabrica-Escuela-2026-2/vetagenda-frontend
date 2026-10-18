@@ -68,7 +68,7 @@ export const DetalleCitaPage: React.FC = () => {
       {/* Navbar Superior */}
       <header className="border-b border-slate-200 bg-white px-4 py-3.5 sm:px-8">
         <div className="mx-auto flex max-w-6xl items-center justify-between">
-          <BrandHeader subtitle="Detalle de cita" />
+          <BrandHeader subtitle="Detalle de cita" homePath="/cliente" />
           <ClientSessionActions />
         </div>
       </header>

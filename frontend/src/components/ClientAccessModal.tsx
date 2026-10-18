@@ -71,7 +71,7 @@ export function ClientAccessModal({ isOpen, onClose }: ClientAccessModalProps) {
       const profile = await getCurrentClient(auth.token);
       saveClientSession(profile, auth.token);
       onClose();
-      navigate('/cliente/citas');
+      navigate('/cliente');
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : 'No fue posible iniciar sesión.');
     } finally {
@@ -87,7 +87,7 @@ export function ClientAccessModal({ isOpen, onClose }: ClientAccessModalProps) {
       const profile = await getCurrentClient(auth.token);
       saveClientSession(profile, auth.token);
       onClose();
-      navigate('/cliente/citas');
+      navigate('/cliente');
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : 'No fue posible cargar el perfil de Carolina.');
     } finally {

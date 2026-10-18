@@ -171,7 +171,7 @@ export const ReprogramarCitaPage = () => {
     <main className="min-h-screen bg-slate-50 px-4 py-8 text-slate-800 sm:px-6">
       <div className="mx-auto max-w-6xl">
         <header className="mb-6 flex flex-col gap-4 rounded-xl border border-slate-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between">
-          <BrandHeader subtitle="Reprogramar cita" />
+          <BrandHeader subtitle="Reprogramar cita" homePath="/cliente" />
           <div className="flex items-center justify-between gap-4 sm:justify-end">
             <ClientSessionActions />
           </div>

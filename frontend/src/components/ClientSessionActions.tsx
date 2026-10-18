@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { CalendarDays, LogIn, LogOut, UserRound } from 'lucide-react';
+import { LayoutDashboard, LogIn, LogOut, UserRound } from 'lucide-react';
 import {
   CLIENT_SESSION_EVENT,
   clearClientSession,
@@ -12,7 +12,7 @@ type ClientSessionActionsProps = {
   className?: string;
   onOpenLogin?: () => void;
   onAction?: () => void;
-  showAppointmentsLink?: boolean;
+  showPortalLink?: boolean;
   stacked?: boolean;
 };
 
@@ -20,7 +20,7 @@ export function ClientSessionActions({
   className = '',
   onOpenLogin,
   onAction,
-  showAppointmentsLink = true,
+  showPortalLink = true,
   stacked = false,
 }: ClientSessionActionsProps) {
   const [session, setSession] = useState<ClientSession | null>(() => getClientSession());
@@ -98,14 +98,14 @@ export function ClientSessionActions({
         <span>Sesión: {firstName}</span>
       </span>
 
-      {showAppointmentsLink && (
+      {showPortalLink && (
         <Link
-          to="/cliente/citas"
+          to="/cliente"
           onClick={onAction}
           className={`${stacked ? 'w-full justify-start' : ''} inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-[#0D5C75] transition hover:bg-[#F0F7F7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488]`}
         >
-          <CalendarDays className="h-4 w-4" />
-          Mis citas
+          <LayoutDashboard className="h-4 w-4" />
+          Mi portal
         </Link>
       )}
 

@@ -164,7 +164,7 @@ export function ReservarCitaPage() {
     <main className="min-h-screen bg-sky-50 px-4 py-8 text-slate-800 md:px-8">
       <div className="mx-auto max-w-4xl">
         <header className="mb-8 flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 md:flex-row md:items-center md:justify-between">
-          <BrandHeader subtitle="Reservar cita" />
+          <BrandHeader subtitle="Reservar cita" homePath="/cliente" />
           <ClientSessionActions />
         </header>
 
