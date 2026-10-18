@@ -120,10 +120,14 @@ type CitaClienteApi = {
   canceladaAt?: string;
 };
 
-type MascotaApi = {
+export type PetProfile = {
+  id: number;
   nombre: string;
   especie: string;
   raza: string;
+  edad: number;
+  sexo: string;
+  observaciones?: string | null;
 };
 
 export type CancelacionCitaApi = {
@@ -407,6 +411,32 @@ export async function registerPet(payload: PetPayload, documentoIdentidad: strin
   }
 
   return response.json();
+}
+
+export async function listClientPets(documentoIdentidad: string, token: string): Promise<PetProfile[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/mascotas?documentoIdentidad=${encodeURIComponent(documentoIdentidad)}`,
+    {
+      headers: {
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({}));
+    const mensaje =
+      errorData?.mensaje ||
+      errorData?.message ||
+      (response.status === 404
+        ? 'No se encontró el perfil de cliente asociado a esta sesión.'
+        : 'No fue posible consultar tus mascotas.');
+    throw new Error(mensaje);
+  }
+
+  const data: unknown = await response.json();
+  return Array.isArray(data) ? data as PetProfile[] : [];
 }
 
 // ──────────────────────────────────────────────

@@ -8,18 +8,13 @@ import {
   Stethoscope,
   UserRound,
 } from 'lucide-react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ClientPortalHeader } from '../components/ClientPortalHeader';
+import { ClientPetsModal } from '../components/ClientPetsModal';
 import { getClientSession } from '../services/api';
 
 const actions = [
-  {
-    to: '/mascotas/registro',
-    title: 'Registrar una mascota',
-    description: 'Agrega un paciente a tu cuenta para poder reservar su atención.',
-    icon: PawPrint,
-    tone: 'bg-emerald-50 text-emerald-700',
-  },
   {
     to: '/catalogo',
     title: 'Consultar servicios',
@@ -44,6 +39,7 @@ const actions = [
 ];
 
 export function ClientPortalPage() {
+  const [isPetsModalOpen, setIsPetsModalOpen] = useState(false);
   const session = getClientSession();
   const firstName = session?.nombre.trim().split(/\s+/)[0] || 'Cliente';
 
@@ -80,6 +76,23 @@ export function ClientPortalPage() {
             </div>
 
             <div className="mt-5 grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setIsPetsModalOpen(true)}
+                className="group flex min-h-[148px] flex-col justify-between rounded-lg border border-slate-200 bg-white p-5 text-left shadow-sm transition hover:border-[#0D9488]/50 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488]"
+              >
+                <div className="flex w-full items-start justify-between gap-4">
+                  <span className="flex h-10 w-10 items-center justify-center rounded-lg bg-emerald-50 text-emerald-700">
+                    <PawPrint className="h-5 w-5" />
+                  </span>
+                  <ArrowRight className="h-5 w-5 text-slate-300 transition group-hover:translate-x-1 group-hover:text-[#0D5C75]" />
+                </div>
+                <div className="mt-5">
+                  <h3 className="font-bold text-slate-900">Mis mascotas</h3>
+                  <p className="mt-1 text-sm leading-6 text-slate-600">Consulta los pacientes asociados a tu cuenta o registra uno nuevo.</p>
+                </div>
+              </button>
+
               {actions.map(({ to, title, description, icon: Icon, tone }) => (
                 <Link
                   key={to}
@@ -133,6 +146,8 @@ export function ClientPortalPage() {
           </aside>
         </div>
       </main>
+
+      <ClientPetsModal isOpen={isPetsModalOpen} onClose={() => setIsPetsModalOpen(false)} />
     </div>
   );
 }
