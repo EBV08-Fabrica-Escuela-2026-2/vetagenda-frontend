@@ -1,4 +1,4 @@
-import { useEffect, type ReactElement } from 'react';
+import { useLayoutEffect, type ReactElement } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import LandingPage from './LandingPage';
 import RegisterPage from './RegisterPage';
@@ -20,8 +20,23 @@ import { hasAuthenticatedClientSession } from './services/api';
 function HashScrollHandler() {
   const { hash, pathname } = useLocation();
 
-  useEffect(() => {
-    if (!hash) return undefined;
+  useLayoutEffect(() => {
+    if (!hash) {
+      const scrollToTop = () => {
+        window.scrollTo({
+          top: 0,
+          left: 0,
+          behavior: 'instant' as ScrollBehavior,
+        });
+      };
+
+      scrollToTop();
+      const frameId = window.requestAnimationFrame(() => {
+        scrollToTop();
+      });
+
+      return () => window.cancelAnimationFrame(frameId);
+    }
 
     const sectionId = decodeURIComponent(hash.slice(1));
     const frameId = window.requestAnimationFrame(() => {
