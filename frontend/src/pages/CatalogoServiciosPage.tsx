@@ -17,6 +17,13 @@ const formatPrice = (value: string | number) => {
   return currencyFormatter.format(value);
 };
 
+function getTodayDate() {
+  const today = new Date();
+  const month = String(today.getMonth() + 1).padStart(2, '0');
+  const day = String(today.getDate()).padStart(2, '0');
+  return `${today.getFullYear()}-${month}-${day}`;
+}
+
 function CatalogSkeleton() {
   return (
     <main className="min-h-screen bg-sky-50 px-4 py-8 text-slate-800 md:px-8">
@@ -57,6 +64,7 @@ function CatalogSkeleton() {
 export function CatalogoServiciosPage() {
   const [veterinarios, setVeterinarios] = useState<VeterinarioConServicios[]>([]);
   const [selectedVetId, setSelectedVetId] = useState<number | null>(null);
+  const [selectedServiceId, setSelectedServiceId] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -97,6 +105,33 @@ export function CatalogoServiciosPage() {
     () => veterinarios.find((vet) => vet.id === selectedVetId) ?? null,
     [selectedVetId, veterinarios],
   );
+
+  const selectedService = useMemo(
+    () => selectedVet?.servicios.find((service) => service.id === selectedServiceId) ?? null,
+    [selectedServiceId, selectedVet],
+  );
+
+  useEffect(() => {
+    if (!selectedVet) {
+      setSelectedServiceId(null);
+      return;
+    }
+
+    if (!selectedVet.servicios.some((service) => service.id === selectedServiceId)) {
+      setSelectedServiceId(selectedVet.servicios[0]?.id ?? null);
+    }
+  }, [selectedServiceId, selectedVet]);
+
+  const availabilityHref = useMemo(() => {
+    if (!selectedVet || !selectedService) return '/disponibilidad';
+
+    const query = new URLSearchParams({
+      servicio: String(selectedService.id),
+      veterinario: String(selectedVet.id),
+      fecha: getTodayDate(),
+    });
+    return `/disponibilidad?${query.toString()}`;
+  }, [selectedService, selectedVet]);
 
   if (isLoading) {
     return <CatalogSkeleton />;
@@ -220,13 +255,7 @@ export function CatalogoServiciosPage() {
 
                   <div className="mt-6 border-t border-slate-200 pt-5">
                     <h3 className="text-lg font-bold text-slate-900">Servicios</h3>
-                    <Link
-                      to="/disponibilidad"
-                      className="mt-3 inline-flex items-center gap-2 rounded-xl bg-sky-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-sky-700"
-                    >
-                      Consultar disponibilidad
-                      <span aria-hidden="true">→</span>
-                    </Link>
+                    <p className="mt-1 text-sm text-slate-500">Selecciona el servicio que quieres agendar.</p>
 
                     {selectedVet.servicios.length === 0 ? (
                       <div className="mt-3 rounded-xl bg-amber-50 px-3 py-3 text-sm font-medium text-amber-700">
@@ -235,7 +264,17 @@ export function CatalogoServiciosPage() {
                     ) : (
                       <div className="mt-4 space-y-3">
                         {selectedVet.servicios.map((servicio) => (
-                          <div key={servicio.id} className="rounded-2xl border border-slate-200 p-3">
+                          <button
+                            key={servicio.id}
+                            type="button"
+                            onClick={() => setSelectedServiceId(servicio.id)}
+                            aria-pressed={selectedServiceId === servicio.id}
+                            className={`w-full rounded-2xl border p-3 text-left transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 ${
+                              selectedServiceId === servicio.id
+                                ? 'border-sky-500 bg-sky-50 ring-2 ring-sky-100'
+                                : 'border-slate-200 hover:border-sky-300'
+                            }`}
+                          >
                             <div className="flex items-center justify-between gap-3">
                               <p className="font-semibold text-slate-800">{servicio.nombre}</p>
                               <span className="shrink-0 font-bold text-sky-700">{formatPrice(servicio.precio)}</span>
@@ -246,8 +285,18 @@ export function CatalogoServiciosPage() {
                                 Duración: {servicio.duracionMinutos} min
                               </p>
                             )}
-                          </div>
+                          </button>
                         ))}
+
+                        {selectedService && (
+                          <Link
+                            to={availabilityHref}
+                            className="flex w-full items-center justify-center gap-2 rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-sky-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+                          >
+                            Consultar disponibilidad de {selectedService.nombre}
+                            <span aria-hidden="true">→</span>
+                          </Link>
+                        )}
                       </div>
                     )}
                   </div>
