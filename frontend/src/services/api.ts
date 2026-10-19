@@ -219,6 +219,27 @@ export type ClientSession = {
   token: string;
 };
 
+export type VeterinarianProfile = {
+  id: number;
+  nombre: string;
+  correo: string;
+  documentoIdentidad: string;
+  especialidad?: string;
+};
+
+export type VeterinarianSession = {
+  id: number;
+  nombre: string;
+  rol: 'VETERINARIO';
+  email: string;
+  documento: string;
+  documentoIdentidad: string;
+  especialidad?: string;
+  token: string;
+};
+
+export type AuthenticatedSession = ClientSession | VeterinarianSession;
+
 export const CLIENT_SESSION_EVENT = 'vetagenda-session-changed';
 
 const CLIENT_SESSION_KEYS = [
@@ -316,6 +337,45 @@ export function saveClientSession(profile: ClientProfile, token: string) {
   window.dispatchEvent(new Event(CLIENT_SESSION_EVENT));
 }
 
+export async function loginVeterinarianDemo(): Promise<LoginResponse> {
+  const response = await fetch(`${API_BASE_URL}/auth/veterinario/demo`, {
+    method: 'POST',
+    headers: { Accept: 'application/json' },
+  });
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok || !data || typeof data !== 'object' || !('token' in data) || typeof data.token !== 'string') {
+    throw new Error('No fue posible iniciar el perfil veterinario de demostración.');
+  }
+  return data as LoginResponse;
+}
+
+export async function getCurrentVeterinarian(token: string): Promise<VeterinarianProfile> {
+  const response = await fetch(`${API_BASE_URL}/veterinario-portal/perfil`, {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok) throw new Error('No fue posible cargar el perfil veterinario.');
+  return response.json();
+}
+
+export function saveVeterinarianSession(profile: VeterinarianProfile, token: string) {
+  const session: VeterinarianSession = {
+    id: profile.id,
+    nombre: profile.nombre,
+    rol: 'VETERINARIO',
+    email: profile.correo,
+    documento: profile.documentoIdentidad,
+    documentoIdentidad: profile.documentoIdentidad,
+    especialidad: profile.especialidad,
+    token,
+  };
+  localStorage.setItem('vetagenda_user', JSON.stringify(session));
+  localStorage.setItem('vetagenda_session', 'true');
+  localStorage.setItem('vetagenda_role', 'Veterinario');
+  localStorage.setItem('vetagenda_token', token);
+  localStorage.setItem('vetagenda_documento', profile.documentoIdentidad);
+  window.dispatchEvent(new Event(CLIENT_SESSION_EVENT));
+}
+
 export function getClientSession(): ClientSession | null {
   const token = localStorage.getItem('vetagenda_token');
   const sessionActive = localStorage.getItem('vetagenda_session') === 'true';
@@ -352,6 +412,35 @@ export function getClientSession(): ClientSession | null {
 
 export function hasAuthenticatedClientSession(): boolean {
   return getClientSession() !== null;
+}
+
+export function getVeterinarianSession(): VeterinarianSession | null {
+  const token = localStorage.getItem('vetagenda_token');
+  if (!token || localStorage.getItem('vetagenda_session') !== 'true') return null;
+  try {
+    const user = JSON.parse(localStorage.getItem('vetagenda_user') || 'null') as Partial<VeterinarianSession> | null;
+    if (user?.rol !== 'VETERINARIO' || typeof user.id !== 'number' || typeof user.nombre !== 'string') return null;
+    return {
+      id: user.id,
+      nombre: user.nombre,
+      rol: 'VETERINARIO',
+      email: typeof user.email === 'string' ? user.email : '',
+      documento: typeof user.documento === 'string' ? user.documento : String(user.documentoIdentidad ?? ''),
+      documentoIdentidad: String(user.documentoIdentidad ?? ''),
+      especialidad: typeof user.especialidad === 'string' ? user.especialidad : undefined,
+      token,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function getAuthenticatedSession(): AuthenticatedSession | null {
+  return getClientSession() ?? getVeterinarianSession();
+}
+
+export function hasAuthenticatedVeterinarianSession(): boolean {
+  return getVeterinarianSession() !== null;
 }
 
 export function clearClientSession() {
@@ -989,18 +1078,60 @@ export async function cancelarCita(
   };
 }
 
+export type VeterinarianAppointmentApi = {
+  id: number;
+  clienteNombre: string;
+  mascotaNombre: string;
+  mascotaEspecie?: string;
+  mascotaRaza?: string;
+  servicioNombre: string;
+  fechaHoraInicio: string;
+  fechaHoraFin: string;
+  estado: string;
+  motivoCancelacion?: string;
+};
+
+function veterinarianAuthorization() {
+  const session = getVeterinarianSession();
+  if (!session) throw new Error('Debes iniciar sesión como veterinario.');
+  return { Authorization: `Bearer ${session.token}` };
+}
+
+export async function listVeterinarianAppointments(): Promise<VeterinarianAppointmentApi[]> {
+  const response = await fetch(`${API_BASE_URL}/veterinario-portal/citas`, {
+    headers: { Accept: 'application/json', ...veterinarianAuthorization() },
+  });
+  if (!response.ok) throw new Error('No fue posible cargar la agenda desde el servidor.');
+  return response.json();
+}
+
+export async function cancelVeterinarianAppointment(citaId: number, motivo: string): Promise<CancelacionCitaApi> {
+  const response = await fetch(`${API_BASE_URL}/veterinario-portal/citas/${citaId}/cancelar`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      ...veterinarianAuthorization(),
+    },
+    body: JSON.stringify({ motivo }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data?.mensaje || 'No fue posible cancelar la cita.');
+  return data as CancelacionCitaApi;
+}
+
 // ──────────────────────────────────────────────
 // Disponibilidad del veterinario (días y franjas de atención - HU09)
 // ──────────────────────────────────────────────
 //
 // Contrato esperado con el backend:
-//   GET    /veterinarios/{id}/disponibilidad
-//   PUT    /veterinarios/{id}/disponibilidad                     body: DisponibilidadPayload
-//   DELETE /veterinarios/{id}/disponibilidad/franjas/{franjaId}
+//   GET    /veterinario-portal/disponibilidad
+//   PUT    /veterinario-portal/disponibilidad                     body: DisponibilidadPayload
+//   DELETE /veterinario-portal/disponibilidad/franjas/{franjaId}
 // Respuesta (GET/PUT): { veterinarioId, dias: [{ dia, franjas: [{ id, horaInicio: "HH:mm", horaFin: "HH:mm" }] }] }
 //
-// Si el backend no responde o el endpoint aún no existe, la configuración
-// se guarda en localStorage para que el flujo pueda probarse en la demo.
+// El backend es la fuente de verdad. localStorage conserva únicamente una
+// copia de la última respuesta para mantener estable la interfaz durante la sesión.
 
 export type DiaSemana = 'LUNES' | 'MARTES' | 'MIERCOLES' | 'JUEVES' | 'VIERNES' | 'SABADO' | 'DOMINGO';
 
@@ -1041,8 +1172,6 @@ export type DisponibilidadResultado = {
 };
 
 const AVAILABILITY_STORAGE_KEY = 'vetagenda-disponibilidad';
-const FALLBACK_STATUSES = [404, 405, 500, 501, 502, 503];
-
 export const generarIdFranja = () => `tmp-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
 export const crearDisponibilidadVacia = (): DisponibilidadDia[] =>
@@ -1164,17 +1293,13 @@ async function extraerMensaje(response: Response): Promise<string | undefined> {
 }
 
 export async function fetchVetAvailability(veterinarioId: number): Promise<DisponibilidadResultado> {
-  const response = await tryFetch(`${API_BASE_URL}/veterinarios/${veterinarioId}/disponibilidad`, {
-    headers: { Accept: 'application/json' },
+  const session = getVeterinarianSession();
+  if (!session || session.id !== veterinarioId) throw new Error('Debes iniciar sesión como este veterinario.');
+  const response = await tryFetch(`${API_BASE_URL}/veterinario-portal/disponibilidad`, {
+    headers: { Accept: 'application/json', ...veterinarianAuthorization() },
   });
 
-  if (!response || FALLBACK_STATUSES.includes(response.status)) {
-    return { dias: getStoredAvailability(veterinarioId), origen: 'local' };
-  }
-
-  if (!response.ok) {
-    return { dias: getStoredAvailability(veterinarioId), origen: 'local' };
-  }
+  if (!response || !response.ok) throw new Error('No fue posible cargar la disponibilidad desde el servidor.');
 
   const dias = normalizarDisponibilidad(await response.json());
   setStoredAvailability(veterinarioId, dias);
@@ -1205,16 +1330,15 @@ export async function saveVetAvailability(
     };
   });
 
-  const response = await tryFetch(`${API_BASE_URL}/veterinarios/${veterinarioId}/disponibilidad`, {
+  const session = getVeterinarianSession();
+  if (!session || session.id !== veterinarioId) throw new Error('Debes iniciar sesión como este veterinario.');
+  const response = await tryFetch(`${API_BASE_URL}/veterinario-portal/disponibilidad`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...veterinarianAuthorization() },
     body: JSON.stringify(payload),
   });
 
-  if (!response || FALLBACK_STATUSES.includes(response.status)) {
-    setStoredAvailability(veterinarioId, guardadoLocal);
-    return { dias: guardadoLocal, origen: 'local' };
-  }
+  if (!response) throw new Error('No fue posible conectar con el servidor.');
 
   if (!response.ok) {
     if (response.status === 400) {
@@ -1223,8 +1347,8 @@ export async function saveVetAvailability(
         mensaje || 'El rango de horario no es válido o existen franjas que se cruzan.',
       );
     }
-    setStoredAvailability(veterinarioId, guardadoLocal);
-    return { dias: guardadoLocal, origen: 'local' };
+    const mensaje = await extraerMensaje(response);
+    throw new Error(mensaje || 'No fue posible guardar la disponibilidad.');
   }
 
   // El backend puede devolver la disponibilidad con ids definitivos o solo un mensaje
@@ -1243,17 +1367,20 @@ export async function deleteAvailabilitySlot(veterinarioId: number, franjaId: st
     setStoredAvailability(veterinarioId, actual);
   };
 
+  const session = getVeterinarianSession();
+  if (!session || session.id !== veterinarioId) throw new Error('Debes iniciar sesión como este veterinario.');
   const response = franjaId.startsWith('tmp-')
     ? null
     : await tryFetch(
-        `${API_BASE_URL}/veterinarios/${veterinarioId}/disponibilidad/franjas/${encodeURIComponent(franjaId)}`,
-        { method: 'DELETE', headers: { Accept: 'application/json' } },
+        `${API_BASE_URL}/veterinario-portal/disponibilidad/franjas/${encodeURIComponent(franjaId)}`,
+        { method: 'DELETE', headers: { Accept: 'application/json', ...veterinarianAuthorization() } },
       );
 
-  if (!response || FALLBACK_STATUSES.includes(response.status) || !response.ok) {
+  if (franjaId.startsWith('tmp-')) {
     quitarLocal();
     return 'local';
   }
+  if (!response || !response.ok) throw new Error('No fue posible eliminar la franja en el servidor.');
 
   quitarLocal();
   return 'api';

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BackToHomeButton } from '../components/BackToHomeButton';
 import { BrandHeader } from '../components/BrandHeader';
+import { ClientSessionActions } from '../components/ClientSessionActions';
 import {
   crearDisponibilidadVacia,
   deleteAvailabilitySlot,
@@ -11,10 +12,9 @@ import {
   FranjaHoraria,
   fetchVetAvailability,
   generarIdFranja,
-  listVeterinarians,
+  getVeterinarianSession,
   saveVetAvailability,
   VeterinarioListaItem,
-  DEMO_VETERINARIOS,
 } from '../services/api';
 
 const DURACION_TURNO_MINUTOS = 30;
@@ -140,8 +140,6 @@ function resumenSemanal(dias: DisponibilidadDia[]) {
 
 export function ConfigurarHorariosPage() {
   const [veterinarios, setVeterinarios] = useState<VeterinarioListaItem[]>([]);
-  const [loadingVets, setLoadingVets] = useState(true);
-  const [vetsNotice, setVetsNotice] = useState<string | null>(null);
   const [veterinarioId, setVeterinarioId] = useState('');
 
   const [guardado, setGuardado] = useState<DisponibilidadDia[]>(crearDisponibilidadVacia());
@@ -160,30 +158,12 @@ export function ConfigurarHorariosPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
-  // Cargar veterinarios
+  // El veterinario autenticado solo puede administrar su propia disponibilidad.
   useEffect(() => {
-    let isMounted = true;
-    listVeterinarians()
-      .then((data) => {
-        if (isMounted) {
-          const list = data && data.length > 0 ? data : DEMO_VETERINARIOS;
-          setVeterinarios(list);
-          setVeterinarioId((prev) => (prev ? prev : String(list[0]?.id ?? '')));
-        }
-      })
-      .catch(() => {
-        if (isMounted) {
-          setVeterinarios(DEMO_VETERINARIOS);
-          setVetsNotice('No se pudo conectar con el backend. Se muestran veterinarios de ejemplo.');
-          setVeterinarioId((prev) => (prev ? prev : String(DEMO_VETERINARIOS[0]?.id ?? '')));
-        }
-      })
-      .finally(() => {
-        if (isMounted) setLoadingVets(false);
-      });
-    return () => {
-      isMounted = false;
-    };
+    const session = getVeterinarianSession();
+    if (!session) return;
+    setVeterinarios([{ id: session.id, nombre: session.nombre }]);
+    setVeterinarioId(String(session.id));
   }, []);
 
   // Cargar la disponibilidad del veterinario seleccionado
@@ -366,7 +346,7 @@ export function ConfigurarHorariosPage() {
       <div className="mx-auto max-w-6xl">
         <header className="mb-6 flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:flex-row sm:items-center sm:justify-between">
           <BrandHeader subtitle="Gestión de disponibilidad" />
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-3">
             <Link
               to="/veterinario/agenda"
               className="inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-bold text-sky-800 transition hover:bg-sky-100"
@@ -377,6 +357,7 @@ export function ConfigurarHorariosPage() {
             <span className="hidden rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700 sm:inline">
               Veterinario
             </span>
+            <ClientSessionActions showPortalLink={false} />
             <BackToHomeButton />
           </div>
         </header>
@@ -410,46 +391,11 @@ export function ConfigurarHorariosPage() {
           </p>
         </div>
 
-        {/* Selección de veterinario */}
+        {/* Perfil autenticado */}
         <section className="mb-6 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 md:p-7">
-          <label className="block max-w-md">
-            <span className="mb-2 block text-sm font-bold text-slate-800">
-              Veterinario <span className="text-red-500">*</span>
-            </span>
-            {loadingVets ? (
-              <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-sky-500 border-t-transparent" />
-                Cargando veterinarios...
-              </div>
-            ) : (
-              <select
-                value={veterinarioId}
-                onChange={(event) => {
-                  if (hayCambios && !window.confirm('Tienes cambios sin guardar. ¿Deseas descartarlos?')) return;
-                  setVeterinarioId(event.target.value);
-                }}
-                className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
-              >
-                <option value="">Selecciona tu perfil...</option>
-                {veterinarios.map((vet) => (
-                  <option key={vet.id} value={vet.id}>
-                    {vet.nombre}
-                  </option>
-                ))}
-              </select>
-            )}
-          </label>
-          {vetsNotice && (
-            <p className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
-              ⚠️ {vetsNotice}
-            </p>
-          )}
-          {origen === 'local' && veterinarioId && !loadingSchedule && (
-            <p className="mt-3 text-xs text-slate-500">
-              Modo demostración: la disponibilidad se guarda en este navegador mientras el servicio de agenda no esté
-              disponible.
-            </p>
-          )}
+          <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-700">Perfil profesional</p>
+          <p className="mt-2 text-lg font-bold text-slate-900">{vetSeleccionado?.nombre ?? 'Veterinario'}</p>
+          <p className="mt-1 text-sm text-slate-500">Los cambios se guardan en la agenda central de VetAgenda.</p>
         </section>
 
         {!veterinarioId ? (

@@ -4,8 +4,8 @@ import { LayoutDashboard, LogIn, LogOut, UserRound } from 'lucide-react';
 import {
   CLIENT_SESSION_EVENT,
   clearClientSession,
-  getClientSession,
-  type ClientSession,
+  getAuthenticatedSession,
+  type AuthenticatedSession,
 } from '../services/api';
 
 type ClientSessionActionsProps = {
@@ -23,12 +23,12 @@ export function ClientSessionActions({
   showPortalLink = true,
   stacked = false,
 }: ClientSessionActionsProps) {
-  const [session, setSession] = useState<ClientSession | null>(() => getClientSession());
+  const [session, setSession] = useState<AuthenticatedSession | null>(() => getAuthenticatedSession());
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
-    const refreshSession = () => setSession(getClientSession());
+    const refreshSession = () => setSession(getAuthenticatedSession());
 
     window.addEventListener(CLIENT_SESSION_EVENT, refreshSession);
     window.addEventListener('storage', refreshSession);
@@ -100,7 +100,7 @@ export function ClientSessionActions({
 
       {showPortalLink && (
         <Link
-          to="/cliente"
+          to={session.rol === 'VETERINARIO' ? '/veterinario/agenda' : '/cliente'}
           onClick={onAction}
           className={`${stacked ? 'w-full justify-start' : ''} inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-[#0D5C75] transition hover:bg-[#F0F7F7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488]`}
         >

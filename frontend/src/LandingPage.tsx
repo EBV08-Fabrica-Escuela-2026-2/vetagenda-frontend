@@ -9,7 +9,13 @@ import { Footer } from './components/Footer';
 import { Icon, type IconName } from './components/Icon';
 import { FaqSection, HowItWorks } from './components/LandingSections';
 import { Reveal } from './components/Reveal';
-import { listServices, type CatalogService } from './services/api';
+import {
+  getCurrentVeterinarian,
+  listServices,
+  loginVeterinarianDemo,
+  saveVeterinarianSession,
+  type CatalogService,
+} from './services/api';
 
 const serviceVisuals = [
   'bg-[#E8F4F1] text-[#0D5C75]',
@@ -85,31 +91,17 @@ function LandingPage() {
     };
   }, []);
 
-  function startDemo(profile: DemoProfile) {
-    const session = {
-      id: profile.id,
-      nombre: profile.nombre,
-      rol: profile.rol,
-      email: profile.email,
-      token: 'mock-jwt-token',
-      ...(profile.rol === 'CLIENTE'
-        ? {
-            documento: '1012345678',
-            documentoIdentidad: '1012345678',
-            mascota: { nombre: 'Rocky', especie: 'Canino', raza: 'Golden Retriever' },
-          }
-        : {}),
-    };
-
-    localStorage.setItem('vetagenda_user', JSON.stringify(session));
-    localStorage.setItem('vetagenda_session', 'true');
-    localStorage.setItem('vetagenda_role', profile.rol === 'CLIENTE' ? 'Cliente' : 'Veterinario');
-    localStorage.setItem('vetagenda_token', session.token);
-    if (profile.rol === 'CLIENTE') {
-      localStorage.setItem('vetagenda_documento', '1012345678');
+  async function startDemo(profile: DemoProfile) {
+    if (profile.rol !== 'VETERINARIO') return;
+    try {
+      const auth = await loginVeterinarianDemo();
+      const veterinarian = await getCurrentVeterinarian(auth.token);
+      saveVeterinarianSession(veterinarian, auth.token);
+      closeLogin();
+      navigate(profile.destination);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'No fue posible iniciar el perfil demo.');
     }
-    closeLogin();
-    navigate(profile.destination);
   }
 
   return (

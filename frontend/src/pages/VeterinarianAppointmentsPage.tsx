@@ -2,6 +2,13 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BackToHomeButton } from '../components/BackToHomeButton';
 import { BrandHeader } from '../components/BrandHeader';
+import { ClientSessionActions } from '../components/ClientSessionActions';
+import {
+  cancelVeterinarianAppointment,
+  getVeterinarianSession,
+  listVeterinarianAppointments,
+  type VeterinarianAppointmentApi,
+} from '../services/api';
 
 const MIN_REASON_LENGTH = 10;
 
@@ -18,61 +25,24 @@ type Appointment = {
   cancellationReason?: string;
 };
 
-function dateOffset(days: number) {
-  const date = new Date();
-  date.setDate(date.getDate() + days);
-  date.setHours(12, 0, 0, 0);
-  return date.toISOString();
+function mapAppointment(item: VeterinarianAppointmentApi): Appointment {
+  const status: AppointmentStatus = item.estado === 'CONFIRMADA'
+    ? 'Programada'
+    : item.estado === 'COMPLETADA'
+      ? 'Completada'
+      : 'Cancelada';
+  const petDetails = [item.mascotaNombre, item.mascotaEspecie, item.mascotaRaza].filter(Boolean).join(' · ');
+  return {
+    id: item.id,
+    client: item.clienteNombre,
+    pet: petDetails,
+    service: item.servicioNombre,
+    date: item.fechaHoraInicio,
+    time: new Intl.DateTimeFormat('es-CO', { hour: 'numeric', minute: '2-digit' }).format(new Date(item.fechaHoraInicio)),
+    status,
+    cancellationReason: item.motivoCancelacion,
+  };
 }
-
-const initialAppointments: Appointment[] = [
-  {
-    id: 1,
-    client: 'Mariana López',
-    pet: 'Luna · Golden retriever',
-    service: 'Consulta general',
-    date: dateOffset(1),
-    time: '9:00 a. m.',
-    status: 'Programada',
-  },
-  {
-    id: 2,
-    client: 'Carlos Ramírez',
-    pet: 'Max · Gato criollo',
-    service: 'Control veterinario',
-    date: dateOffset(1),
-    time: '10:30 a. m.',
-    status: 'Programada',
-  },
-  {
-    id: 3,
-    client: 'Valentina Cruz',
-    pet: 'Nina · Beagle',
-    service: 'Vacunación',
-    date: dateOffset(2),
-    time: '11:00 a. m.',
-    status: 'Programada',
-  },
-  {
-    id: 4,
-    client: 'Juan David Pérez',
-    pet: 'Rocky · Labrador',
-    service: 'Consulta general',
-    date: dateOffset(-2),
-    time: '3:00 p. m.',
-    status: 'Completada',
-  },
-  {
-    id: 5,
-    client: 'Sofía Gómez',
-    pet: 'Milo · Schnauzer',
-    service: 'Desparasitación',
-    date: dateOffset(-1),
-    time: '8:30 a. m.',
-    status: 'Cancelada',
-    cancellationReason: 'El cliente solicitó reprogramar la cita.',
-  },
-];
 
 function formatAppointmentDate(value: string) {
   return new Intl.DateTimeFormat('es-CO', {
@@ -173,7 +143,7 @@ function CancellationDialog({ appointment, onClose, onConfirm }: CancellationDia
             aria-describedby="reason-help reason-counter"
             aria-invalid={reason.length > 0 && !isReasonValid}
             autoFocus
-            maxLength={500}
+            maxLength={240}
             onChange={(event) => setReason(event.target.value)}
             placeholder="Escribe el motivo para informar al cliente..."
             required
@@ -215,10 +185,28 @@ function CancellationDialog({ appointment, onClose, onConfirm }: CancellationDia
 }
 
 export function VeterinarianAppointmentsPage() {
-  const [appointments, setAppointments] = useState(initialAppointments);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const veterinarian = getVeterinarianSession();
+
+  useEffect(() => {
+    let active = true;
+    listVeterinarianAppointments()
+      .then((items) => {
+        if (active) setAppointments(items.map(mapAppointment));
+      })
+      .catch((error) => {
+        if (active) setLoadError(error instanceof Error ? error.message : 'No fue posible cargar la agenda.');
+      })
+      .finally(() => {
+        if (active) setIsLoading(false);
+      });
+    return () => { active = false; };
+  }, []);
 
   const orderedAppointments = [...appointments].sort(
     (left, right) => new Date(left.date).getTime() - new Date(right.date).getTime(),
@@ -228,21 +216,20 @@ export function VeterinarianAppointmentsPage() {
     : orderedAppointments.filter((appointment) => appointment.status === 'Programada');
   const pendingCount = appointments.filter((appointment) => appointment.status === 'Programada').length;
 
-  function cancelAppointment(appointmentId: number, reason: string) {
+  async function cancelAppointment(appointmentId: number, reason: string) {
     const appointment = appointments.find((item) => item.id === appointmentId);
     if (!appointment || appointment.status !== 'Programada') return;
-
-    setAppointments((current) =>
-      current.map((item) =>
-        item.id === appointmentId
-          ? { ...item, status: 'Cancelada', cancellationReason: reason }
-          : item,
-      ),
-    );
-    setSelectedAppointment(null);
-    setNotification(
-      `La cita de ${appointment.client} fue cancelada. El horario ${appointment.time} quedó liberado en tu agenda y se notificará a las partes.`,
-    );
+    try {
+      await cancelVeterinarianAppointment(appointmentId, reason);
+      setAppointments((current) => current.map((item) => item.id === appointmentId
+        ? { ...item, status: 'Cancelada', cancellationReason: reason }
+        : item));
+      setSelectedAppointment(null);
+      setNotification(`La cita de ${appointment.client} fue cancelada y el horario ${appointment.time} quedó liberado.`);
+    } catch (error) {
+      setSelectedAppointment(null);
+      setNotification(error instanceof Error ? error.message : 'No fue posible cancelar la cita.');
+    }
   }
 
   return (
@@ -250,7 +237,7 @@ export function VeterinarianAppointmentsPage() {
       <div className="mx-auto max-w-6xl">
         <header className="mb-6 flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 sm:flex-row sm:items-center sm:justify-between">
           <BrandHeader subtitle="Agenda del veterinario" />
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center justify-end gap-3">
             <Link
               to="/veterinario/disponibilidad"
               className="inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-bold text-sky-800 transition hover:bg-sky-100"
@@ -258,13 +245,14 @@ export function VeterinarianAppointmentsPage() {
               <span aria-hidden="true">⏰</span>
               <span>Gestionar disponibilidad</span>
             </Link>
+            <ClientSessionActions showPortalLink={false} />
             <BackToHomeButton />
           </div>
         </header>
 
         <section className="mb-6 flex flex-col gap-5 rounded-3xl bg-gradient-to-r from-sky-700 to-cyan-600 p-6 text-white shadow-lg sm:flex-row sm:items-center sm:justify-between sm:p-8">
           <div>
-            <p className="text-sm font-semibold text-sky-100">Panel profesional</p>
+            <p className="text-sm font-semibold text-sky-100">Panel profesional · {veterinarian?.nombre}</p>
             <h1 className="mt-2 text-3xl font-black">Mi agenda</h1>
             <p className="mt-2 max-w-xl text-sm text-sky-50">
               Revisa tus citas programadas, gestiona cancelaciones y administra tus horarios de atención disponibles.
@@ -336,7 +324,15 @@ export function VeterinarianAppointmentsPage() {
             </div>
           )}
 
-          {visibleAppointments.length === 0 ? (
+          {isLoading ? (
+            <div className="mt-6 grid gap-3" aria-label="Cargando agenda">
+              {Array.from({ length: 3 }, (_, index) => <div key={index} className="h-28 animate-pulse rounded-2xl bg-slate-100" />)}
+            </div>
+          ) : loadError ? (
+            <div role="alert" className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-5 text-sm font-semibold text-rose-800">
+              {loadError}
+            </div>
+          ) : visibleAppointments.length === 0 ? (
             <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-5 py-12 text-center">
               <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-white text-2xl shadow-sm" aria-hidden="true">🗓️</div>
               <h3 className="mt-4 text-lg font-bold text-slate-900">No hay citas para mostrar</h3>
@@ -393,7 +389,7 @@ export function VeterinarianAppointmentsPage() {
         </section>
 
         <p className="mt-5 text-center text-xs text-slate-500">
-          Agenda de demostración. Las cancelaciones se reflejan en esta pantalla; el backend aún no gestiona citas ni notificaciones reales.
+          Agenda sincronizada con VetAgenda. Los cambios se reflejan también en las citas del cliente.
         </p>
       </div>
 
