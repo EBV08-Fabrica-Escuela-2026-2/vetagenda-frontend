@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { BackToHomeButton } from '../components/BackToHomeButton';
 import { Logo } from '../components/Logo';
 import { getCurrentClient, loginUser, saveClientSession } from '../services/api';
@@ -10,6 +10,10 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const requestedReturn = searchParams.get('returnTo');
+  const returnTo = requestedReturn?.startsWith('/') && !requestedReturn.startsWith('//')
+    ? requestedReturn
+    : '/cliente';
 
   const handleLogin = async () => {
     if (!email.trim() || !password.trim()) {
@@ -25,10 +29,6 @@ export default function LoginPage() {
       const profile = await getCurrentClient(response.token);
       saveClientSession(profile, response.token);
       setError('');
-      const requestedReturn = searchParams.get('returnTo');
-      const returnTo = requestedReturn?.startsWith('/') && !requestedReturn.startsWith('//')
-        ? requestedReturn
-        : '/cliente';
       navigate(returnTo, { replace: true });
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'No fue posible iniciar sesión. Intenta nuevamente.');
@@ -77,6 +77,19 @@ export default function LoginPage() {
           >
             Ingresar
           </button>
+
+          <div className="flex items-center gap-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
+            <span className="h-px flex-1 bg-slate-200" />
+            <span>o</span>
+            <span className="h-px flex-1 bg-slate-200" />
+          </div>
+
+          <Link
+            to={`/registro?returnTo=${encodeURIComponent(returnTo)}`}
+            className="flex w-full items-center justify-center rounded-xl border border-sky-700 px-4 py-3 font-semibold text-sky-800 transition hover:bg-sky-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+          >
+            Crear cuenta de cliente
+          </Link>
         </div>
       </div>
     </main>

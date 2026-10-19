@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { BackToHomeButton } from './components/BackToHomeButton';
 import { BrandHeader } from './components/BrandHeader';
 import {
@@ -32,12 +32,18 @@ const initialState: FormState = {
 
 function App() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const [form, setForm] = useState<FormState>(initialState);
   const [errors, setErrors] = useState<Partial<Record<keyof FormState, string>>>({});
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [backendError, setBackendError] = useState<string | null>(null);
   const [registrationStage, setRegistrationStage] = useState<'profile' | 'credentials' | 'complete'>('profile');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const requestedReturn = searchParams.get('returnTo');
+  const returnTo = requestedReturn?.startsWith('/') && !requestedReturn.startsWith('//')
+    ? requestedReturn
+    : '/cliente';
+  const continuesReservation = returnTo.startsWith('/citas/reservar');
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;
@@ -154,7 +160,7 @@ function App() {
     setBackendError(null);
     setForm(initialState);
     setRegistrationStage('profile');
-    navigate('/cliente');
+    navigate(returnTo, { replace: true });
   };
 
   return (
@@ -323,7 +329,10 @@ function App() {
 
               <div className="pt-1 text-center text-sm text-slate-500">
                 ¿Ya tienes una cuenta?
-                <Link to="/login" className="ml-1 font-semibold text-sky-700 underline-offset-4 hover:underline">
+                <Link
+                  to={`/login?returnTo=${encodeURIComponent(returnTo)}`}
+                  className="ml-1 font-semibold text-sky-700 underline-offset-4 hover:underline"
+                >
                   Inicia sesión
                 </Link>
               </div>
@@ -353,7 +362,7 @@ function App() {
               onClick={handleCloseModal}
               className="w-full rounded-xl bg-[#0ea5e9] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0284c7]"
             >
-              Ir a mis citas
+              {continuesReservation ? 'Continuar con la reserva' : 'Ir a mi portal'}
             </button>
           </div>
         </div>
