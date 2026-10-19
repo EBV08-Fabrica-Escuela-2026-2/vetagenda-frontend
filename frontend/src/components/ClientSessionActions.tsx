@@ -85,7 +85,10 @@ export function ClientSessionActions({
     );
   }
 
-  const firstName = session.nombre.trim().split(/\s+/)[0] || session.nombre;
+  const nameParts = session.nombre.trim().split(/\s+/);
+  const firstName = ['Dr.', 'Dra.'].includes(nameParts[0]) && nameParts[1]
+    ? nameParts[1]
+    : nameParts[0] || session.nombre;
 
   return (
     <div className={`${containerClass} ${className}`}>
