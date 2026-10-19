@@ -1,12 +1,13 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { listVeterinarians, DEMO_VETERINARIOS, type CatalogService } from '../services/api';
+import { fetchCatalogo, type CatalogService, type VeterinarioConServicios } from '../services/api';
 import { Icon } from './Icon';
 
-const defaultVetOptions = [
-  { value: 'all', label: 'Cualquier profesional' },
-  ...DEMO_VETERINARIOS.map((vet) => ({ value: String(vet.id), label: vet.nombre })),
-];
+const anyVeterinarianOption = { value: 'all', label: 'Cualquier profesional' };
+
+function normalizeText(value: string) {
+  return value.toLocaleLowerCase('es-CO').normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+}
 
 function getTodayDate() {
   const date = new Date();
@@ -23,23 +24,45 @@ type HeroSearchProps = {
 export function HeroSearch({ services, isLoading }: HeroSearchProps) {
   const navigate = useNavigate();
   const [service, setService] = useState('');
-  const [vetOptions, setVetOptions] = useState(defaultVetOptions);
-  const [veterinarian, setVeterinarian] = useState(defaultVetOptions[0].value);
+  const [catalog, setCatalog] = useState<VeterinarioConServicios[]>([]);
+  const [veterinarian, setVeterinarian] = useState(anyVeterinarianOption.value);
   const [date, setDate] = useState(getTodayDate);
 
   useEffect(() => {
     let isMounted = true;
-    listVeterinarians().then((vets) => {
-      if (!isMounted || !vets?.length) return;
-      setVetOptions([
-        { value: 'all', label: 'Cualquier profesional' },
-        ...vets.map((v) => ({ value: String(v.id), label: v.nombre })),
-      ]);
+    fetchCatalogo().then((vets) => {
+      if (isMounted) setCatalog(vets);
     });
     return () => {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    if (!service && services.length > 0) {
+      setService(String(services[0].id));
+    }
+  }, [service, services]);
+
+  const selectedService = services.find((item) => String(item.id) === service);
+  const vetOptions = useMemo(() => {
+    if (!selectedService) return [anyVeterinarianOption];
+
+    const matchingVets = catalog.filter((vet) => vet.servicios.some((item) => (
+      String(item.id) === service || normalizeText(item.nombre) === normalizeText(selectedService.nombre)
+    )));
+
+    return [
+      anyVeterinarianOption,
+      ...matchingVets.map((vet) => ({ value: String(vet.id), label: vet.nombre })),
+    ];
+  }, [catalog, selectedService, service]);
+
+  useEffect(() => {
+    if (!vetOptions.some((option) => option.value === veterinarian)) {
+      setVeterinarian(anyVeterinarianOption.value);
+    }
+  }, [veterinarian, vetOptions]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -73,7 +96,10 @@ export function HeroSearch({ services, isLoading }: HeroSearchProps) {
                 required
                 disabled={isLoading || services.length === 0}
                 value={service || String(services[0]?.id ?? '')}
-                onChange={(event) => setService(event.target.value)}
+                onChange={(event) => {
+                  setService(event.target.value);
+                  setVeterinarian(anyVeterinarianOption.value);
+                }}
                 className="w-full rounded-lg border-0 bg-white px-0 py-1 text-sm font-semibold text-slate-800 outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488]"
               >
                 {isLoading && <option value="">Cargando servicios...</option>}

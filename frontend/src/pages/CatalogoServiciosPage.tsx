@@ -72,8 +72,9 @@ export function CatalogoServiciosPage() {
 
         if (!isMounted) return;
 
-        setVeterinarios(data);
-        setSelectedVetId(data[0]?.id ?? null);
+        const publicados = data.filter((veterinario) => veterinario.servicios.length > 0);
+        setVeterinarios(publicados);
+        setSelectedVetId(publicados[0]?.id ?? null);
       } catch (fetchError) {
         if (!isMounted) return;
 
@@ -169,18 +170,25 @@ export function CatalogoServiciosPage() {
                           {veterinario.mensajeServicios ?? 'Sin servicios registrados'}
                         </div>
                       ) : (
-                        serviciosPreview.map((servicio) => (
-                          <div
-                            key={servicio.id}
-                            className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2"
-                          >
-                            <div>
-                              <p className="font-medium text-slate-800">{servicio.nombre}</p>
-                              <p className="text-xs text-slate-500">{servicio.descripcion}</p>
+                        <>
+                          {serviciosPreview.map((servicio) => (
+                            <div
+                              key={servicio.id}
+                              className="flex items-center justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2"
+                            >
+                              <div>
+                                <p className="font-medium text-slate-800">{servicio.nombre}</p>
+                                <p className="text-xs text-slate-500">{servicio.descripcion}</p>
+                              </div>
+                              <span className="shrink-0 font-bold text-sky-700">{formatPrice(servicio.precio)}</span>
                             </div>
-                            <span className="shrink-0 font-bold text-sky-700">{formatPrice(servicio.precio)}</span>
-                          </div>
-                        ))
+                          ))}
+                          {veterinario.servicios.length > serviciosPreview.length && (
+                            <p className="px-1 pt-1 text-xs font-semibold text-sky-700">
+                              +{veterinario.servicios.length - serviciosPreview.length} servicios más en el detalle
+                            </p>
+                          )}
+                        </>
                       )}
                     </div>
                   </button>

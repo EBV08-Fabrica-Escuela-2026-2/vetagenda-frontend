@@ -45,7 +45,6 @@ const faqs = [
   { q: '¿Qué servicios ofrece VetAgenda?', a: 'Puedes ver el catálogo de servicios con su duración y valores referenciales desde la sección de servicios.' },
   { q: '¿Puedo registrar a más de una mascota?', a: 'Sí. Desde el portal de clientes puedes registrar mascotas y gestionarlas desde una sola cuenta.' },
   { q: '¿Cómo funciona para los veterinarios?', a: 'Los profesionales pueden registrarse, consultar su agenda y gestionar cancelaciones desde su portal.' },
-  { q: '¿Esto es una cuenta real?', a: 'Es una demostración académica: los perfiles son de ejemplo y no debes ingresar datos personales reales.' },
 ];
 
 export function FaqSection() {
