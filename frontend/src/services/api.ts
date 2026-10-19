@@ -770,68 +770,65 @@ export async function reservarCita(payload: ReservarCitaPayload): Promise<Reserv
     throw new Error('Debes iniciar sesión para agendar una cita.');
   }
 
-  // Intentar con backend si es posible
-  try {
-    let fechaHoraInicioStr = '';
-    if (payload.fecha && payload.hora) {
-      const mins = parseTimeToMinutes(payload.hora);
-      const hh = String(Math.floor(mins / 60)).padStart(2, '0');
-      const mm = String(mins % 60).padStart(2, '0');
-      fechaHoraInicioStr = `${payload.fecha}T${hh}:${mm}:00`;
-    }
-
-    if (payload.mascotaId && payload.veterinarioId && payload.servicioId && fechaHoraInicioStr) {
-      const response = await fetch(`${API_BASE_URL}/citas?documentoIdentidad=${encodeURIComponent(documento)}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({
-          mascotaId: payload.mascotaId,
-          veterinarioId: payload.veterinarioId,
-          servicioId: payload.servicioId,
-          fechaHoraInicio: fechaHoraInicioStr,
-        }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        const id = Number(data.idCita || data.id || Date.now());
-        const codigo = `VA-${String(id).padStart(4, '0')}`;
-        guardarCitaLocal({
-          id,
-          codigoReserva: codigo,
-          clienteNombre: payload.clienteNombre || 'Carolina Restrepo',
-          clienteDocumento: documento,
-          mascotaNombre: payload.mascotaNombre,
-          mascotaEspecie: 'Mascota',
-          mascotaRaza: '',
-          veterinarioNombre: payload.veterinarioNombre,
-          servicioNombre: payload.servicioNombre,
-          fecha: payload.fecha,
-          hora: payload.hora,
-          estado: 'PROGRAMADA',
-          consultorio: 'Consultorio 1 - Clínica VetAgenda',
-          precio: 'Consultar',
-        });
-        return {
-          id,
-          codigo,
-          mensaje: data.mensaje || 'Cita reservada exitosamente',
-          fechaHoraInicio: data.fechaHoraInicio,
-          fechaHoraFin: data.fechaHoraFin,
-        };
-      }
-    }
-  } catch {
-    // Si no responde el backend, se procesa en modo local
+  if (!payload.mascotaId || !payload.veterinarioId || !payload.servicioId) {
+    throw new Error('La reserva no tiene todos los identificadores requeridos. Vuelve a seleccionar la mascota y el horario.');
   }
 
-  // Fallback local garantizado para la demo
-  const id = Date.now();
-  const codigo = `VA-${String(id).slice(-4)}`;
+  let fechaHoraInicioStr = '';
+  if (payload.fecha && payload.hora) {
+    const mins = parseTimeToMinutes(payload.hora);
+    const hh = String(Math.floor(mins / 60)).padStart(2, '0');
+    const mm = String(mins % 60).padStart(2, '0');
+    fechaHoraInicioStr = `${payload.fecha}T${hh}:${mm}:00`;
+  }
+
+  if (!fechaHoraInicioStr) {
+    throw new Error('La fecha y el horario seleccionados no son válidos.');
+  }
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/citas?documentoIdentidad=${encodeURIComponent(documento)}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({
+        mascotaId: payload.mascotaId,
+        veterinarioId: payload.veterinarioId,
+        servicioId: payload.servicioId,
+        fechaHoraInicio: fechaHoraInicioStr,
+      }),
+    });
+  } catch {
+    throw new Error('No fue posible conectar con el servidor. La cita no fue creada; inténtalo nuevamente.');
+  }
+
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const mensaje = data && typeof data === 'object'
+      && (('mensaje' in data && typeof data.mensaje === 'string')
+        || ('message' in data && typeof data.message === 'string'))
+      ? ('mensaje' in data ? data.mensaje : data.message) as string
+      : response.status === 409
+        ? 'Ese horario acaba de ser reservado. Selecciona otro turno disponible.'
+        : 'No fue posible crear la cita. Revisa los datos e inténtalo nuevamente.';
+    throw new Error(mensaje);
+  }
+
+  if (!data || typeof data !== 'object') {
+    throw new Error('El servidor confirmó la solicitud, pero devolvió una respuesta inválida.');
+  }
+
+  const rawId = 'idCita' in data ? data.idCita : 'id' in data ? data.id : null;
+  const id = Number(rawId);
+  if (!Number.isFinite(id) || id <= 0) {
+    throw new Error('El servidor no devolvió el identificador de la cita creada.');
+  }
+
+  const codigo = `VA-${String(id).padStart(4, '0')}`;
   guardarCitaLocal({
     id,
     codigoReserva: codigo,
@@ -852,7 +849,15 @@ export async function reservarCita(payload: ReservarCitaPayload): Promise<Reserv
   return {
     id,
     codigo,
-    mensaje: 'Cita reservada exitosamente',
+    mensaje: 'mensaje' in data && typeof data.mensaje === 'string'
+      ? data.mensaje
+      : 'Cita reservada exitosamente',
+    fechaHoraInicio: 'fechaHoraInicio' in data && typeof data.fechaHoraInicio === 'string'
+      ? data.fechaHoraInicio
+      : undefined,
+    fechaHoraFin: 'fechaHoraFin' in data && typeof data.fechaHoraFin === 'string'
+      ? data.fechaHoraFin
+      : undefined,
   };
 }
 

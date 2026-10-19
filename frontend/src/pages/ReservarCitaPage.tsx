@@ -1,25 +1,41 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import {
+  AlertCircle,
+  CalendarDays,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  PawPrint,
+  Stethoscope,
+} from 'lucide-react';
 import { BrandHeader } from '../components/BrandHeader';
 import { ClientSessionActions } from '../components/ClientSessionActions';
 import {
+  getClientSession,
+  listClientPets,
   listServices,
   reservarCita,
   type CatalogService,
+  type PetProfile,
 } from '../services/api';
 
-const BASE_HORARIOS = [
-  { hora: '08:00 a. m.', profesional: 'Dra. Laura Gómez' },
-  { hora: '10:00 a. m.', profesional: 'Dr. Andrés Pérez' },
-  { hora: '02:00 p. m.', profesional: 'Dra. Natalia Ruiz' },
-  { hora: '04:00 p. m.', profesional: 'Dr. Sebastián López' },
+const STEPS = [
+  { number: 1, label: 'Paciente y servicio' },
+  { number: 2, label: 'Horario' },
+  { number: 3, label: 'Confirmación' },
 ];
+
+function formatDate(value: string) {
+  if (!value) return '';
+  const [year, month, day] = value.split('-').map(Number);
+  return new Intl.DateTimeFormat('es-CO', { dateStyle: 'long' })
+    .format(new Date(year, month - 1, day));
+}
 
 export function ReservarCitaPage() {
   const location = useLocation();
-  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-
   const stateData = (location.state || {}) as {
     servicio?: string;
     servicioId?: number | string;
@@ -28,6 +44,7 @@ export function ReservarCitaPage() {
     profesional?: string;
     veterinarioId?: number | string;
     mascota?: string;
+    mascotaId?: number | string;
   };
 
   const paramServicio = stateData.servicio || searchParams.get('servicio') || '';
@@ -35,398 +52,314 @@ export function ReservarCitaPage() {
   const paramHorario = stateData.horario || searchParams.get('horario') || '';
   const paramProfesional = stateData.profesional || searchParams.get('profesional') || '';
   const paramMascota = stateData.mascota || searchParams.get('mascota') || '';
-  const servicioId = stateData.servicioId || searchParams.get('servicioId') || '';
-  const veterinarioId = stateData.veterinarioId || searchParams.get('veterinarioId') || '';
+  const paramServicioId = String(stateData.servicioId || searchParams.get('servicioId') || '');
+  const paramVeterinarioId = String(stateData.veterinarioId || searchParams.get('veterinarioId') || '');
+  const paramMascotaId = String(stateData.mascotaId || searchParams.get('mascotaId') || '');
 
-  const userSession = useMemo(() => {
-    try {
-      const raw = localStorage.getItem('vetagenda_user');
-      return raw ? JSON.parse(raw) : null;
-    } catch {
-      return null;
-    }
-  }, []);
-
-  const nombreCliente = userSession?.nombre || 'Carolina Restrepo';
-
-  const [serviciosDisponibles, setServiciosDisponibles] = useState<string[]>([
-    'Consulta general',
-    'Vacunación',
-    'Control veterinario',
-    'Desparasitación',
-    'Profilaxis dental',
-  ]);
+  const session = useMemo(() => getClientSession(), []);
+  const [step, setStep] = useState(1);
+  const [pets, setPets] = useState<PetProfile[]>([]);
+  const [services, setServices] = useState<CatalogService[]>([]);
+  const [loadingData, setLoadingData] = useState(true);
+  const [dataError, setDataError] = useState('');
+  const [petId, setPetId] = useState(paramMascotaId);
+  const [serviceId, setServiceId] = useState(paramServicioId);
+  const [date, setDate] = useState(paramFecha);
+  const [time, setTime] = useState(paramHorario);
+  const [professional, setProfessional] = useState(paramProfesional);
+  const [veterinarianId, setVeterinarianId] = useState(paramVeterinarioId);
+  const [saving, setSaving] = useState(false);
+  const [reservationError, setReservationError] = useState('');
+  const [reservationId, setReservationId] = useState<number | string>('');
+  const [reservationCode, setReservationCode] = useState('');
 
   useEffect(() => {
-    let isMounted = true;
-    listServices().then((servs: CatalogService[]) => {
-      if (!isMounted || !servs?.length) return;
-      const nombres = servs.map((s) => s.nombre);
-      setServiciosDisponibles((prev) => {
-        const set = new Set([...prev, ...nombres]);
-        if (paramServicio) set.add(paramServicio);
-        return Array.from(set);
-      });
-    });
+    let active = true;
+
+    async function loadFormData() {
+      if (!session) return;
+      setLoadingData(true);
+      setDataError('');
+      try {
+        const [clientPets, catalogServices] = await Promise.all([
+          listClientPets(session.documentoIdentidad, session.token),
+          listServices(),
+        ]);
+        if (!active) return;
+        setPets(clientPets);
+        setServices(catalogServices);
+
+        if (!petId) {
+          const petFromName = clientPets.find((pet) => pet.nombre === paramMascota);
+          if (petFromName) setPetId(String(petFromName.id));
+          else if (clientPets.length === 1) setPetId(String(clientPets[0].id));
+        }
+        if (!serviceId && paramServicio) {
+          const serviceFromName = catalogServices.find(
+            (service) => service.nombre.toLowerCase() === paramServicio.toLowerCase(),
+          );
+          if (serviceFromName) setServiceId(String(serviceFromName.id));
+        }
+      } catch (error: unknown) {
+        if (active) {
+          setDataError(error instanceof Error ? error.message : 'No fue posible cargar los datos para reservar.');
+        }
+      } finally {
+        if (active) setLoadingData(false);
+      }
+    }
+
+    void loadFormData();
     return () => {
-      isMounted = false;
+      active = false;
     };
-  }, [paramServicio]);
+  }, [session, paramMascota, paramServicio]);
 
-  const mascotasDisponibles = useMemo(() => {
-    const list = ['Luna', 'Toby', 'Milo'];
-    if (userSession?.mascota?.nombre && !list.includes(userSession.mascota.nombre)) {
-      list.unshift(userSession.mascota.nombre);
-    }
-    if (paramMascota && !list.includes(paramMascota)) {
-      list.push(paramMascota);
-    }
-    return list;
-  }, [userSession, paramMascota]);
+  const selectedPet = pets.find((pet) => String(pet.id) === petId);
+  const selectedService = services.find((service) => String(service.id) === serviceId);
+  const hasRealSchedule = Boolean(date && time && professional && veterinarianId);
+  const reservationConfirmed = Boolean(reservationId && reservationCode);
 
-  const horariosDisponibles = useMemo(() => {
-    const lista = [...BASE_HORARIOS];
-    if (paramHorario) {
-      const existe = lista.some((opcion) => opcion.hora.toLowerCase() === paramHorario.toLowerCase());
-      if (!existe) {
-        lista.unshift({
-          hora: paramHorario,
-          profesional: paramProfesional || 'Veterinario asignado',
-        });
-      }
-    }
-    return lista;
-  }, [paramHorario, paramProfesional]);
+  function goToStep(nextStep: number) {
+    setReservationError('');
+    setStep(nextStep);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
 
-  const [mascota, setMascota] = useState(paramMascota || userSession?.mascota?.nombre || '');
-  const [servicio, setServicio] = useState(paramServicio || 'Consulta general');
-  const [fecha, setFecha] = useState(paramFecha || '');
-  const [horario, setHorario] = useState(paramHorario || '');
-  const [profesional, setProfesional] = useState(paramProfesional || '');
-  const [reservaConfirmada, setReservaConfirmada] = useState(false);
-  const [codigoReserva, setCodigoReserva] = useState('');
-  const [idCitaGenerada, setIdCitaGenerada] = useState<number | string>('');
-  const [guardando, setGuardando] = useState(false);
-
-  useEffect(() => {
-    if (paramHorario && !profesional) {
-      const disp = horariosDisponibles.find((opcion) => opcion.hora === paramHorario);
-      if (disp?.profesional) {
-        setProfesional(disp.profesional);
-      }
-    }
-  }, [paramHorario, profesional, horariosDisponibles]);
-
-  const seleccionarHorario = (hora: string) => {
-    setHorario(hora);
-
-    const disponibilidad = horariosDisponibles.find(
-      (opcion) => opcion.hora === hora
-    );
-
-    setProfesional(disponibilidad?.profesional ?? '');
-  };
-
-  const confirmarReserva = async () => {
-    if (!mascota || !servicio || !fecha || !horario || !profesional) {
+  async function confirmReservation() {
+    if (!session || !selectedPet || !selectedService || !hasRealSchedule) {
+      setReservationError('Faltan datos para crear la cita. Regresa al paso anterior y revisa la selección.');
       return;
     }
 
-    setGuardando(true);
+    setSaving(true);
+    setReservationError('');
     try {
-      const resp = await reservarCita({
-        mascotaNombre: mascota,
-        servicioNombre: servicio,
-        fecha,
-        hora: horario,
-        veterinarioNombre: profesional,
-        clienteNombre: nombreCliente,
-        servicioId: servicioId ? Number(servicioId) : undefined,
-        veterinarioId: veterinarioId ? Number(veterinarioId) : undefined,
+      const response = await reservarCita({
+        mascotaId: selectedPet.id,
+        mascotaNombre: selectedPet.nombre,
+        servicioId: selectedService.id,
+        servicioNombre: selectedService.nombre,
+        fecha: date,
+        hora: time,
+        veterinarioId: Number(veterinarianId),
+        veterinarioNombre: professional,
+        clienteNombre: session.nombre,
+        documentoIdentidad: session.documentoIdentidad,
       });
-
-      setIdCitaGenerada(resp.id);
-      setCodigoReserva(resp.codigo);
-      setReservaConfirmada(true);
-    } catch {
-      const idTmp = Date.now();
-      setIdCitaGenerada(idTmp);
-      setCodigoReserva(`VA-${idTmp.toString().slice(-4)}`);
-      setReservaConfirmada(true);
+      setReservationId(response.id);
+      setReservationCode(response.codigo);
+    } catch (error: unknown) {
+      setReservationError(
+        error instanceof Error ? error.message : 'No fue posible crear la cita. Inténtalo nuevamente.',
+      );
     } finally {
-      setGuardando(false);
+      setSaving(false);
     }
-  };
-
-  const vieneDeDisponibilidad = Boolean(paramHorario || paramFecha);
+  }
 
   return (
-    <main className="min-h-screen bg-sky-50 px-4 py-8 text-slate-800 md:px-8">
-      <div className="mx-auto max-w-4xl">
-        <header className="mb-8 flex flex-col gap-4 rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 md:flex-row md:items-center md:justify-between">
+    <main className="min-h-screen bg-sky-50 px-4 py-6 text-slate-800 md:px-8 md:py-8">
+      <div className="mx-auto max-w-5xl">
+        <header className="mb-6 flex flex-col gap-4 rounded-3xl bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:flex-row sm:items-center sm:justify-between md:p-6">
           <BrandHeader subtitle="Reservar cita" homePath="/cliente" />
           <ClientSessionActions />
         </header>
 
-        <section className="rounded-3xl bg-white p-6 shadow-sm ring-1 ring-slate-200 md:p-8">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-600">
-              HU12 · Reservar Cita
-            </p>
-            <Link
-              to="/disponibilidad"
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-sky-700 hover:text-sky-900"
-            >
-              <span>🗓️</span> Consultar disponibilidad en tiempo real
-            </Link>
-          </div>
+        <section className="bg-white p-5 shadow-sm ring-1 ring-slate-200 sm:rounded-3xl md:p-8">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-sky-700">Nueva cita</p>
+          <h1 className="mt-2 text-3xl font-black text-slate-950 md:text-4xl">Agenda la atención de tu mascota</h1>
+          <p className="mt-2 text-slate-600">Completa los pasos y revisa la información antes de confirmar.</p>
 
-          <h1 className="mt-3 text-3xl font-black text-slate-900">
-            Reserva una cita para tu mascota
-          </h1>
+          {!reservationConfirmed && (
+            <ol className="mt-7 grid gap-2 sm:grid-cols-3" aria-label="Progreso de la reserva">
+              {STEPS.map((item) => {
+                const current = item.number === step;
+                const completed = item.number < step;
+                return (
+                  <li
+                    key={item.number}
+                    aria-current={current ? 'step' : undefined}
+                    className={`flex min-h-14 items-center gap-3 border-b-2 px-2 py-3 ${
+                      current
+                        ? 'border-sky-600 text-sky-800'
+                        : completed
+                          ? 'border-emerald-500 text-emerald-800'
+                          : 'border-slate-200 text-slate-500'
+                    }`}
+                  >
+                    <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-sm font-black ${
+                      current
+                        ? 'bg-sky-600 text-white'
+                        : completed
+                          ? 'bg-emerald-100 text-emerald-800'
+                          : 'bg-slate-100 text-slate-500'
+                    }`}>
+                      {completed ? <Check className="h-4 w-4" /> : item.number}
+                    </span>
+                    <span className="text-sm font-bold">{item.label}</span>
+                  </li>
+                );
+              })}
+            </ol>
+          )}
 
-          <p className="mt-2 text-slate-600">
-            Selecciona tu mascota, el servicio requerido y el horario disponible para agendar tu atención.
-          </p>
+          {dataError && (
+            <div className="mt-6 flex gap-3 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900" role="alert">
+              <AlertCircle className="h-5 w-5 shrink-0" />
+              <p>{dataError}</p>
+            </div>
+          )}
 
-          {vieneDeDisponibilidad ? (
-            <div className="mt-6 flex flex-col gap-2 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 text-sm text-emerald-950 sm:flex-row sm:items-center sm:justify-between">
+          {!reservationConfirmed && step === 1 && (
+            <section className="mt-8" aria-labelledby="step-one-title">
               <div className="flex items-center gap-3">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-emerald-600 font-bold text-white text-xs">
-                  ✓
-                </span>
-                <div>
-                  <p className="font-bold">Datos sincronizados con disponibilidad</p>
-                  <p className="text-xs text-emerald-800">
-                    Se preseleccionó el servicio, fecha y horario que elegiste en la consulta.
-                  </p>
-                </div>
+                <PawPrint className="h-6 w-6 text-sky-700" />
+                <h2 id="step-one-title" className="text-xl font-black text-slate-950">Selecciona paciente y servicio</h2>
               </div>
-              <Link
-                to="/disponibilidad"
-                className="shrink-0 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-emerald-800 border border-emerald-200 shadow-sm hover:bg-emerald-100/50"
-              >
-                Cambiar en disponibilidad
-              </Link>
-            </div>
-          ) : (
-            <div className="mt-6 flex flex-col gap-2 rounded-2xl border border-slate-200 bg-slate-50/80 p-4 text-sm text-slate-700 sm:flex-row sm:items-center sm:justify-between">
-              <span>¿Quieres ver antes el calendario con turnos libres por doctor?</span>
-              <Link
-                to="/disponibilidad"
-                className="inline-flex shrink-0 items-center gap-1 rounded-lg bg-white px-3 py-1.5 text-xs font-bold text-sky-700 border border-slate-200 shadow-sm hover:bg-sky-50"
-              >
-                Ver disponibilidad →
-              </Link>
-            </div>
+
+              {loadingData ? (
+                <p className="mt-6 text-sm text-slate-600">Cargando tus mascotas y servicios...</p>
+              ) : (
+                <div className="mt-6 grid gap-5 md:grid-cols-2">
+                  <label className="grid gap-2">
+                    <span className="font-bold text-slate-900">Mascota</span>
+                    <select value={petId} onChange={(event) => setPetId(event.target.value)} className="min-h-12 rounded-lg border border-slate-300 bg-white px-4 py-3 focus:border-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-200">
+                      <option value="">Selecciona una mascota</option>
+                      {pets.map((pet) => <option key={pet.id} value={pet.id}>{pet.nombre} · {pet.especie}</option>)}
+                    </select>
+                    {pets.length === 0 && !dataError && <span className="text-sm text-slate-500">Primero debes registrar una mascota desde tu portal.</span>}
+                  </label>
+
+                  <label className="grid gap-2">
+                    <span className="font-bold text-slate-900">Servicio</span>
+                    <select value={serviceId} onChange={(event) => setServiceId(event.target.value)} className="min-h-12 rounded-lg border border-slate-300 bg-white px-4 py-3 focus:border-sky-600 focus:outline-none focus:ring-2 focus:ring-sky-200">
+                      <option value="">Selecciona un servicio</option>
+                      {services.map((service) => <option key={service.id} value={service.id}>{service.nombre}</option>)}
+                    </select>
+                  </label>
+                </div>
+              )}
+
+              <div className="mt-8 flex justify-end">
+                <button type="button" onClick={() => goToStep(2)} disabled={!selectedPet || !selectedService || loadingData} className="inline-flex min-h-12 items-center gap-2 rounded-lg bg-sky-700 px-5 py-3 font-bold text-white transition hover:bg-sky-800 disabled:cursor-not-allowed disabled:bg-slate-300">
+                  Continuar <ChevronRight className="h-5 w-5" />
+                </button>
+              </div>
+            </section>
           )}
 
-          <div className="mt-8 grid gap-6 md:grid-cols-2">
-            <label className="grid gap-2">
-              <span className="font-semibold text-slate-900">Mascota</span>
-              <select
-                id="select-mascota"
-                value={mascota}
-                onChange={(e) => {
-                  setMascota(e.target.value);
-                  setReservaConfirmada(false);
-                }}
-                className="rounded-xl border border-slate-300 bg-white px-4 py-3 font-medium text-slate-800 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200"
-              >
-                <option value="">Selecciona una mascota</option>
-                {mascotasDisponibles.map((nombre) => (
-                  <option key={nombre} value={nombre}>
-                    {nombre}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="grid gap-2">
-              <span className="font-semibold text-slate-900">Servicio</span>
-              <select
-                id="select-servicio"
-                value={servicio}
-                onChange={(e) => {
-                  setServicio(e.target.value);
-                  setReservaConfirmada(false);
-                }}
-                className="rounded-xl border border-slate-300 bg-white px-4 py-3 font-medium text-slate-800 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200"
-              >
-                <option value="">Selecciona un servicio</option>
-                {serviciosDisponibles.map((nom) => (
-                  <option key={nom} value={nom}>
-                    {nom}
-                  </option>
-                ))}
-              </select>
-            </label>
-
-            <label className="grid gap-2">
-              <span className="font-semibold text-slate-900">Fecha</span>
-              <input
-                id="input-fecha"
-                type="date"
-                value={fecha}
-                onChange={(e) => {
-                  setFecha(e.target.value);
-                  setReservaConfirmada(false);
-                }}
-                className="rounded-xl border border-slate-300 bg-white px-4 py-3 font-medium text-slate-800 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200"
-              />
-            </label>
-
-            <label className="grid gap-2">
-              <span className="font-semibold text-slate-900">Horario disponible</span>
-              <select
-                id="select-horario"
-                value={horario}
-                onChange={(e) => {
-                  seleccionarHorario(e.target.value);
-                  setReservaConfirmada(false);
-                }}
-                className="rounded-xl border border-slate-300 bg-white px-4 py-3 font-medium text-slate-800 focus:border-sky-500 focus:outline-none focus:ring-2 focus:ring-sky-200"
-              >
-                <option value="">Selecciona un horario</option>
-                {horariosDisponibles.map((opcion) => (
-                  <option key={opcion.hora} value={opcion.hora}>
-                    {opcion.hora} - {opcion.profesional}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-
-          {profesional && !reservaConfirmada && (
-            <div className="mt-6 rounded-2xl bg-sky-50 p-4 ring-1 ring-sky-100 flex items-center justify-between">
-              <div>
-                <span className="text-xs uppercase font-bold tracking-wider text-slate-500">
-                  Profesional asignado
-                </span>
-                <p className="text-base font-bold text-slate-900">{profesional}</p>
+          {!reservationConfirmed && step === 2 && (
+            <section className="mt-8" aria-labelledby="step-two-title">
+              <div className="flex items-center gap-3">
+                <CalendarDays className="h-6 w-6 text-sky-700" />
+                <h2 id="step-two-title" className="text-xl font-black text-slate-950">Selecciona un horario disponible</h2>
               </div>
-              <span className="text-xl">🩺</span>
-            </div>
+
+              {hasRealSchedule ? (
+                <div className="mt-6 grid gap-4 md:grid-cols-3">
+                  {[
+                    ['Fecha', formatDate(date)],
+                    ['Hora', time],
+                    ['Profesional', professional],
+                  ].map(([label, value]) => (
+                    <div key={label} className="border-l-4 border-sky-500 bg-sky-50 p-4">
+                      <p className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">{label}</p>
+                      <p className="mt-1 font-bold text-slate-950">{value}</p>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="mt-6 border border-slate-200 bg-slate-50 p-5">
+                  <p className="font-bold text-slate-950">Consulta la agenda para elegir un turno real.</p>
+                  <p className="mt-1 text-sm text-slate-600">Mostraremos únicamente profesionales que prestan {selectedService?.nombre || 'el servicio seleccionado'}.</p>
+                  <Link to={`/disponibilidad?servicio=${encodeURIComponent(serviceId)}`} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-sky-800">
+                    Ver horarios disponibles <ChevronRight className="h-4 w-4" />
+                  </Link>
+                </div>
+              )}
+
+              <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
+                <button type="button" onClick={() => goToStep(1)} className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 font-bold text-slate-700 hover:bg-slate-100">
+                  <ChevronLeft className="h-5 w-5" /> Atrás
+                </button>
+                <button type="button" onClick={() => goToStep(3)} disabled={!hasRealSchedule} className="inline-flex min-h-12 items-center gap-2 rounded-lg bg-sky-700 px-5 py-3 font-bold text-white hover:bg-sky-800 disabled:cursor-not-allowed disabled:bg-slate-300">
+                  Revisar reserva <ChevronRight className="h-5 w-5" />
+                </button>
+              </div>
+            </section>
           )}
 
-          <div className="mt-8 flex justify-end">
-            <button
-              type="button"
-              id="btn-confirmar-reserva"
-              onClick={confirmarReserva}
-              disabled={
-                !mascota || !servicio || !fecha || !horario || !profesional || guardando
-              }
-              className="rounded-xl bg-sky-600 px-7 py-3.5 font-bold text-white shadow-md transition hover:bg-sky-700 active:scale-95 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:shadow-none"
-            >
-              {guardando ? 'Confirmando...' : 'Confirmar reserva'}
-            </button>
-          </div>
-
-          {reservaConfirmada && (
-            <section
-              id="resumen-reserva"
-              className="mt-8 rounded-3xl border border-emerald-200 bg-emerald-50 p-6 md:p-8"
-            >
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between border-b border-emerald-200 pb-5">
-                <div>
-                  <p className="text-sm font-bold uppercase tracking-wider text-emerald-700">
-                    Reserva confirmada
-                  </p>
-                  <h2 className="mt-1 text-2xl font-black text-slate-900">
-                    Resumen de la cita
-                  </h2>
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  {idCitaGenerada && (
-                    <div className="inline-flex items-center gap-2 rounded-2xl bg-white px-3.5 py-1.5 text-xs font-bold text-slate-700 shadow-sm border border-emerald-200">
-                      <span className="text-slate-500">ID Cita:</span>
-                      <span className="font-mono text-sm font-black text-sky-800">{idCitaGenerada}</span>
-                    </div>
-                  )}
-                  {codigoReserva && (
-                    <div className="inline-flex items-center gap-2 rounded-2xl bg-white px-3.5 py-1.5 text-xs font-bold text-emerald-800 shadow-sm border border-emerald-200">
-                      <span className="text-emerald-600">Código:</span>
-                      <span className="font-mono text-sm font-black text-emerald-800">{codigoReserva}</span>
-                    </div>
-                  )}
-                </div>
+          {!reservationConfirmed && step === 3 && (
+            <section className="mt-8" aria-labelledby="step-three-title">
+              <div className="flex items-center gap-3">
+                <Stethoscope className="h-6 w-6 text-sky-700" />
+                <h2 id="step-three-title" className="text-xl font-black text-slate-950">Revisa y confirma la cita</h2>
               </div>
 
-              <div className="mt-6 grid gap-4 sm:grid-cols-2 md:grid-cols-3">
-                <div className="rounded-2xl bg-white/80 p-4 border border-emerald-100 shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Nombre del cliente</p>
-                  <p className="mt-1 font-bold text-slate-900">{nombreCliente}</p>
-                </div>
+              <dl className="mt-6 grid gap-px overflow-hidden border border-slate-200 bg-slate-200 sm:grid-cols-2">
+                {[
+                  ['Cliente', session?.nombre || ''],
+                  ['Mascota', selectedPet?.nombre || ''],
+                  ['Servicio', selectedService?.nombre || ''],
+                  ['Profesional', professional],
+                  ['Fecha', formatDate(date)],
+                  ['Hora', time],
+                ].map(([label, value]) => (
+                  <div key={label} className="bg-white p-4">
+                    <dt className="text-xs font-bold uppercase tracking-[0.14em] text-slate-500">{label}</dt>
+                    <dd className="mt-1 font-bold text-slate-950">{value}</dd>
+                  </div>
+                ))}
+              </dl>
 
-                <div className="rounded-2xl bg-white/80 p-4 border border-emerald-100 shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Mascota</p>
-                  <p className="mt-1 font-bold text-slate-900">{mascota}</p>
+              {reservationError && (
+                <div className="mt-5 flex gap-3 rounded-xl border border-rose-300 bg-rose-50 p-4 text-sm text-rose-950" role="alert" aria-live="assertive">
+                  <AlertCircle className="h-5 w-5 shrink-0" />
+                  <div>
+                    <p className="font-bold">No pudimos crear la cita</p>
+                    <p className="mt-1">{reservationError}</p>
+                  </div>
                 </div>
+              )}
 
-                <div className="rounded-2xl bg-white/80 p-4 border border-emerald-100 shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Horario</p>
-                  <p className="mt-1 font-bold text-slate-900">
-                    {fecha} · {horario}
-                  </p>
-                </div>
-
-                <div className="rounded-2xl bg-white/80 p-4 border border-emerald-100 shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-                    Nombre del profesional
-                  </p>
-                  <p className="mt-1 font-bold text-slate-900">{profesional}</p>
-                </div>
-
-                <div className="rounded-2xl bg-white/80 p-4 border border-emerald-100 shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Servicio</p>
-                  <p className="mt-1 font-bold text-slate-900">{servicio}</p>
-                </div>
-
-                <div className="rounded-2xl bg-white/80 p-4 border border-emerald-100 shadow-sm">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">Sede</p>
-                  <p className="mt-1 font-bold text-slate-900">Clínica VetAgenda</p>
-                </div>
+              <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
+                <button type="button" onClick={() => goToStep(2)} disabled={saving} className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-50">
+                  <ChevronLeft className="h-5 w-5" /> Atrás
+                </button>
+                <button type="button" onClick={confirmReservation} disabled={saving} className="inline-flex min-h-12 items-center gap-2 rounded-lg bg-emerald-700 px-5 py-3 font-bold text-white hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-60">
+                  {saving ? 'Confirmando cita...' : 'Confirmar cita'}
+                  {!saving && <Check className="h-5 w-5" />}
+                </button>
               </div>
+            </section>
+          )}
 
-              <div className="mt-6 flex flex-wrap items-center justify-between gap-4 border-t border-emerald-200 pt-5">
-                <p className="text-xs text-emerald-800">
-                  ✓ Tu cita ha quedado reservada exitosamente en el sistema con el ID indicado arriba.
-                </p>
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <Link
-                    to={`/cliente/citas/${encodeURIComponent(String(idCitaGenerada || codigoReserva))}`}
-                    className="inline-flex items-center gap-1.5 rounded-xl bg-sky-600 px-4 py-2.5 text-xs font-bold text-white shadow-md transition hover:bg-sky-700 active:scale-95"
-                  >
-                    <span>🔍</span> Consultar detalle de la cita
-                  </Link>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setReservaConfirmada(false);
-                      setHorario('');
-                      setProfesional('');
-                      setFecha('');
-                      setIdCitaGenerada('');
-                      setCodigoReserva('');
-                    }}
-                    className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
-                  >
-                    Reservar otra cita
-                  </button>
-                  <Link
-                    to="/cliente/citas"
-                    className="rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-xs font-bold text-slate-700 shadow-sm transition hover:bg-slate-50"
-                  >
-                    Ver mis citas
-                  </Link>
-                  <Link
-                    to="/"
-                    className="rounded-xl bg-emerald-700 px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-emerald-800"
-                  >
-                    Volver al inicio
-                  </Link>
-                </div>
+          {reservationConfirmed && (
+            <section className="mt-8 border border-emerald-200 bg-emerald-50 p-6 md:p-8" aria-live="polite">
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-emerald-700 text-white"><Check className="h-7 w-7" /></div>
+              <p className="mt-5 text-sm font-bold uppercase tracking-[0.16em] text-emerald-800">Reserva confirmada</p>
+              <h2 className="mt-1 text-2xl font-black text-slate-950">Tu cita quedó registrada</h2>
+              <p className="mt-2 text-slate-700">Código <strong>{reservationCode}</strong> · ID {reservationId}</p>
+              <div className="mt-6 flex flex-wrap gap-3">
+                <Link to={`/cliente/citas/${reservationId}`} className="inline-flex min-h-11 items-center rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-sky-800">Ver detalle de la cita</Link>
+                <Link to="/cliente/citas" className="inline-flex min-h-11 items-center rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 hover:bg-slate-50">Ver mis citas</Link>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setReservationId('');
+                    setReservationCode('');
+                    setReservationError('');
+                    setDate('');
+                    setTime('');
+                    setProfessional('');
+                    setVeterinarianId('');
+                    goToStep(1);
+                  }}
+                  className="inline-flex min-h-11 items-center rounded-lg px-4 py-2.5 text-sm font-bold text-sky-800 hover:bg-sky-100"
+                >
+                  Reservar otra cita
+                </button>
               </div>
             </section>
           )}
