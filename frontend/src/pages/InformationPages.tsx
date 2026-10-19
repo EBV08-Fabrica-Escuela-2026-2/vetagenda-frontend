@@ -139,11 +139,6 @@ const projectLinks = [
     description: 'Reporta inconvenientes de API, autenticación, datos o despliegue en Render.',
     href: 'https://github.com/EBV08-Fabrica-Escuela-2026-2/veterinary-system/issues',
   },
-  {
-    title: 'Proyecto en Azure DevOps',
-    description: 'Consulta el backlog, las historias de usuario y el avance del equipo.',
-    href: 'https://dev.azure.com/FE-EBV08/VetAgenda',
-  },
 ];
 
 export function ContactPage() {
