@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { BrandHeader } from '../components/BrandHeader';
 import { ClientSessionActions } from '../components/ClientSessionActions';
+import { getClinicTodayDate, minutesUntilClinicDateTime } from '../services/api';
 import {
   consultarDisponibilidadReprogramacion,
   obtenerCitaParaReprogramar,
@@ -62,7 +63,7 @@ function mensajeError(error: unknown) {
 export const ReprogramarCitaPage = () => {
   const { citaId = '' } = useParams<{ citaId: string }>();
   const navigate = useNavigate();
-  const hoy = useMemo(() => inicioDelDia(new Date()), []);
+  const hoy = useMemo(() => inicioDelDia(fechaDesdeClave(getClinicTodayDate())), []);
   const hoyClave = fechaComoClave(hoy);
 
   const [cita, setCita] = useState<CitaReprogramacionDetalle | null>(null);
@@ -132,7 +133,7 @@ export const ReprogramarCitaPage = () => {
   const mesActual = new Date(hoy.getFullYear(), hoy.getMonth(), 1);
   const puedeIrAlMesAnterior = mesVisible > mesActual;
   const horasFaltantes = cita
-    ? (new Date(cita.fechaHoraInicio).getTime() - Date.now()) / (60 * 60 * 1000)
+    ? minutesUntilClinicDateTime(cita.fechaHoraInicio) / 60
     : 0;
   const esReprogramable = cita?.estado === 'CONFIRMADA' && horasFaltantes > 4;
 

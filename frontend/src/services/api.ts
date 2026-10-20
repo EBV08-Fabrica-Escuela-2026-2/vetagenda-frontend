@@ -670,51 +670,45 @@ export const DEFAULT_CATALOGO: VeterinarioConServicios[] = [
 ];
 
 export async function fetchCatalogo(): Promise<VeterinarioConServicios[]> {
+  let response: Response;
   try {
-    const response = await fetch(`${API_BASE_URL}/catalogo`, {
+    response = await fetch(`${API_BASE_URL}/catalogo`, {
       headers: { Accept: 'application/json' },
     });
-
-    if (!response.ok) {
-      return DEFAULT_CATALOGO;
-    }
-
-    const data: CatalogoApiResponse = await response.json();
-
-    if (!data?.veterinarios?.length) {
-      return DEFAULT_CATALOGO;
-    }
-
-    return data.veterinarios.map((vet) => ({
-      id: Number(vet.id),
-      nombre: vet.nombre,
-      direccion: vet.direccion || 'Dirección no registrada',
-      telefono: vet.telefono || 'Sin teléfono',
-      horarioAtencion: vet.horarioAtencion || 'Sin horario registrado',
-      servicios: (vet.servicios || []).map((s) => ({
-        id: Number(s.id),
-        nombre: s.nombre,
-        descripcion: s.descripcion,
-        precio: s.precio,
-        duracionMinutos: s.duracionMinutos,
-      })),
-      mensajeServicios: vet.mensajeServicios,
-    }));
   } catch {
-    return DEFAULT_CATALOGO;
+    throw new Error('No fue posible conectar con el catálogo. Intenta nuevamente en unos segundos.');
   }
+
+  if (!response.ok) {
+    throw new Error('No fue posible cargar el catálogo de servicios.');
+  }
+
+  const data: CatalogoApiResponse = await response.json();
+  if (!Array.isArray(data?.veterinarios)) {
+    throw new Error('El catálogo devolvió una respuesta inválida.');
+  }
+
+  return data.veterinarios.map((vet) => ({
+    id: Number(vet.id),
+    nombre: vet.nombre,
+    direccion: vet.direccion || 'Dirección no registrada',
+    telefono: vet.telefono || 'Sin teléfono',
+    horarioAtencion: vet.horarioAtencion || 'Sin horario registrado',
+    servicios: (vet.servicios || []).map((s) => ({
+      id: Number(s.id),
+      nombre: s.nombre,
+      descripcion: s.descripcion,
+      precio: s.precio,
+      duracionMinutos: s.duracionMinutos,
+    })),
+    mensajeServicios: vet.mensajeServicios,
+  }));
 }
 
 /** @deprecated Usar fetchCatalogo() para obtener los veterinarios con sus servicios completos */
 export async function listServices(): Promise<CatalogService[]> {
-  try {
-    const vets = await fetchCatalogo();
-    if (!vets.length) return getStoredServices();
-    const services = vets.flatMap((v) => v.servicios);
-    return services.length ? services : getStoredServices();
-  } catch {
-    return getStoredServices();
-  }
+  const vets = await fetchCatalogo();
+  return vets.flatMap((v) => v.servicios);
 }
 
 // ──────────────────────────────────────────────
@@ -795,6 +789,60 @@ export function parseTimeToMinutes(timeStr: string): number {
   if (period.includes('p') && hours < 12) hours += 12;
   if (period.includes('a') && hours === 12) hours = 0;
   return hours * 60 + minutes;
+}
+
+const CLINIC_TIME_ZONE = 'America/Bogota';
+
+function getClinicNowParts() {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: CLINIC_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(new Date());
+  const values = Object.fromEntries(parts.map((part) => [part.type, part.value]));
+  return {
+    date: `${values.year}-${values.month}-${values.day}`,
+    minutes: Number(values.hour) * 60 + Number(values.minute),
+  };
+}
+
+export function getClinicTodayDate(): string {
+  return getClinicNowParts().date;
+}
+
+export function minutesUntilClinicDateTime(value: string): number {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/);
+  if (!match) return Number.NEGATIVE_INFINITY;
+  const clinicNow = getClinicNowParts();
+  const [nowYear, nowMonth, nowDay] = clinicNow.date.split('-').map(Number);
+  const target = Date.UTC(
+    Number(match[1]),
+    Number(match[2]) - 1,
+    Number(match[3]),
+    Number(match[4]),
+    Number(match[5]),
+  );
+  const now = Date.UTC(
+    nowYear,
+    nowMonth - 1,
+    nowDay,
+    Math.floor(clinicNow.minutes / 60),
+    clinicNow.minutes % 60,
+  );
+  return (target - now) / 60_000;
+}
+
+export function isFutureReservationSlot(date: string, time: string): boolean {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return false;
+  const match = time.match(/^(\d{1,2}):(\d{2})\s*(a\.\s*m\.|p\.\s*m\.|am|pm)?$/i);
+  if (!match) return false;
+  const clinicNow = getClinicNowParts();
+  if (date !== clinicNow.date) return date > clinicNow.date;
+  return parseTimeToMinutes(time) > clinicNow.minutes;
 }
 
 export const DEFAULT_DEMO_CITAS: Cita[] = [
@@ -915,6 +963,9 @@ export async function reservarCita(payload: ReservarCitaPayload): Promise<Reserv
 
   if (!fechaHoraInicioStr) {
     throw new Error('La fecha y el horario seleccionados no son válidos.');
+  }
+  if (!isFutureReservationSlot(payload.fecha, payload.hora)) {
+    throw new Error('El horario seleccionado ya pasó. Vuelve a consultar la disponibilidad.');
   }
 
   let response: Response;
@@ -1064,8 +1115,16 @@ export async function getCitas(documentoIdentidad: string): Promise<Cita[]> {
       const ids = new Set(apiCitas.map((c) => c.id));
       return [...apiCitas, ...localCitas.filter((c) => !ids.has(c.id))];
     }
-  } catch {
-    // Usar datos locales si el backend no responde
+    if (hasRealSession) {
+      const body = await response.json().catch(() => ({}));
+      throw new Error(body?.mensaje || body?.message || 'No fue posible consultar las citas.');
+    }
+  } catch (error) {
+    if (hasRealSession) {
+      throw error instanceof Error
+        ? error
+        : new Error('No fue posible conectar con el servidor para consultar las citas.');
+    }
   }
 
   return localCitas;
@@ -1075,49 +1134,52 @@ export async function cancelarCita(
   citaId: number,
   documentoIdentidad: string,
 ): Promise<CancelacionCitaApi> {
-  // Actualizar en almacenamiento local demo
+  const token = localStorage.getItem('vetagenda_token');
+  let response: Response;
   try {
-    const list = getCitasLocales();
-    const updated = list.map((item) =>
-      item.id === citaId
-        ? {
-            ...item,
-            estado: 'CANCELADA' as const,
-            motivoCancelacion: 'Anulada por el cliente',
-            fechaCancelacion: new Intl.DateTimeFormat('es-CO').format(new Date()),
-          }
-        : item,
-    );
-    localStorage.setItem(CITAS_STORAGE_KEY, JSON.stringify(updated));
-  } catch {
-    // Ignore error
-  }
-
-  try {
-    const response = await fetch(
+    response = await fetch(
       `${API_BASE_URL}/citas/${citaId}/cancelar?documentoIdentidad=${encodeURIComponent(documentoIdentidad)}`,
       {
         method: 'POST',
-        headers: { Accept: 'application/json' },
+        headers: {
+          Accept: 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
       },
     );
-
-    if (response.ok) {
-      return response.json();
-    }
   } catch {
-    // Fallback demo
+    throw new Error('No fue posible conectar con el servidor. La cita no fue anulada.');
   }
 
-  return {
-    mensaje: 'Cita anulada exitosamente',
-    idCita: citaId,
-    estado: 'ANULADA',
-    etiquetaEstado: 'Cancelada',
-    cupoLiberado: true,
-    fechaHoraInicio: new Date().toISOString(),
-    fechaHoraFin: new Date().toISOString(),
-  };
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const mensaje = data && typeof data === 'object'
+      && (('mensaje' in data && typeof data.mensaje === 'string')
+        || ('message' in data && typeof data.message === 'string'))
+      ? ('mensaje' in data ? data.mensaje : data.message) as string
+      : 'No fue posible anular la cita.';
+    throw new Error(mensaje);
+  }
+  if (!data || typeof data !== 'object') {
+    throw new Error('El servidor devolvió una respuesta inválida al anular la cita.');
+  }
+
+  try {
+    const list = getCitasLocales();
+    const updated = list.map((item) => item.id === citaId
+      ? {
+          ...item,
+          estado: 'CANCELADA' as const,
+          motivoCancelacion: 'Anulada por el cliente',
+          fechaCancelacion: new Intl.DateTimeFormat('es-CO').format(new Date()),
+        }
+      : item);
+    localStorage.setItem(CITAS_STORAGE_KEY, JSON.stringify(updated));
+  } catch {
+    // La confirmación del backend sigue siendo la fuente de verdad.
+  }
+
+  return data as CancelacionCitaApi;
 }
 
 export type VeterinarianAppointmentApi = {

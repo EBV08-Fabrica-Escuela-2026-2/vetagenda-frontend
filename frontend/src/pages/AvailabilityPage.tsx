@@ -4,15 +4,12 @@ import { BrandHeader } from '../components/BrandHeader';
 import { ClientSessionActions } from '../components/ClientSessionActions';
 import { Icon } from '../components/Icon';
 import {
-  listServices,
   fetchCatalogo,
   fetchDisponibilidad,
-  getStoredAvailability,
+  getClinicTodayDate,
   hasAuthenticatedClientSession,
-  DEFAULT_CATALOGO,
-  type CatalogService,
+  isFutureReservationSlot,
   type VeterinarioConServicios,
-  type DiaSemana,
 } from '../services/api';
 
 export type AvailabilityService = {
@@ -30,18 +27,8 @@ export type AvailableSlot = {
   veterinarioNombre: string;
 };
 
-const DIA_SEMANA_MAP: DiaSemana[] = [
-  'DOMINGO',
-  'LUNES',
-  'MARTES',
-  'MIERCOLES',
-  'JUEVES',
-  'VIERNES',
-  'SABADO',
-];
-
 const weekdays = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-const today = new Date();
+const today = fromDateKey(getClinicTodayDate());
 today.setHours(0, 0, 0, 0);
 
 function toDateKey(date: Date) {
@@ -90,81 +77,6 @@ function parseTimeToMinutes(timeStr: string): number {
   return hours * 60 + minutes;
 }
 
-function getVetDailySlots(dateKey: string, vetId: number): string[] {
-  const date = fromDateKey(dateKey);
-  const diaSemana = DIA_SEMANA_MAP[date.getDay()];
-  const config = getStoredAvailability(vetId);
-  const diaConfig = config.find((d) => d.dia === diaSemana);
-  if (!diaConfig || !diaConfig.activo || diaConfig.franjas.length === 0) {
-    return [];
-  }
-  const slots: string[] = [];
-  diaConfig.franjas.forEach((franja) => {
-    const [hIni, mIni] = franja.horaInicio.split(':').map(Number);
-    const [hFin, mFin] = franja.horaFin.split(':').map(Number);
-    let cur = hIni * 60 + mIni;
-    const end = hFin * 60 + mFin;
-    while (cur + 30 <= end) {
-      const h = Math.floor(cur / 60);
-      const m = cur % 60;
-      const periodo = h < 12 ? 'a. m.' : 'p. m.';
-      const h12 = h % 12 === 0 ? 12 : h % 12;
-      const slotTime = `${h12}:${String(m).padStart(2, '0')} ${periodo}`;
-      const now = new Date();
-      const isToday = dateKey === toDateKey(now);
-      const isFutureToday = h * 60 + m > now.getHours() * 60 + now.getMinutes();
-      if (!isToday || isFutureToday) {
-        slots.push(slotTime);
-      }
-      cur += 30;
-    }
-  });
-  return slots;
-}
-
-function getAvailableSlots(
-  dateKey: string,
-  serviceId: string,
-  veterinarianId: string,
-  catalogo: VeterinarioConServicios[],
-  serviceName?: string,
-): AvailableSlot[] {
-  if (veterinarianId && veterinarianId !== 'all') {
-    const vetIdNum = Number(veterinarianId);
-    const vet = catalogo.find((v) => v.id === vetIdNum);
-    // Si el profesional no existe o NO presta este servicio, no hay horarios
-    if (!vet || !vetOffersService(vet, serviceId, serviceName)) {
-      return [];
-    }
-    const rawSlots = getVetDailySlots(dateKey, vetIdNum);
-    return rawSlots.map((time) => ({
-      time,
-      veterinarioId: vet.id,
-      veterinarioNombre: vet.nombre,
-    }));
-  }
-
-  // Si no se eligió profesional ("all"), filtrar solo los profesionales que SÍ prestan el servicio
-  const prestadores = catalogo.filter((vet) => vetOffersService(vet, serviceId, serviceName));
-  if (prestadores.length === 0) {
-    return [];
-  }
-
-  const allSlots: AvailableSlot[] = [];
-  prestadores.forEach((vet) => {
-    const rawSlots = getVetDailySlots(dateKey, vet.id);
-    rawSlots.forEach((time) => {
-      allSlots.push({
-        time,
-        veterinarioId: vet.id,
-        veterinarioNombre: vet.nombre,
-      });
-    });
-  });
-
-  return allSlots.sort((a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time));
-}
-
 function formatLongDate(dateKey: string) {
   return new Intl.DateTimeFormat('es-CO', {
     weekday: 'long',
@@ -180,10 +92,7 @@ function findServiceForVet(vet: VeterinarioConServicios, serviceId: string, serv
 }
 
 function isFutureApiSlot(dateKey: string, time: string) {
-  const [hours, minutes] = time.slice(0, 5).split(':').map(Number);
-  const slotDate = fromDateKey(dateKey);
-  slotDate.setHours(hours, minutes, 0, 0);
-  return slotDate.getTime() > Date.now();
+  return isFutureReservationSlot(dateKey, time.slice(0, 5));
 }
 
 function formatApiTime(time: string) {
@@ -225,8 +134,8 @@ function AvailabilitySkeleton() {
 
 export function AvailabilityPage() {
   const navigate = useNavigate();
-  const [catalogo, setCatalogo] = useState<VeterinarioConServicios[]>(DEFAULT_CATALOGO);
-  const [services, setServices] = useState<AvailabilityService[]>(() => extractServicesFromCatalog(DEFAULT_CATALOGO));
+  const [catalogo, setCatalogo] = useState<VeterinarioConServicios[]>([]);
+  const [services, setServices] = useState<AvailabilityService[]>([]);
 
   const [selectedServiceId, setSelectedServiceId] = useState<string>(() => {
     const param = new URLSearchParams(window.location.search).get('servicio');
@@ -265,34 +174,21 @@ export function AvailabilityPage() {
   // Cargar catálogo de veterinarios con sus servicios reales
   useEffect(() => {
     let isMounted = true;
-    fetchCatalogo().then((data) => {
-      if (!isMounted || !data || data.length === 0) return;
-      setCatalogo(data);
-      const catalogServices = extractServicesFromCatalog(data);
-      if (catalogServices.length > 0) {
-        setServices(catalogServices);
-      }
-    });
-
-    listServices().then((apiServices: CatalogService[]) => {
-      if (!isMounted || !apiServices?.length) return;
-      setServices((prev) => {
-        const map = new Map<string, AvailabilityService>();
-        prev.forEach((s) => map.set(s.id, s));
-        apiServices.forEach((s) => {
-          const key = String(s.id);
-          if (!map.has(key)) {
-            map.set(key, {
-              id: key,
-              name: s.nombre,
-              duration: s.duracionMinutos ?? 30,
-              price: typeof s.precio === 'number' ? `$${s.precio.toLocaleString('es-CO')}` : String(s.precio),
-            });
-          }
-        });
-        return Array.from(map.values());
+    fetchCatalogo()
+      .then((data) => {
+        if (!isMounted) return;
+        setCatalogo(data);
+        setServices(extractServicesFromCatalog(data));
+        if (data.length === 0) {
+          setAvailabilityError('No hay profesionales ni servicios publicados en el catálogo.');
+        }
+      })
+      .catch((error: unknown) => {
+        if (!isMounted) return;
+        setCatalogo([]);
+        setServices([]);
+        setAvailabilityError(error instanceof Error ? error.message : 'No fue posible cargar el catálogo.');
       });
-    });
 
     return () => {
       isMounted = false;
@@ -661,10 +557,7 @@ export function AvailabilityPage() {
                     const isPast = date < today;
                     const isBeyondRange = date > maxDate;
                     const isSelected = dateKey === selectedDate;
-                    const daySlots = (!isPast && !isBeyondRange)
-                      ? getAvailableSlots(dateKey, selectedServiceId, selectedVeterinarianId, catalogo, selectedService?.name)
-                      : [];
-                    const hasAvailability = daySlots.length > 0;
+                    const hasAvailability = !isPast && !isBeyondRange && dateKey === selectedDate && slots.length > 0;
 
                     return (
                       <button

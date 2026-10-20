@@ -13,6 +13,7 @@ import { BrandHeader } from '../components/BrandHeader';
 import { ClientSessionActions } from '../components/ClientSessionActions';
 import {
   getClientSession,
+  isFutureReservationSlot,
   listClientPets,
   listServices,
   reservarCita,
@@ -117,7 +118,8 @@ export function ReservarCitaPage() {
 
   const selectedPet = pets.find((pet) => String(pet.id) === petId);
   const selectedService = services.find((service) => String(service.id) === serviceId);
-  const hasRealSchedule = Boolean(date && time && professional && veterinarianId);
+  const hasScheduleSelection = Boolean(date && time && professional && veterinarianId);
+  const hasRealSchedule = hasScheduleSelection && isFutureReservationSlot(date, time);
   const reservationConfirmed = Boolean(reservationId && reservationCode);
 
   function goToStep(nextStep: number) {
@@ -271,8 +273,14 @@ export function ReservarCitaPage() {
                 </div>
               ) : (
                 <div className="mt-6 border border-slate-200 bg-slate-50 p-5">
-                  <p className="font-bold text-slate-950">Consulta la agenda para elegir un turno real.</p>
-                  <p className="mt-1 text-sm text-slate-600">Mostraremos únicamente profesionales que prestan {selectedService?.nombre || 'el servicio seleccionado'}.</p>
+                  <p className="font-bold text-slate-950">
+                    {hasScheduleSelection ? 'El horario seleccionado ya no está disponible.' : 'Consulta la agenda para elegir un turno real.'}
+                  </p>
+                  <p className="mt-1 text-sm text-slate-600">
+                    {hasScheduleSelection
+                      ? 'Vuelve a consultar la agenda para escoger una franja futura.'
+                      : `Mostraremos únicamente profesionales que prestan ${selectedService?.nombre || 'el servicio seleccionado'}.`}
+                  </p>
                   <Link to={`/disponibilidad?servicio=${encodeURIComponent(serviceId)}`} className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-lg bg-sky-700 px-4 py-2.5 text-sm font-bold text-white hover:bg-sky-800">
                     Ver horarios disponibles <ChevronRight className="h-4 w-4" />
                   </Link>

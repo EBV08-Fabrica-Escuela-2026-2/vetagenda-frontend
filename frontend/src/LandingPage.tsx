@@ -79,12 +79,16 @@ function LandingPage() {
 
   useEffect(() => {
     let isMounted = true;
-    listServices().then((services) => {
-      if (isMounted) {
-        setCatalogServices(services);
-        setIsCatalogLoading(false);
-      }
-    });
+    listServices()
+      .then((services) => {
+        if (isMounted) setCatalogServices(services);
+      })
+      .catch(() => {
+        if (isMounted) setCatalogServices([]);
+      })
+      .finally(() => {
+        if (isMounted) setIsCatalogLoading(false);
+      });
 
     return () => {
       isMounted = false;

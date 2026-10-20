@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchCatalogo, type CatalogService, type VeterinarioConServicios } from '../services/api';
+import { fetchCatalogo, getClinicTodayDate, type CatalogService, type VeterinarioConServicios } from '../services/api';
 import { Icon } from './Icon';
 
 const anyVeterinarianOption = { value: 'all', label: 'Cualquier profesional' };
@@ -10,10 +10,7 @@ function normalizeText(value: string) {
 }
 
 function getTodayDate() {
-  const date = new Date();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  return `${date.getFullYear()}-${month}-${day}`;
+  return getClinicTodayDate();
 }
 
 type HeroSearchProps = {
@@ -30,9 +27,13 @@ export function HeroSearch({ services, isLoading }: HeroSearchProps) {
 
   useEffect(() => {
     let isMounted = true;
-    fetchCatalogo().then((vets) => {
-      if (isMounted) setCatalog(vets);
-    });
+    fetchCatalogo()
+      .then((vets) => {
+        if (isMounted) setCatalog(vets);
+      })
+      .catch(() => {
+        if (isMounted) setCatalog([]);
+      });
     return () => {
       isMounted = false;
     };

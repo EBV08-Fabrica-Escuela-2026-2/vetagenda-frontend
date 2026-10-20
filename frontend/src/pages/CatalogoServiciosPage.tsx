@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BrandHeader } from '../components/BrandHeader';
 import { ClientSessionActions } from '../components/ClientSessionActions';
-import { fetchCatalogo, VeterinarioConServicios } from '../services/api';
+import { fetchCatalogo, getClinicTodayDate, VeterinarioConServicios } from '../services/api';
 
 const currencyFormatter = new Intl.NumberFormat('es-CO', {
   style: 'currency',
@@ -18,10 +18,7 @@ const formatPrice = (value: string | number) => {
 };
 
 function getTodayDate() {
-  const today = new Date();
-  const month = String(today.getMonth() + 1).padStart(2, '0');
-  const day = String(today.getDate()).padStart(2, '0');
-  return `${today.getFullYear()}-${month}-${day}`;
+  return getClinicTodayDate();
 }
 
 function CatalogSkeleton() {
