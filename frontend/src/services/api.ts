@@ -140,6 +140,22 @@ export type CancelacionCitaApi = {
   fechaHoraFin: string;
 };
 
+export type DisponibilidadConsultaApi = {
+  servicioId: number;
+  servicioNombre: string;
+  duracionMinutos: number;
+  veterinarioId: number;
+  veterinarioNombre: string;
+  fecha: string;
+  hayDisponibilidad: boolean;
+  horariosDisponibles: Array<{
+    horaInicio: string;
+    horaFin: string;
+  }>;
+  mensaje?: string | null;
+  fechaDisponibleMasCercana?: string | null;
+};
+
 // ──────────────────────────────────────────────
 // Configuración base
 // ──────────────────────────────────────────────
@@ -197,6 +213,32 @@ export const getStoredServices = (): CatalogService[] => {
 export const setStoredServices = (services: CatalogService[]) => {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(services));
 };
+
+export async function fetchDisponibilidad(
+  servicioId: number,
+  fecha: string,
+  veterinarioId?: number,
+  signal?: AbortSignal,
+): Promise<DisponibilidadConsultaApi> {
+  const query = new URLSearchParams({
+    servicioId: String(servicioId),
+    fecha,
+  });
+  if (veterinarioId !== undefined) {
+    query.set('veterinarioId', String(veterinarioId));
+  }
+
+  const response = await fetch(`${API_BASE_URL}/citas/disponibilidad?${query.toString()}`, {
+    headers: { Accept: 'application/json' },
+    signal,
+  });
+  if (!response.ok) {
+    const body = await response.json().catch(() => ({}));
+    throw new Error(body?.mensaje || body?.message || 'No fue posible consultar los horarios disponibles.');
+  }
+
+  return response.json();
+}
 
 // ──────────────────────────────────────────────
 // Autenticación

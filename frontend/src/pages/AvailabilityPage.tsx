@@ -6,6 +6,7 @@ import { Icon } from '../components/Icon';
 import {
   listServices,
   fetchCatalogo,
+  fetchDisponibilidad,
   getStoredAvailability,
   hasAuthenticatedClientSession,
   DEFAULT_CATALOGO,
@@ -108,7 +109,13 @@ function getVetDailySlots(dateKey: string, vetId: number): string[] {
       const m = cur % 60;
       const periodo = h < 12 ? 'a. m.' : 'p. m.';
       const h12 = h % 12 === 0 ? 12 : h % 12;
-      slots.push(`${h12}:${String(m).padStart(2, '0')} ${periodo}`);
+      const slotTime = `${h12}:${String(m).padStart(2, '0')} ${periodo}`;
+      const now = new Date();
+      const isToday = dateKey === toDateKey(now);
+      const isFutureToday = h * 60 + m > now.getHours() * 60 + now.getMinutes();
+      if (!isToday || isFutureToday) {
+        slots.push(slotTime);
+      }
       cur += 30;
     }
   });
@@ -165,6 +172,27 @@ function formatLongDate(dateKey: string) {
     month: 'long',
     year: 'numeric',
   }).format(fromDateKey(dateKey));
+}
+
+function findServiceForVet(vet: VeterinarioConServicios, serviceId: string, serviceName: string) {
+  return vet.servicios.find((service) => String(service.id) === serviceId)
+    ?? vet.servicios.find((service) => normalizeText(service.nombre) === normalizeText(serviceName));
+}
+
+function isFutureApiSlot(dateKey: string, time: string) {
+  const [hours, minutes] = time.slice(0, 5).split(':').map(Number);
+  const slotDate = fromDateKey(dateKey);
+  slotDate.setHours(hours, minutes, 0, 0);
+  return slotDate.getTime() > Date.now();
+}
+
+function formatApiTime(time: string) {
+  const [hours, minutes] = time.slice(0, 5).split(':').map(Number);
+  const date = new Date(2000, 0, 1, hours, minutes);
+  return new Intl.DateTimeFormat('es-CO', {
+    hour: 'numeric',
+    minute: '2-digit',
+  }).format(date);
 }
 
 function extractServicesFromCatalog(catalogo: VeterinarioConServicios[]): AvailabilityService[] {
@@ -230,6 +258,9 @@ export function AvailabilityPage() {
     return new Date(initialDate.getFullYear(), initialDate.getMonth(), 1);
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [slots, setSlots] = useState<AvailableSlot[]>([]);
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null);
+  const [availabilityRetry, setAvailabilityRetry] = useState(0);
 
   // Cargar catálogo de veterinarios con sus servicios reales
   useEffect(() => {
@@ -311,18 +342,95 @@ export function AvailabilityPage() {
     ];
   }, [catalogo, selectedServiceId, selectedService?.name]);
 
-  // Horarios disponibles para la fecha y filtros actuales
-  const slots = useMemo(
-    () => getAvailableSlots(selectedDate, selectedServiceId, selectedVeterinarianId, catalogo, selectedService?.name),
-    [selectedDate, selectedServiceId, selectedVeterinarianId, catalogo, selectedService?.name],
-  );
-
   useEffect(() => {
+    const controller = new AbortController();
+    let isActive = true;
     setIsLoading(true);
     setSelectedSlot(null);
-    const timeoutId = window.setTimeout(() => setIsLoading(false), 300);
-    return () => window.clearTimeout(timeoutId);
-  }, [selectedDate, selectedServiceId, selectedVeterinarianId]);
+    setAvailabilityError(null);
+
+    const targetVets = selectedVeterinarianId === 'all'
+      ? vetsQuePrestan
+      : selectedVeterinarian && profesionalPrestaServicio
+        ? [selectedVeterinarian]
+        : [];
+
+    if (targetVets.length === 0) {
+      setSlots([]);
+      setIsLoading(false);
+      return () => {
+        isActive = false;
+        controller.abort();
+      };
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      if (!isActive) return;
+      controller.abort();
+      setSlots([]);
+      setAvailabilityError('La agenda está tardando demasiado en responder. Intenta nuevamente en unos segundos.');
+      setIsLoading(false);
+    }, 15000);
+
+    Promise.all(targetVets.map(async (vet) => {
+      const service = findServiceForVet(vet, selectedServiceId, selectedService.name);
+      if (!service) return [];
+
+      const availability = await fetchDisponibilidad(
+        Number(service.id),
+        selectedDate,
+        vet.id,
+        controller.signal,
+      );
+      return availability.horariosDisponibles
+        .filter((slot) => isFutureApiSlot(selectedDate, slot.horaInicio))
+        .map((slot) => ({
+          time: formatApiTime(slot.horaInicio),
+          veterinarioId: availability.veterinarioId,
+          veterinarioNombre: availability.veterinarioNombre,
+        }));
+    }))
+      .then((results) => {
+        if (!isActive) return;
+        const uniqueSlots = new Map<string, AvailableSlot>();
+        results.flat().forEach((slot) => {
+          uniqueSlots.set(`${slot.veterinarioId}-${slot.time}`, slot);
+        });
+        setSlots(Array.from(uniqueSlots.values()).sort(
+          (a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time),
+        ));
+      })
+      .catch((error: unknown) => {
+        if (!isActive || (error instanceof DOMException && error.name === 'AbortError')) return;
+        setSlots([]);
+        setAvailabilityError(
+          error instanceof TypeError
+            ? 'No fue posible conectar con la agenda. Intenta nuevamente en unos segundos.'
+            : error instanceof Error
+              ? error.message
+              : 'No fue posible consultar los horarios disponibles.',
+        );
+      })
+      .finally(() => {
+        window.clearTimeout(timeoutId);
+        if (isActive && !controller.signal.aborted) setIsLoading(false);
+      });
+
+    return () => {
+      isActive = false;
+      window.clearTimeout(timeoutId);
+      controller.abort();
+    };
+  }, [
+    selectedDate,
+    selectedServiceId,
+    selectedService.name,
+    selectedVeterinarianId,
+    selectedVeterinarian,
+    profesionalPrestaServicio,
+    vetsQuePrestan,
+    availabilityRetry,
+  ]);
 
   const monthDays = useMemo(() => {
     const firstDay = new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), 1);
@@ -604,6 +712,18 @@ export function AvailabilityPage() {
             <div className="pt-5">
               {isLoading ? (
                 <AvailabilitySkeleton />
+              ) : availabilityError ? (
+                <div className="rounded-2xl border border-red-200 bg-red-50 p-5" role="alert">
+                  <h3 className="font-bold text-red-900">No pudimos consultar la agenda</h3>
+                  <p className="mt-2 text-sm leading-6 text-red-800">{availabilityError}</p>
+                  <button
+                    type="button"
+                    onClick={() => setAvailabilityRetry((current) => current + 1)}
+                    className="mt-4 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-800"
+                  >
+                    Intentar de nuevo
+                  </button>
+                </div>
               ) : selectedVeterinarianId !== 'all' && !profesionalPrestaServicio ? (
                 /* Estado cuando el profesional NO presta el servicio */
                 <div className="rounded-2xl border border-amber-300 bg-amber-50 p-6 text-center" role="status">
