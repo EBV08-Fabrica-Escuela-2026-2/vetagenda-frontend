@@ -112,165 +112,45 @@ function mapearDetalle(datos: CitaDetalleApi): Cita {
   };
 }
 
-export function buscarCitaLocal(citaId: string): Cita | null {
-  try {
-    const raw = localStorage.getItem('vetagenda_citas_locales');
-    const storedList = raw ? JSON.parse(raw) : [];
-    const list = [
-      ...(Array.isArray(storedList) ? storedList : []),
-      {
-        id: 1,
-        codigoReserva: 'VA-0001',
-        clienteNombre: 'Carolina Restrepo',
-        mascotaNombre: 'Rocky',
-        mascotaEspecie: 'Canino',
-        mascotaRaza: 'Golden Retriever',
-        veterinarioNombre: 'Dra. Laura Gómez',
-        servicioNombre: 'Consulta general',
-        fecha: '2026-10-25',
-        hora: '08:00 a. m.',
-        estado: 'PROGRAMADA',
-      },
-      {
-        id: 2,
-        codigoReserva: 'VA-0002',
-        clienteNombre: 'Carolina Restrepo',
-        mascotaNombre: 'Rocky',
-        mascotaEspecie: 'Canino',
-        mascotaRaza: 'Golden Retriever',
-        veterinarioNombre: 'Dr. Andrés Pérez',
-        servicioNombre: 'Vacunación',
-        fecha: '2026-10-28',
-        hora: '10:00 a. m.',
-        estado: 'PROGRAMADA',
-      },
-      {
-        id: 3,
-        codigoReserva: 'VA-0003',
-        clienteNombre: 'Carolina Restrepo',
-        mascotaNombre: 'Rocky',
-        mascotaEspecie: 'Canino',
-        mascotaRaza: 'Golden Retriever',
-        veterinarioNombre: 'Dra. Natalia Ruiz',
-        servicioNombre: 'Control veterinario',
-        fecha: '2026-10-15',
-        hora: '02:00 p. m.',
-        estado: 'CANCELADA',
-      },
-    ];
-
-    const query = citaId.trim().toLowerCase();
-    const querySinPrefijo = query.replace(/^va-0*/i, '');
-
-    const encontrado = list.find((item: any) => {
-      const idStr = String(item.id || '').toLowerCase();
-      const idSinPrefijo = idStr.replace(/^va-0*/i, '');
-      const codStr = String(item.codigoReserva || item.codigo || '').toLowerCase();
-      const codSinPrefijo = codStr.replace(/^va-0*/i, '');
-
-      return (
-        idStr === query ||
-        codStr === query ||
-        (querySinPrefijo && (idSinPrefijo === querySinPrefijo || codSinPrefijo === querySinPrefijo))
-      );
-    });
-
-    if (encontrado) {
-      return {
-        id: String(encontrado.id),
-        codigo: encontrado.codigoReserva || `VA-${String(encontrado.id).padStart(4, '0')}`,
-        servicio: encontrado.servicioNombre || encontrado.servicio || 'Consulta general',
-        categoriaServicio: 'Atención médica',
-        fecha: encontrado.fecha || '25 de octubre de 2026',
-        hora: encontrado.hora || '08:00 a. m.',
-        duracion: '30 min',
-        costo: 65000,
-        estado: (encontrado.estado === 'CANCELADA' ? 'CANCELADA' : 'CONFIRMADA') as EstadoCita,
-        mascota: {
-          nombre: encontrado.mascotaNombre || 'Luna',
-          especieRaza: encontrado.mascotaEspecie ? `${encontrado.mascotaEspecie} · Canino` : 'Canino · Golden Retriever · 3 años',
-          edad: '3 años',
-        },
-        profesional: {
-          id: String(encontrado.veterinarioId || '1'),
-          nombre: encontrado.veterinarioNombre || 'Dra. Laura Gómez',
-          especialidad: 'Medicina Veterinaria',
-        },
-        indicacionesPrevias: [
-          'Presentar carné de vacunación al llegar',
-          'Llegar 10 minutos antes de la hora fijada',
-          'Mantener a la mascota con correa o en transportadora',
-        ],
-      };
-    }
-
-    // En modo demo, generar ficha para el ID consultado
-    const num = citaId.replace(/\D/g, '') || '1';
-    return {
-      id: citaId,
-      codigo: citaId.toUpperCase().startsWith('VA-') ? citaId.toUpperCase() : `VA-${num.padStart(4, '0')}`,
-      servicio: 'Consulta general',
-      categoriaServicio: 'Atención médica',
-      fecha: '25 de octubre de 2026',
-      hora: '08:00 a. m.',
-      duracion: '30 min',
-      costo: 65000,
-      estado: 'CONFIRMADA',
-      mascota: {
-        nombre: 'Luna',
-        especieRaza: 'Canino · Golden Retriever · 3 años',
-        edad: '3 años',
-      },
-      profesional: {
-        id: '1',
-        nombre: 'Dra. Laura Gómez',
-        especialidad: 'Medicina Veterinaria',
-      },
-      indicacionesPrevias: [
-        'Presentar carné de vacunación al llegar',
-        'Llegar 10 minutos antes de la hora fijada',
-        'Mantener a la mascota con correa o en transportadora',
-      ],
-    };
-  } catch {
-    return null;
-  }
-}
-
 export async function obtenerDetalleCita(citaId: string, token?: string): Promise<Cita> {
-  // Primero intentamos buscar en citas locales / demo para evitar bloqueos de login en modo demo
-  const citaLocal = buscarCitaLocal(citaId);
-  if (citaLocal) {
-    return citaLocal;
+  if (!token) {
+    throw new CitaApiError('UNAUTHORIZED', 'Debes iniciar sesión para consultar la cita.');
   }
 
+  let response: Response;
   try {
-    const response = await fetch(`${API_BASE_URL}/citas/${encodeURIComponent(citaId)}`, {
+    response = await fetch(`${API_BASE_URL}/citas/${encodeURIComponent(citaId)}`, {
       headers: {
         Accept: 'application/json',
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        Authorization: `Bearer ${token}`,
       },
     });
-
-    if (response.ok) {
-      const respuesta: unknown = await response.json();
-      if (respuesta && typeof respuesta === 'object') {
-        const datos = 'cita' in respuesta ? respuesta.cita : respuesta;
-        if (datos && typeof datos === 'object') {
-          return mapearDetalle(datos as CitaDetalleApi);
-        }
-      }
-    }
   } catch {
-    // Si no responde el backend, se retorna la cita local de demo
+    throw new CitaApiError('NETWORK_ERROR', 'No fue posible conectar con el servidor.');
   }
 
-  const fallback = buscarCitaLocal(citaId);
-  if (fallback) {
-    return fallback;
+  if (response.status === 401 || response.status === 403) {
+    throw new CitaApiError('UNAUTHORIZED', 'Tu sesión terminó. Inicia sesión nuevamente.');
+  }
+  if (response.status === 404) {
+    throw new CitaApiError('NOT_FOUND', 'La cita no existe o no pertenece a tu cuenta.');
+  }
+  if (!response.ok) {
+    throw new CitaApiError('NETWORK_ERROR', 'No fue posible consultar el detalle de la cita.');
   }
 
-  throw new CitaApiError('NOT_FOUND', 'La cita no existe o fue cancelada.');
+  try {
+    const respuesta: unknown = await response.json();
+    const datos = respuesta && typeof respuesta === 'object' && 'cita' in respuesta
+      ? respuesta.cita
+      : respuesta;
+    if (!datos || typeof datos !== 'object') {
+      throw new Error('Respuesta inválida');
+    }
+    return mapearDetalle(datos as CitaDetalleApi);
+  } catch {
+    throw new CitaApiError('NETWORK_ERROR', 'El servidor devolvió un detalle de cita inválido.');
+  }
 }
 
 export interface CitaReprogramacionDetalle {
