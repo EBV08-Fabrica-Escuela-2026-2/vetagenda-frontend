@@ -49,8 +49,8 @@ function addDays(date: Date, days: number) {
   return result;
 }
 
-function normalizeText(text: string) {
-  return text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+function normalizeText(text: unknown) {
+  return String(text ?? '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
 }
 
 export function vetOffersService(
@@ -108,13 +108,15 @@ function extractServicesFromCatalog(catalogo: VeterinarioConServicios[]): Availa
   const map = new Map<string, AvailabilityService>();
   catalogo.forEach((vet) => {
     vet.servicios?.forEach((s) => {
-      const key = String(s.id);
+      const key = String(s.id ?? '');
+      const name = String(s.nombre ?? '').trim();
+      if (!key || !name) return;
       if (!map.has(key)) {
         map.set(key, {
           id: key,
-          name: s.nombre,
-          duration: s.duracionMinutos ?? 30,
-          price: typeof s.precio === 'number' ? `$${s.precio.toLocaleString('es-CO')}` : String(s.precio),
+          name,
+          duration: Number(s.duracionMinutos) > 0 ? Number(s.duracionMinutos) : 30,
+          price: typeof s.precio === 'number' ? `$${s.precio.toLocaleString('es-CO')}` : String(s.precio ?? 'Por confirmar'),
         });
       }
     });
@@ -167,7 +169,10 @@ export function AvailabilityPage() {
     return new Date(initialDate.getFullYear(), initialDate.getMonth(), 1);
   });
   const [isLoading, setIsLoading] = useState(true);
+  const [isCatalogLoading, setIsCatalogLoading] = useState(true);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
   const [slots, setSlots] = useState<AvailableSlot[]>([]);
+  const [nearestAvailableDate, setNearestAvailableDate] = useState<string | null>(null);
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
   const [availabilityRetry, setAvailabilityRetry] = useState(0);
 
@@ -177,17 +182,28 @@ export function AvailabilityPage() {
     fetchCatalogo()
       .then((data) => {
         if (!isMounted) return;
+        const extractedServices = extractServicesFromCatalog(data);
         setCatalogo(data);
-        setServices(extractServicesFromCatalog(data));
-        if (data.length === 0) {
-          setAvailabilityError('No hay profesionales ni servicios publicados en el catálogo.');
+        setServices(extractedServices);
+        setCatalogError(null);
+        if (extractedServices.length === 0) {
+          setCatalogError('No hay servicios publicados en el catálogo.');
+        } else {
+          setSelectedServiceId((current) =>
+            extractedServices.some((service) => service.id === current)
+              ? current
+              : extractedServices[0].id,
+          );
         }
       })
       .catch((error: unknown) => {
         if (!isMounted) return;
         setCatalogo([]);
         setServices([]);
-        setAvailabilityError(error instanceof Error ? error.message : 'No fue posible cargar el catálogo.');
+        setCatalogError(error instanceof Error ? error.message : 'No fue posible cargar el catálogo.');
+      })
+      .finally(() => {
+        if (isMounted) setIsCatalogLoading(false);
       });
 
     return () => {
@@ -197,10 +213,10 @@ export function AvailabilityPage() {
 
   const selectedService = useMemo(
     () => services.find((s) => s.id === selectedServiceId) ?? services[0] ?? {
-      id: selectedServiceId,
-      name: 'Servicio clínico',
-      duration: 30,
-      price: '$50.000',
+      id: '',
+      name: '',
+      duration: 0,
+      price: '',
     },
     [services, selectedServiceId],
   );
@@ -244,6 +260,16 @@ export function AvailabilityPage() {
     setIsLoading(true);
     setSelectedSlot(null);
     setAvailabilityError(null);
+    setNearestAvailableDate(null);
+
+    if (!selectedService.id || isCatalogLoading || catalogError) {
+      setSlots([]);
+      setIsLoading(isCatalogLoading);
+      return () => {
+        isActive = false;
+        controller.abort();
+      };
+    }
 
     const targetVets = selectedVeterinarianId === 'all'
       ? vetsQuePrestan
@@ -270,7 +296,7 @@ export function AvailabilityPage() {
 
     Promise.all(targetVets.map(async (vet) => {
       const service = findServiceForVet(vet, selectedServiceId, selectedService.name);
-      if (!service) return [];
+      if (!service) return { slots: [] as AvailableSlot[], nearestDate: null as string | null };
 
       const availability = await fetchDisponibilidad(
         Number(service.id),
@@ -278,23 +304,32 @@ export function AvailabilityPage() {
         vet.id,
         controller.signal,
       );
-      return availability.horariosDisponibles
+      const availableSlots = availability.horariosDisponibles
         .filter((slot) => isFutureApiSlot(selectedDate, slot.horaInicio))
         .map((slot) => ({
           time: formatApiTime(slot.horaInicio),
           veterinarioId: availability.veterinarioId,
           veterinarioNombre: availability.veterinarioNombre,
         }));
+      return {
+        slots: availableSlots,
+        nearestDate: availability.fechaDisponibleMasCercana ?? null,
+      };
     }))
       .then((results) => {
         if (!isActive) return;
         const uniqueSlots = new Map<string, AvailableSlot>();
-        results.flat().forEach((slot) => {
+        results.flatMap((result) => result.slots).forEach((slot) => {
           uniqueSlots.set(`${slot.veterinarioId}-${slot.time}`, slot);
         });
         setSlots(Array.from(uniqueSlots.values()).sort(
           (a, b) => parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time),
         ));
+        const nearestDate = results
+          .map((result) => result.nearestDate)
+          .filter((date): date is string => Boolean(date) && date! > selectedDate)
+          .sort()[0] ?? null;
+        setNearestAvailableDate(nearestDate);
       })
       .catch((error: unknown) => {
         if (!isActive || (error instanceof DOMException && error.name === 'AbortError')) return;
@@ -326,6 +361,8 @@ export function AvailabilityPage() {
     profesionalPrestaServicio,
     vetsQuePrestan,
     availabilityRetry,
+    isCatalogLoading,
+    catalogError,
   ]);
 
   const monthDays = useMemo(() => {
@@ -337,26 +374,6 @@ export function AvailabilityPage() {
       ...Array.from({ length: numberOfDays }, (_, index) => new Date(visibleMonth.getFullYear(), visibleMonth.getMonth(), index + 1)),
     ];
   }, [visibleMonth]);
-
-  const nearestAvailableDate = useMemo(() => {
-    // Si seleccionó un profesional que no presta el servicio, no hay fechas disponibles con él
-    if (selectedVeterinarianId !== 'all' && !profesionalPrestaServicio) {
-      return null;
-    }
-    // Si no hay ningún profesional que preste el servicio
-    if (vetsQuePrestan.length === 0) {
-      return null;
-    }
-
-    for (let offset = 1; offset <= 30; offset += 1) {
-      const dateKey = toDateKey(addDays(fromDateKey(selectedDate), offset));
-      const testSlots = getAvailableSlots(dateKey, selectedServiceId, selectedVeterinarianId, catalogo, selectedService?.name);
-      if (testSlots.length > 0) {
-        return dateKey;
-      }
-    }
-    return null;
-  }, [selectedDate, selectedServiceId, selectedVeterinarianId, catalogo, selectedService?.name, profesionalPrestaServicio, vetsQuePrestan.length]);
 
   const maxDate = addDays(today, 60);
   const monthLabel = new Intl.DateTimeFormat('es-CO', { month: 'long', year: 'numeric' }).format(visibleMonth);
@@ -425,14 +442,17 @@ export function AvailabilityPage() {
                 <select
                   value={selectedServiceId}
                   onChange={(event) => setSelectedServiceId(event.target.value)}
+                  disabled={isCatalogLoading || services.length === 0}
                   className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100"
                 >
+                  {isCatalogLoading && <option value={selectedServiceId}>Cargando servicios...</option>}
+                  {!isCatalogLoading && services.length === 0 && <option value="">Sin servicios disponibles</option>}
                   {services.map((service) => (
                     <option key={service.id} value={service.id}>{service.name}</option>
                   ))}
                 </select>
                 <span className="mt-1 block text-xs text-slate-500">
-                  {selectedService.duration} min · {selectedService.price}
+                  {selectedService.id ? `${selectedService.duration} min · ${selectedService.price}` : 'Esperando el catálogo real'}
                 </span>
               </label>
 
@@ -441,6 +461,7 @@ export function AvailabilityPage() {
                 <select
                   value={selectedVeterinarianId}
                   onChange={(event) => setSelectedVeterinarianId(event.target.value)}
+                  disabled={isCatalogLoading || !selectedService.id}
                   className={`w-full rounded-xl border px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-sky-500 focus:ring-2 focus:ring-sky-100 ${
                     selectedVeterinarianId !== 'all' && !profesionalPrestaServicio
                       ? 'border-amber-400 bg-amber-50/50'
@@ -462,7 +483,7 @@ export function AvailabilityPage() {
             </div>
 
             {/* Alerta y sugerencia cuando el profesional seleccionado NO presta el servicio */}
-            {selectedVeterinarianId !== 'all' && !profesionalPrestaServicio && (
+            {selectedService.id && selectedVeterinarianId !== 'all' && !profesionalPrestaServicio && (
               <div className="mt-5 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950 shadow-sm animate-fadeIn" role="alert">
                 <div className="flex items-start gap-3">
                   <span className="text-2xl" aria-hidden="true">⚠️</span>
@@ -505,7 +526,7 @@ export function AvailabilityPage() {
             )}
 
             {/* Nota de filtrado automático cuando está en "Cualquier profesional" */}
-            {selectedVeterinarianId === 'all' && (
+            {selectedService.id && selectedVeterinarianId === 'all' && (
               <div className="mt-4 flex items-center justify-between gap-2 rounded-xl bg-slate-50 px-3.5 py-2 text-xs text-slate-600 ring-1 ring-slate-200">
                 <span>
                   <strong>Filtro activo:</strong> solo se muestran horarios de profesionales que ofrecen{' '}
@@ -603,7 +624,21 @@ export function AvailabilityPage() {
             </div>
 
             <div className="pt-5">
-              {isLoading ? (
+              {isCatalogLoading ? (
+                <AvailabilitySkeleton />
+              ) : catalogError ? (
+                <div className="rounded-2xl border border-red-200 bg-red-50 p-5" role="alert">
+                  <h3 className="font-bold text-red-900">No pudimos cargar el catálogo</h3>
+                  <p className="mt-2 text-sm leading-6 text-red-800">{catalogError}</p>
+                  <button
+                    type="button"
+                    onClick={() => window.location.reload()}
+                    className="mt-4 rounded-xl bg-red-700 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-red-800"
+                  >
+                    Recargar página
+                  </button>
+                </div>
+              ) : isLoading ? (
                 <AvailabilitySkeleton />
               ) : availabilityError ? (
                 <div className="rounded-2xl border border-red-200 bg-red-50 p-5" role="alert">

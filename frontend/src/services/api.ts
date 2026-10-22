@@ -237,7 +237,25 @@ export async function fetchDisponibilidad(
     throw new Error(body?.mensaje || body?.message || 'No fue posible consultar los horarios disponibles.');
   }
 
-  return response.json();
+  const data = await response.json() as Partial<DisponibilidadConsultaApi>;
+  return {
+    servicioId: Number(data.servicioId ?? servicioId),
+    servicioNombre: String(data.servicioNombre ?? ''),
+    duracionMinutos: Number(data.duracionMinutos ?? 0),
+    veterinarioId: Number(data.veterinarioId ?? veterinarioId ?? 0),
+    veterinarioNombre: String(data.veterinarioNombre ?? ''),
+    fecha: String(data.fecha ?? fecha),
+    hayDisponibilidad: Boolean(data.hayDisponibilidad),
+    horariosDisponibles: Array.isArray(data.horariosDisponibles)
+      ? data.horariosDisponibles.filter(
+          (slot): slot is { horaInicio: string; horaFin: string } =>
+            typeof slot?.horaInicio === 'string' && typeof slot?.horaFin === 'string',
+        )
+      : [],
+    mensaje: data.mensaje ?? null,
+    fechaDisponibleMasCercana:
+      typeof data.fechaDisponibleMasCercana === 'string' ? data.fechaDisponibleMasCercana : null,
+  };
 }
 
 // ──────────────────────────────────────────────

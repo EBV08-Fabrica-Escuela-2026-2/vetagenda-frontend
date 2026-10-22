@@ -33,6 +33,10 @@ import type { Cita } from '../services/api';
 type FiltroEstado = 'TODAS' | 'PROGRAMADA' | 'CANCELADA';
 type ModoVista = 'lista' | 'tarjetas';
 
+function searchable(value: unknown) {
+  return String(value ?? '').toLocaleLowerCase('es-CO');
+}
+
 export const CancelarCitaPage: React.FC = () => {
   const [citas, setCitas] = useState<Cita[]>([]);
   const [filtroTexto, setFiltroTexto] = useState<string>('');
@@ -82,12 +86,12 @@ export const CancelarCitaPage: React.FC = () => {
       // Filtro por texto
       if (filtroTexto.trim() !== '') {
         const query = filtroTexto.trim().toLowerCase();
-        const coincideCodigo = cita.codigoReserva.toLowerCase().includes(query);
-        const coincideDoc = cita.clienteDocumento.toLowerCase().includes(query);
-        const coincideCliente = cita.clienteNombre.toLowerCase().includes(query);
-        const coincideMascota = cita.mascotaNombre.toLowerCase().includes(query);
-        const coincideVet = cita.veterinarioNombre.toLowerCase().includes(query);
-        const coincideServicio = cita.servicioNombre.toLowerCase().includes(query);
+        const coincideCodigo = searchable(cita.codigoReserva).includes(query);
+        const coincideDoc = searchable(cita.clienteDocumento).includes(query);
+        const coincideCliente = searchable(cita.clienteNombre).includes(query);
+        const coincideMascota = searchable(cita.mascotaNombre).includes(query);
+        const coincideVet = searchable(cita.veterinarioNombre).includes(query);
+        const coincideServicio = searchable(cita.servicioNombre).includes(query);
 
         return (
           coincideCodigo ||
