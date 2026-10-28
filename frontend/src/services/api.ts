@@ -798,6 +798,13 @@ export type ReservarCitaResponse = {
   fechaHoraFin?: string;
 };
 
+export class ReservationConflictError extends Error {
+  constructor(message = 'Ese horario acaba de ser reservado por otra persona. Actualizamos la agenda para que elijas otro.') {
+    super(message);
+    this.name = 'ReservationConflictError';
+  }
+}
+
 export function parseTimeToMinutes(timeStr: string): number {
   const match = timeStr.match(/^(\d{1,2}):(\d{2})\s*(a\.\s*m\.|p\.\s*m\.|am|pm)?$/i);
   if (!match) return 0;
@@ -1008,14 +1015,21 @@ export async function reservarCita(payload: ReservarCitaPayload): Promise<Reserv
 
   const data: unknown = await response.json().catch(() => null);
   if (!response.ok) {
-    const mensaje = data && typeof data === 'object'
+    const mensajeServidor = data && typeof data === 'object'
       && (('mensaje' in data && typeof data.mensaje === 'string')
         || ('message' in data && typeof data.message === 'string'))
       ? ('mensaje' in data ? data.mensaje : data.message) as string
-      : response.status === 409
-        ? 'Ese horario acaba de ser reservado. Selecciona otro turno disponible.'
-        : 'No fue posible crear la cita. Revisa los datos e inténtalo nuevamente.';
-    throw new Error(mensaje);
+      : '';
+    const esConflictoDeHorario = response.status === 409
+      || /horario.*(?:reservad|no est[aá] disponible)|cita.*(?:solap|traslap)/i.test(mensajeServidor);
+
+    if (esConflictoDeHorario) {
+      throw new ReservationConflictError();
+    }
+
+    throw new Error(
+      mensajeServidor || 'No fue posible crear la cita. Revisa los datos e inténtalo nuevamente.',
+    );
   }
 
   if (!data || typeof data !== 'object') {

@@ -175,6 +175,22 @@ export function AvailabilityPage() {
   const [nearestAvailableDate, setNearestAvailableDate] = useState<string | null>(null);
   const [availabilityError, setAvailabilityError] = useState<string | null>(null);
   const [availabilityRetry, setAvailabilityRetry] = useState(0);
+  const [isRevalidating, setIsRevalidating] = useState(false);
+
+  useEffect(() => {
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === 'visible') {
+        setAvailabilityRetry((value) => value + 1);
+      }
+    };
+
+    window.addEventListener('focus', refreshWhenVisible);
+    document.addEventListener('visibilitychange', refreshWhenVisible);
+    return () => {
+      window.removeEventListener('focus', refreshWhenVisible);
+      document.removeEventListener('visibilitychange', refreshWhenVisible);
+    };
+  }, []);
 
   // Cargar catálogo de veterinarios con sus servicios reales
   useEffect(() => {
@@ -398,14 +414,57 @@ export function AvailabilityPage() {
     return `/citas/reservar?${query.toString()}`;
   }
 
-  function continueToReservation() {
-    const reservationPath = buildReservationPath();
-    if (!hasAuthenticatedClientSession()) {
-      navigate(`/login?returnTo=${encodeURIComponent(reservationPath)}`);
+  async function continueToReservation() {
+    if (!selectedSlot) return;
+
+    const selectedVet = catalogo.find((vet) => vet.id === selectedSlot.veterinarioId);
+    const service = selectedVet
+      ? findServiceForVet(selectedVet, selectedServiceId, selectedService.name)
+      : undefined;
+
+    if (!service) {
+      setSelectedSlot(null);
+      setAvailabilityError('No pudimos validar ese horario. Selecciona nuevamente el servicio y el profesional.');
       return;
     }
 
-    navigate(reservationPath);
+    setIsRevalidating(true);
+    setAvailabilityError(null);
+    try {
+      const latestAvailability = await fetchDisponibilidad(
+        Number(service.id),
+        selectedDate,
+        selectedSlot.veterinarioId,
+      );
+      const isStillAvailable = latestAvailability.horariosDisponibles.some(
+        (slot) => formatApiTime(slot.horaInicio) === selectedSlot.time,
+      );
+
+      if (!isStillAvailable) {
+        setSelectedSlot(null);
+        setAvailabilityError(
+          'Ese horario acaba de ser reservado por otra persona. Actualizamos la agenda para que elijas otro.',
+        );
+        setAvailabilityRetry((value) => value + 1);
+        return;
+      }
+
+      const reservationPath = buildReservationPath();
+      if (!hasAuthenticatedClientSession()) {
+        navigate(`/login?returnTo=${encodeURIComponent(reservationPath)}`);
+        return;
+      }
+
+      navigate(reservationPath);
+    } catch (error: unknown) {
+      setAvailabilityError(
+        error instanceof Error
+          ? error.message
+          : 'No pudimos comprobar el horario. Intenta nuevamente.',
+      );
+    } finally {
+      setIsRevalidating(false);
+    }
   }
 
   return (
@@ -742,12 +801,15 @@ export function AvailabilityPage() {
                           type="button"
                           id="btn-agendar-cita"
                           onClick={continueToReservation}
-                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-emerald-700 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500"
+                          disabled={isRevalidating}
+                          className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-5 py-3 text-sm font-bold text-white shadow-md transition hover:bg-emerald-700 active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500 disabled:cursor-wait disabled:opacity-60"
                         >
                           <Icon name={hasAuthenticatedClientSession() ? 'calendar' : 'user'} className="h-5 w-5" />
-                          {hasAuthenticatedClientSession()
-                            ? 'Agendar cita con este horario'
-                            : 'Inicia sesión para agendar'}
+                          {isRevalidating
+                            ? 'Comprobando horario...'
+                            : hasAuthenticatedClientSession()
+                              ? 'Agendar cita con este horario'
+                              : 'Inicia sesión para agendar'}
                         </button>
                       </div>
                       <p className="mt-2 text-xs text-emerald-700">

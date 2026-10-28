@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import {
   AlertCircle,
   CalendarDays,
@@ -16,6 +16,7 @@ import {
   isFutureReservationSlot,
   listClientPets,
   listServices,
+  ReservationConflictError,
   reservarCita,
   type CatalogService,
   type PetProfile,
@@ -35,6 +36,7 @@ function formatDate(value: string) {
 }
 
 export function ReservarCitaPage() {
+  const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
   const stateData = (location.state || {}) as {
@@ -71,6 +73,7 @@ export function ReservarCitaPage() {
   const [veterinarianId, setVeterinarianId] = useState(paramVeterinarioId);
   const [saving, setSaving] = useState(false);
   const [reservationError, setReservationError] = useState('');
+  const [scheduleConflict, setScheduleConflict] = useState(false);
   const [reservationId, setReservationId] = useState<number | string>('');
   const [reservationCode, setReservationCode] = useState('');
 
@@ -124,6 +127,7 @@ export function ReservarCitaPage() {
 
   function goToStep(nextStep: number) {
     setReservationError('');
+    setScheduleConflict(false);
     setStep(nextStep);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
@@ -136,6 +140,7 @@ export function ReservarCitaPage() {
 
     setSaving(true);
     setReservationError('');
+    setScheduleConflict(false);
     try {
       const response = await reservarCita({
         mascotaId: selectedPet.id,
@@ -152,12 +157,24 @@ export function ReservarCitaPage() {
       setReservationId(response.id);
       setReservationCode(response.codigo);
     } catch (error: unknown) {
+      if (error instanceof ReservationConflictError) {
+        setScheduleConflict(true);
+      }
       setReservationError(
         error instanceof Error ? error.message : 'No fue posible crear la cita. Inténtalo nuevamente.',
       );
     } finally {
       setSaving(false);
     }
+  }
+
+  function returnToUpdatedAvailability() {
+    const query = new URLSearchParams({
+      servicio: serviceId,
+      veterinario: veterinarianId,
+      fecha: date,
+    });
+    navigate(`/disponibilidad?${query.toString()}`, { replace: true });
   }
 
   return (
@@ -327,6 +344,15 @@ export function ReservarCitaPage() {
                   <div>
                     <p className="font-bold">No pudimos crear la cita</p>
                     <p className="mt-1">{reservationError}</p>
+                    {scheduleConflict && (
+                      <button
+                        type="button"
+                        onClick={returnToUpdatedAvailability}
+                        className="mt-3 inline-flex min-h-10 items-center rounded-lg bg-rose-800 px-4 py-2 font-bold text-white hover:bg-rose-900"
+                      >
+                        Ver horarios actualizados
+                      </button>
+                    )}
                   </div>
                 </div>
               )}
@@ -335,7 +361,7 @@ export function ReservarCitaPage() {
                 <button type="button" onClick={() => goToStep(2)} disabled={saving} className="inline-flex min-h-11 items-center gap-2 rounded-lg px-3 py-2 font-bold text-slate-700 hover:bg-slate-100 disabled:opacity-50">
                   <ChevronLeft className="h-5 w-5" /> Atrás
                 </button>
-                <button type="button" onClick={confirmReservation} disabled={saving} className="inline-flex min-h-12 items-center gap-2 rounded-lg bg-emerald-700 px-5 py-3 font-bold text-white hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-60">
+                <button type="button" onClick={confirmReservation} disabled={saving || scheduleConflict} className="inline-flex min-h-12 items-center gap-2 rounded-lg bg-emerald-700 px-5 py-3 font-bold text-white hover:bg-emerald-800 disabled:cursor-wait disabled:opacity-60">
                   {saving ? 'Confirmando cita...' : 'Confirmar cita'}
                   {!saving && <Check className="h-5 w-5" />}
                 </button>
