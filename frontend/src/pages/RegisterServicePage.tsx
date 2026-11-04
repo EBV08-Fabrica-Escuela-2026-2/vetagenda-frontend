@@ -35,7 +35,7 @@ export function RegisterServicePage() {
   const navigate = useNavigate();
   const veterinarian = getVeterinarianSession();
   const veterinarianId = veterinarian ? String(veterinarian.id) : '';
-  const [form, setForm] = useState<FormState>({ ...initialForm, veterinarioId });
+  const [form, setForm] = useState<FormState>({ ...initialForm, veterinarioId: veterinarianId });
   const [errors, setErrors] = useState<FormErrors>({});
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [descriptionLimitMessage, setDescriptionLimitMessage] = useState('');
@@ -137,7 +137,7 @@ export function RegisterServicePage() {
 
       setExistingServices((current) => [...current, createdService.nombre]);
       setShowSuccessModal(true);
-      setForm({ ...initialForm, veterinarioId });
+      setForm({ ...initialForm, veterinarioId: veterinarianId });
       setDescriptionLimitMessage('');
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'No se pudo guardar el servicio en este momento.');
