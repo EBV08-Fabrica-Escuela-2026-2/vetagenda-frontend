@@ -739,6 +739,7 @@ export async function createService(service: ServicePayload): Promise<CatalogSer
     headers: {
       'Content-Type': 'application/json',
       Accept: 'application/json',
+      ...veterinarianAuthorization(),
     },
     body: JSON.stringify(service),
   });

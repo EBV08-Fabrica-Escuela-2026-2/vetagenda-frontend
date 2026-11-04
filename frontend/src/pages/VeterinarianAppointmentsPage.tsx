@@ -239,6 +239,13 @@ export function VeterinarianAppointmentsPage() {
           <BrandHeader subtitle="Agenda del veterinario" />
           <div className="flex flex-wrap items-center justify-end gap-3">
             <Link
+              to="/servicios/registro"
+              className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-bold text-emerald-800 transition hover:bg-emerald-100"
+            >
+              <span aria-hidden="true">＋</span>
+              <span>Agregar servicio</span>
+            </Link>
+            <Link
               to="/veterinario/disponibilidad"
               className="inline-flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-bold text-sky-800 transition hover:bg-sky-100"
             >
@@ -259,6 +266,13 @@ export function VeterinarianAppointmentsPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            <Link
+              to="/servicios/registro"
+              className="inline-flex items-center gap-2 rounded-2xl bg-emerald-400 px-5 py-3 text-sm font-bold text-emerald-950 shadow-sm transition hover:bg-emerald-300 focus:outline-none focus:ring-2 focus:ring-white/80"
+            >
+              <span aria-hidden="true">＋</span>
+              <span>Agregar servicio</span>
+            </Link>
             <Link
               to="/veterinario/disponibilidad"
               className="inline-flex items-center gap-2 rounded-2xl bg-white px-5 py-3 text-sm font-bold text-sky-800 shadow-sm transition hover:bg-sky-50 focus:outline-none focus:ring-2 focus:ring-white/80"
@@ -289,6 +303,13 @@ export function VeterinarianAppointmentsPage() {
           >
             <span aria-hidden="true">⏰</span>
             <span>Gestionar disponibilidad</span>
+          </Link>
+          <Link
+            to="/servicios/registro"
+            className="inline-flex items-center gap-2 rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 ring-1 ring-slate-200 transition hover:bg-emerald-50 hover:text-emerald-800"
+          >
+            <span aria-hidden="true">＋</span>
+            <span>Agregar servicio</span>
           </Link>
         </div>
 

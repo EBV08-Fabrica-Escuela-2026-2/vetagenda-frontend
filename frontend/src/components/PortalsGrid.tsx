@@ -41,6 +41,7 @@ const portals: {
     bullets: [
       'Configura horarios y turnos',
       'Consulta tu agenda diaria',
+      'Agrega servicios a tu catálogo',
       'Gestiona cancelaciones por imprevistos',
     ],
     action: 'Acceso Veterinarios Demo',

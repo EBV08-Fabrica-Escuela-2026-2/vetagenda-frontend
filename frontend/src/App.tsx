@@ -81,7 +81,14 @@ function App() {
         <Route path="/inicio" element={<LandingPage />} />
         <Route path="/registro" element={<RegisterPage />} />
         <Route path="/veterinarios/registro" element={<RegisterVeterinarianPage />} />
-        <Route path="/servicios/registro" element={<RegisterServicePage />} />
+        <Route
+          path="/servicios/registro"
+          element={(
+            <VeterinarianProtectedRoute>
+              <RegisterServicePage />
+            </VeterinarianProtectedRoute>
+          )}
+        />
         <Route
           path="/cliente"
           element={(

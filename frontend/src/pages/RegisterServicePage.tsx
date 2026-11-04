@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { BackToHomeButton } from '../components/BackToHomeButton';
 import { BrandHeader } from '../components/BrandHeader';
-import { createService, getStoredServices, listVeterinarians, VeterinarioListaItem } from '../services/api';
+import { ClientSessionActions } from '../components/ClientSessionActions';
+import { createService, fetchCatalogo, getVeterinarianSession } from '../services/api';
 
 type FormState = {
   nombre: string;
@@ -32,40 +33,29 @@ const initialForm: FormState = {
 
 export function RegisterServicePage() {
   const navigate = useNavigate();
-  const [form, setForm] = useState<FormState>(initialForm);
+  const veterinarian = getVeterinarianSession();
+  const veterinarianId = veterinarian ? String(veterinarian.id) : '';
+  const [form, setForm] = useState<FormState>({ ...initialForm, veterinarioId });
   const [errors, setErrors] = useState<FormErrors>({});
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [descriptionLimitMessage, setDescriptionLimitMessage] = useState('');
-  const [existingServices, setExistingServices] = useState<string[]>(() =>
-    getStoredServices().map((service) => service.nombre),
-  );
-  const [veterinarios, setVeterinarios] = useState<VeterinarioListaItem[]>([]);
-  const [loadingVets, setLoadingVets] = useState(true);
-  const [vetsError, setVetsError] = useState<string | null>(null);
+  const [existingServices, setExistingServices] = useState<string[]>([]);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Cargar veterinarios activos desde el backend
   useEffect(() => {
-    let isMounted = true;
-    setLoadingVets(true);
-    setVetsError(null);
-
-    listVeterinarians()
-      .then((data) => {
-        if (isMounted) setVeterinarios(data);
+    let active = true;
+    fetchCatalogo()
+      .then((catalog) => {
+        if (!active) return;
+        const ownProfile = catalog.find((item) => item.id === veterinarian?.id);
+        setExistingServices(ownProfile?.servicios.map((service) => service.nombre) ?? []);
       })
       .catch(() => {
-        if (isMounted) setVetsError('No se pudo cargar la lista de veterinarios. Verifica que el backend esté activo.');
-      })
-      .finally(() => {
-        if (isMounted) setLoadingVets(false);
+        if (active) setExistingServices([]);
       });
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    return () => { active = false; };
+  }, [veterinarian?.id]);
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = event.target;
@@ -145,10 +135,9 @@ export function RegisterServicePage() {
         duracionMinutos: Number(form.duracionMinutos),
       });
 
-      const nextStoredServices = [...getStoredServices(), createdService];
-      setExistingServices(nextStoredServices.map((service) => service.nombre));
+      setExistingServices((current) => [...current, createdService.nombre]);
       setShowSuccessModal(true);
-      setForm(initialForm);
+      setForm({ ...initialForm, veterinarioId });
       setDescriptionLimitMessage('');
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : 'No se pudo guardar el servicio en este momento.');
@@ -162,18 +151,22 @@ export function RegisterServicePage() {
   };
 
   const handleCancel = () => {
-    navigate('/catalogo');
+    navigate('/veterinario/agenda');
   };
 
   return (
     <main className="min-h-screen bg-sky-50 px-4 py-10 text-slate-800 md:px-8">
       <div className="mx-auto max-w-4xl rounded-[28px] border border-slate-200 bg-white shadow-[0_18px_50px_rgba(15,23,42,0.08)]">
-        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-5 md:px-8">
+        <div className="flex flex-col gap-4 border-b border-slate-200 px-5 py-5 sm:flex-row sm:items-center sm:justify-between md:px-8">
           <BrandHeader subtitle="Registrar nuevo servicio" />
-          <div className="flex items-center gap-3">
-            <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
-              Catalogación clínica
-            </span>
+          <div className="flex flex-wrap items-center gap-2">
+            <Link
+              to="/veterinario/agenda"
+              className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-2 text-sm font-bold text-sky-800 transition hover:bg-sky-100"
+            >
+              Volver a mi portal
+            </Link>
+            <ClientSessionActions showPortalLink={false} />
             <BackToHomeButton />
           </div>
         </div>
@@ -183,8 +176,14 @@ export function RegisterServicePage() {
             <div className="mb-6">
               <h1 className="text-2xl font-black text-slate-900">Servicio asistencial</h1>
               <p className="mt-1 text-sm text-slate-500">
-                Registra un nuevo servicio para incorporarlo a la oferta clínica disponible en la sede.
+                Agrega un servicio a tu oferta profesional. Al guardarlo quedará disponible en el catálogo público.
               </p>
+            </div>
+
+            <div className="mb-6 rounded-2xl border border-sky-200 bg-sky-50 p-4">
+              <p className="text-xs font-bold uppercase tracking-[0.18em] text-sky-700">Profesional responsable</p>
+              <p className="mt-1 font-bold text-slate-900">{veterinarian?.nombre}</p>
+              <p className="mt-1 text-sm text-slate-600">El servicio se asociará automáticamente a tu perfil.</p>
             </div>
 
             {submitError && (
@@ -244,45 +243,6 @@ export function RegisterServicePage() {
                     {form.descripcion.length}/{MAX_DESCRIPTION_LENGTH}
                   </span>
                 </div>
-              </div>
-
-              {/* Veterinario responsable */}
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-slate-700">
-                  Veterinario responsable <span className="text-red-500">*</span>
-                </label>
-                {loadingVets ? (
-                  <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-500">
-                    <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-sky-500 border-t-transparent" />
-                    Cargando veterinarios...
-                  </div>
-                ) : vetsError ? (
-                  <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                    ⚠️ {vetsError}
-                  </div>
-                ) : (
-                  <select
-                    name="veterinarioId"
-                    value={form.veterinarioId}
-                    onChange={(e) => {
-                      setForm((current) => ({ ...current, veterinarioId: e.target.value }));
-                      setErrors((current) => ({ ...current, veterinarioId: undefined }));
-                    }}
-                    className={`w-full rounded-xl border bg-white px-4 py-3 text-base text-slate-800 shadow-sm outline-none transition focus:ring-4 ${
-                      errors.veterinarioId
-                        ? 'border-red-300 focus:border-red-400 focus:ring-red-100'
-                        : 'border-slate-200 focus:border-sky-400 focus:ring-sky-100'
-                    }`}
-                  >
-                    <option value="">Selecciona un veterinario...</option>
-                    {veterinarios.map((vet) => (
-                      <option key={vet.id} value={vet.id}>
-                        {vet.nombre}
-                      </option>
-                    ))}
-                  </select>
-                )}
-                {errors.veterinarioId && <p className="text-xs font-medium text-red-600">{errors.veterinarioId}</p>}
               </div>
 
               {/* Precio y Duración */}
@@ -348,10 +308,10 @@ export function RegisterServicePage() {
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting || loadingVets}
+                  disabled={isSubmitting}
                   className="rounded-xl bg-sky-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition hover:bg-sky-700 disabled:cursor-wait disabled:opacity-70"
                 >
-                  {isSubmitting ? 'Guardando...' : 'Guardar'}
+                  {isSubmitting ? 'Publicando...' : 'Agregar servicio'}
                 </button>
               </div>
             </form>
@@ -366,14 +326,23 @@ export function RegisterServicePage() {
               ✓
             </div>
             <h3 className="text-xl font-black text-slate-900">Registro exitoso</h3>
-            <p className="mt-2 text-sm text-slate-500">El servicio se ha registrado correctamente en la oferta clínica.</p>
-            <button
-              type="button"
-              onClick={handleCloseModal}
-              className="mt-6 w-full rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-sky-700"
-            >
-              Aceptar
-            </button>
+            <p className="mt-2 text-sm text-slate-500">El servicio ya aparece asociado a tu perfil y está disponible en el catálogo.</p>
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={handleCloseModal}
+                className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Agregar otro
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/veterinario/agenda')}
+                className="rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-sky-700"
+              >
+                Volver a mi portal
+              </button>
+            </div>
           </div>
         </div>
       )}
