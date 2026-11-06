@@ -16,7 +16,12 @@ import { CancelarCitaPage } from './pages/CancelarCitaPage';
 import { ConfigurarHorariosPage } from './pages/ConfigurarHorariosPage';
 import { ContactPage, PrivacyPage, TermsPage } from './pages/InformationPages';
 import { ClientPortalPage } from './pages/ClientPortalPage';
-import { hasAuthenticatedClientSession, hasAuthenticatedVeterinarianSession } from './services/api';
+import OccupancyPage from './pages/OccupancyPage';
+import {
+  hasAuthenticatedAdminDemoSession,
+  hasAuthenticatedClientSession,
+  hasAuthenticatedVeterinarianSession,
+} from './services/api';
 
 function HashScrollHandler() {
   const { hash, pathname } = useLocation();
@@ -71,6 +76,16 @@ function VeterinarianProtectedRoute({ children }: { children: ReactElement }) {
   return <Navigate to={`/?returnTo=${encodeURIComponent(returnTo)}#portales`} replace />;
 }
 
+function AdminProtectedRoute({ children }: { children: ReactElement }) {
+  const location = useLocation();
+
+  if (hasAuthenticatedClientSession()) return <Navigate to="/cliente" replace />;
+  if (hasAuthenticatedVeterinarianSession()) return <Navigate to="/veterinario/agenda" replace />;
+  if (hasAuthenticatedAdminDemoSession()) return children;
+  const returnTo = `${location.pathname}${location.search}`;
+  return <Navigate to={`/login?returnTo=${encodeURIComponent(returnTo)}`} replace />;
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -78,6 +93,14 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/admin/analitica/ocupacion"
+          element={(
+            <AdminProtectedRoute>
+              <OccupancyPage />
+            </AdminProtectedRoute>
+          )}
+        />
         <Route path="/inicio" element={<LandingPage />} />
         <Route path="/registro" element={<RegisterPage />} />
         <Route path="/veterinarios/registro" element={<RegisterVeterinarianPage />} />

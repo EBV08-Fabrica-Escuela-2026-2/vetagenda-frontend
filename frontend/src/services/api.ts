@@ -300,9 +300,22 @@ export type VeterinarianSession = {
   token: string;
 };
 
-export type AuthenticatedSession = ClientSession | VeterinarianSession;
+export type AdminDemoSession = {
+  id: number;
+  nombre: string;
+  rol: 'ADMIN';
+  email: string;
+  token: string;
+};
+
+export type AuthenticatedSession = ClientSession | VeterinarianSession | AdminDemoSession;
 
 export const CLIENT_SESSION_EVENT = 'vetagenda-session-changed';
+export const ADMIN_DEMO_CREDENTIALS = {
+  email: 'admin@vetagenda.test',
+  password: 'Admin123!',
+} as const;
+const ADMIN_DEMO_TOKEN = 'vetagenda-admin-demo-session';
 
 const CLIENT_SESSION_KEYS = [
   'vetagenda_user',
@@ -340,6 +353,41 @@ export async function loginUser(email: string, password: string): Promise<LoginR
   }
 
   return data as LoginResponse;
+}
+
+export function loginAdminDemo(email: string, password: string): boolean {
+  if (
+    email.trim().toLowerCase() !== ADMIN_DEMO_CREDENTIALS.email
+    || password !== ADMIN_DEMO_CREDENTIALS.password
+  ) {
+    return false;
+  }
+
+  const session: AdminDemoSession = {
+    id: 0,
+    nombre: 'Administrador de demostración',
+    rol: 'ADMIN',
+    email: ADMIN_DEMO_CREDENTIALS.email,
+    token: ADMIN_DEMO_TOKEN,
+  };
+  localStorage.setItem('vetagenda_user', JSON.stringify(session));
+  localStorage.setItem('vetagenda_session', 'true');
+  localStorage.setItem('vetagenda_role', 'Administrador de demostración');
+  localStorage.setItem('vetagenda_token', ADMIN_DEMO_TOKEN);
+  localStorage.removeItem('vetagenda_documento');
+  window.dispatchEvent(new Event(CLIENT_SESSION_EVENT));
+  return true;
+}
+
+export function hasAuthenticatedAdminDemoSession(): boolean {
+  if (localStorage.getItem('vetagenda_session') !== 'true') return false;
+  if (localStorage.getItem('vetagenda_token') !== ADMIN_DEMO_TOKEN) return false;
+  try {
+    const user: unknown = JSON.parse(localStorage.getItem('vetagenda_user') || 'null');
+    return typeof user === 'object' && user !== null && 'rol' in user && user.rol === 'ADMIN';
+  } catch {
+    return false;
+  }
 }
 
 export async function registerClientCredentials(payload: {
@@ -1562,4 +1610,3 @@ export async function deleteAvailabilitySlot(veterinarioId: number, franjaId: st
   quitarLocal();
   return 'api';
 }
-
