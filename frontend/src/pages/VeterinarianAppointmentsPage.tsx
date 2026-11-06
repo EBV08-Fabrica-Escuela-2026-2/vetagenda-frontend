@@ -11,6 +11,7 @@ import {
   minutesUntilClinicDateTime,
   updateVeterinarianAppointmentOutcome,
   type AppointmentOutcome,
+  type CupoDecision,
   type VeterinarianAppointmentApi,
 } from '../services/api';
 
@@ -81,11 +82,12 @@ function StatusBadge({ status }: { status: AppointmentStatus }) {
 type CancellationDialogProps = {
   appointment: Appointment;
   onClose: () => void;
-  onConfirm: (appointmentId: number, reason: string) => void;
+  onConfirm: (appointmentId: number, reason: string, decision: CupoDecision) => void;
 };
 
 function CancellationDialog({ appointment, onClose, onConfirm }: CancellationDialogProps) {
   const [reason, setReason] = useState('');
+  const [decision, setDecision] = useState<CupoDecision | ''>('');
   const normalizedReason = reason.trim();
   const isReasonValid = normalizedReason.length >= MIN_REASON_LENGTH;
 
@@ -100,8 +102,8 @@ function CancellationDialog({ appointment, onClose, onConfirm }: CancellationDia
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!isReasonValid) return;
-    onConfirm(appointment.id, normalizedReason);
+    if (!isReasonValid || !decision) return;
+    onConfirm(appointment.id, normalizedReason, decision);
   }
 
   return (
@@ -173,18 +175,58 @@ function CancellationDialog({ appointment, onClose, onConfirm }: CancellationDia
             )}
           </div>
 
+          <fieldset className="mt-5 space-y-3">
+            <legend className="mb-3 text-sm font-bold text-slate-800">
+              ¿Qué hacemos con el cupo? <span className="text-rose-600">*</span>
+            </legend>
+            <label className={`flex min-h-16 cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${
+              decision === 'LIBERAR' ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-100' : 'border-slate-200 hover:border-emerald-300'
+            }`}>
+              <input
+                checked={decision === 'LIBERAR'}
+                className="mt-1 h-4 w-4 accent-emerald-700"
+                name="cancellation-slot-decision"
+                onChange={() => setDecision('LIBERAR')}
+                required
+                type="radio"
+                value="LIBERAR"
+              />
+              <span>
+                <span className="block font-bold text-slate-900">Liberar cupo para otros pacientes</span>
+                <span className="mt-1 block text-sm text-slate-600">El horario volverá a estar disponible para reserva.</span>
+              </span>
+            </label>
+            <label className={`flex min-h-16 cursor-pointer items-start gap-3 rounded-xl border p-4 transition ${
+              decision === 'BLOQUEAR' ? 'border-amber-500 bg-amber-50 ring-2 ring-amber-100' : 'border-slate-200 hover:border-amber-300'
+            }`}>
+              <input
+                checked={decision === 'BLOQUEAR'}
+                className="mt-1 h-4 w-4 accent-amber-700"
+                name="cancellation-slot-decision"
+                onChange={() => setDecision('BLOQUEAR')}
+                required
+                type="radio"
+                value="BLOQUEAR"
+              />
+              <span>
+                <span className="block font-bold text-slate-900">Bloquear franja horaria por indisponibilidad</span>
+                <span className="mt-1 block text-sm text-slate-600">El horario no aparecerá en el portal de reservas.</span>
+              </span>
+            </label>
+          </fieldset>
+
           <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
             <button
               type="button"
               onClick={onClose}
-              className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              className="min-h-11 rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
             >
               Volver
             </button>
             <button
               type="submit"
-              disabled={!isReasonValid}
-              className="rounded-xl bg-rose-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-slate-300"
+              disabled={!isReasonValid || !decision}
+              className="min-h-11 rounded-xl bg-rose-600 px-5 py-3 text-sm font-bold text-white transition hover:bg-rose-700 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               Confirmar cancelación
             </button>
@@ -335,16 +377,18 @@ export function VeterinarianAppointmentsPage() {
   const pendingCount = appointments.filter((appointment) => appointment.status === 'Programada').length;
   const closureCount = appointments.filter((appointment) => appointment.status === 'Pendiente de cierre').length;
 
-  async function cancelAppointment(appointmentId: number, reason: string) {
+  async function cancelAppointment(appointmentId: number, reason: string, decision: CupoDecision) {
     const appointment = appointments.find((item) => item.id === appointmentId);
     if (!appointment || appointment.status !== 'Programada') return;
     try {
-      await cancelVeterinarianAppointment(appointmentId, reason);
+      const result = await cancelVeterinarianAppointment(appointmentId, reason, decision);
       setAppointments((current) => current.map((item) => item.id === appointmentId
         ? { ...item, status: 'Cancelada', cancellationReason: reason }
         : item));
       setSelectedAppointment(null);
-      setNotification(`La cita de ${appointment.client} fue cancelada y el horario ${appointment.time} quedó liberado.`);
+      setNotification(result.mensaje || (result.cupoLiberado
+        ? `La cita de ${appointment.client} fue cancelada y el horario ${appointment.time} quedó liberado.`
+        : `La cita de ${appointment.client} fue cancelada y el horario ${appointment.time} quedó bloqueado.`));
     } catch (error) {
       setSelectedAppointment(null);
       setNotification(error instanceof Error ? error.message : 'No fue posible cancelar la cita.');
