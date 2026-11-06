@@ -37,7 +37,7 @@ Las rutas disponibles en la interfaz son:
 
 El reporte de ocupación usa las citas locales de demostración y una estimación de 16 slots habilitados por día hábil. La protección de la ruta es solo una restricción de interfaz: el backend actual no implementa cuentas ni autorización para el rol `ADMIN`, por lo que este reporte no debe usarse con datos clínicos reales hasta integrar una API autorizada en servidor.
 
-Se puede probar el dashboard con estas credenciales temporales en `/login`, también en el build de producción:
+Se puede probar el dashboard con estas credenciales temporales desde el botón **Ingresar** de la página principal o en `/login`, también en el build de producción:
 
 - Correo: `admin@vetagenda.test`
 - Contraseña: `Admin123!`
