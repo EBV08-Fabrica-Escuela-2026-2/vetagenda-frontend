@@ -1,6 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getCurrentClient, loginUser, saveClientSession } from '../services/api';
+import {
+  ADMIN_DEMO_CREDENTIALS,
+  getCurrentClient,
+  loginAdminDemo,
+  loginUser,
+  saveClientSession,
+} from '../services/api';
 
 const DEMO_EMAIL = 'carolina.restrepo@vetagenda.com';
 const DEMO_PASSWORD = 'Demo2026!';
@@ -67,6 +73,12 @@ export function ClientAccessModal({ isOpen, onClose }: ClientAccessModalProps) {
     setIsSubmitting(true);
     setError('');
     try {
+      if (loginAdminDemo(email, password)) {
+        onClose();
+        navigate('/admin/analitica/ocupacion');
+        return;
+      }
+
       const auth = await loginUser(email.trim(), password);
       const profile = await getCurrentClient(auth.token);
       saveClientSession(profile, auth.token);
@@ -111,9 +123,9 @@ export function ClientAccessModal({ isOpen, onClose }: ClientAccessModalProps) {
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#0D9488]">Portal de clientes</p>
+            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#0D9488]">Acceso a VetAgenda</p>
             <h2 id="client-access-title" className="mt-2 text-2xl font-black text-slate-900">Inicia sesión</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">Consulta tus mascotas y administra tus citas.</p>
+            <p className="mt-2 text-sm leading-6 text-slate-600">Ingresa a tu portal para consultar mascotas y administrar citas.</p>
           </div>
           <button
             type="button"
@@ -160,6 +172,26 @@ export function ClientAccessModal({ isOpen, onClose }: ClientAccessModalProps) {
             {isSubmitting ? 'Ingresando…' : 'Ingresar'}
           </button>
         </form>
+
+        <aside className="mt-5 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+          <p className="font-bold">Acceso temporal de administrador (demostración)</p>
+          <p className="mt-2">Correo: <code className="font-bold">{ADMIN_DEMO_CREDENTIALS.email}</code></p>
+          <p>Contraseña: <code className="font-bold">{ADMIN_DEMO_CREDENTIALS.password}</code></p>
+          <p className="mt-2 text-xs leading-5">
+            Credenciales de demostración del frontend; no usar para proteger información sensible.
+          </p>
+          <button
+            className="mt-3 min-h-11 rounded-xl border border-amber-800 px-3 py-2 text-xs font-bold text-amber-950 hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 focus-visible:ring-offset-2"
+            onClick={() => {
+              setEmail(ADMIN_DEMO_CREDENTIALS.email);
+              setPassword(ADMIN_DEMO_CREDENTIALS.password);
+              setError('');
+            }}
+            type="button"
+          >
+            Usar credenciales de administrador
+          </button>
+        </aside>
 
         <div className="mt-5 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
           <span className="h-px flex-1 bg-slate-200" />
