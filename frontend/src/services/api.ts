@@ -1299,7 +1299,13 @@ export async function listVeterinarianAppointments(): Promise<VeterinarianAppoin
   return response.json();
 }
 
-export async function cancelVeterinarianAppointment(citaId: number, motivo: string): Promise<CancelacionCitaApi> {
+export type CupoDecision = 'LIBERAR' | 'BLOQUEAR';
+
+export async function cancelVeterinarianAppointment(
+  citaId: number,
+  motivo: string,
+  decisionCupo: CupoDecision,
+): Promise<CancelacionCitaApi> {
   const response = await fetch(`${API_BASE_URL}/veterinario-portal/citas/${citaId}/cancelar`, {
     method: 'PATCH',
     headers: {
@@ -1307,7 +1313,7 @@ export async function cancelVeterinarianAppointment(citaId: number, motivo: stri
       Accept: 'application/json',
       ...veterinarianAuthorization(),
     },
-    body: JSON.stringify({ motivo }),
+    body: JSON.stringify({ motivo, decisionCupo }),
   });
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data?.mensaje || 'No fue posible cancelar la cita.');
