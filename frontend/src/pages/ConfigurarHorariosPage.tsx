@@ -144,7 +144,7 @@ export function ConfigurarHorariosPage() {
 
   const [guardado, setGuardado] = useState<DisponibilidadDia[]>(crearDisponibilidadVacia());
   const [borrador, setBorrador] = useState<DisponibilidadDia[]>(crearDisponibilidadVacia());
-  const [origen, setOrigen] = useState<'api' | 'local' | null>(null);
+  const [, setOrigen] = useState<'api' | 'local' | null>(null);
   const [loadingSchedule, setLoadingSchedule] = useState(false);
   const [scheduleError, setScheduleError] = useState<string | null>(null);
 

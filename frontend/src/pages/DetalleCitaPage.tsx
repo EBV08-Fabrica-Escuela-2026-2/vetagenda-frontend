@@ -42,6 +42,7 @@ export const DetalleCitaPage: React.FC = () => {
       CONFIRMADA: { bg: '#dcfce7', text: '#15803d', label: '• CONFIRMADA' },
       PROGRAMADA: { bg: '#e0e7ff', text: '#4338ca', label: '• PROGRAMADA' },
       COMPLETADA: { bg: '#f1f5f9', text: '#64748b', label: '• COMPLETADA' },
+      NO_ASISTIO: { bg: '#fef3c7', text: '#92400e', label: '• NO ASISTIÓ' },
       CANCELADA: { bg: '#fee2e2', text: '#b91c1c', label: '• CANCELADA' },
     }[estado];
 

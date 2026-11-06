@@ -100,7 +100,7 @@ export type Cita = {
   servicioNombre: string;
   fecha: string;
   hora: string;
-  estado: 'PROGRAMADA' | 'CANCELADA';
+  estado: 'PROGRAMADA' | 'COMPLETADA' | 'NO_ASISTIO' | 'CANCELADA';
   consultorio: string;
   precio: string;
   duracionMinutos?: number;
@@ -129,6 +129,8 @@ export type PetProfile = {
   sexo: string;
   observaciones?: string | null;
 };
+
+type MascotaApi = PetProfile;
 
 export type CancelacionCitaApi = {
   mensaje: string;
@@ -1117,6 +1119,13 @@ export async function getCitas(documentoIdentidad: string): Promise<Cita[]> {
         const fechaHora = new Date(cita.fechaHoraInicio);
         const fechaHoraFin = new Date(cita.fechaHoraFin);
         const cancelada = cita.estado === 'ANULADA' || cita.estado.startsWith('CANCELADA');
+        const estado: Cita['estado'] = cancelada
+          ? 'CANCELADA'
+          : cita.estado === 'COMPLETADA'
+            ? 'COMPLETADA'
+            : cita.estado === 'NO_ASISTIO'
+              ? 'NO_ASISTIO'
+              : 'PROGRAMADA';
         const mascota = mascotas.find((item) => item.nombre === cita.mascotaNombre);
         const duracionMinutos = Math.max(0, Math.round((fechaHoraFin.getTime() - fechaHora.getTime()) / 60_000));
 
@@ -1132,7 +1141,7 @@ export async function getCitas(documentoIdentidad: string): Promise<Cita[]> {
           servicioNombre: cita.servicioNombre,
           fecha: new Intl.DateTimeFormat('es-CO', { dateStyle: 'medium' }).format(fechaHora),
           hora: new Intl.DateTimeFormat('es-CO', { timeStyle: 'short' }).format(fechaHora),
-          estado: cancelada ? 'CANCELADA' : 'PROGRAMADA',
+          estado,
           consultorio: 'Clínica VetAgenda',
           precio: 'Consultar',
           duracionMinutos,
@@ -1255,6 +1264,37 @@ export async function cancelVeterinarianAppointment(citaId: number, motivo: stri
   const data = await response.json().catch(() => ({}));
   if (!response.ok) throw new Error(data?.mensaje || 'No fue posible cancelar la cita.');
   return data as CancelacionCitaApi;
+}
+
+export type AppointmentOutcome = 'COMPLETADA' | 'NO_ASISTIO';
+
+export type AppointmentOutcomeResponse = {
+  idCita: number;
+  estado: AppointmentOutcome;
+  etiquetaEstado: string;
+  mensaje: string;
+  fechaHoraInicio: string;
+  fechaHoraFin: string;
+};
+
+export async function updateVeterinarianAppointmentOutcome(
+  citaId: number,
+  estado: AppointmentOutcome,
+): Promise<AppointmentOutcomeResponse> {
+  const response = await fetch(`${API_BASE_URL}/veterinario-portal/citas/${citaId}/estado`, {
+    method: 'PATCH',
+    headers: {
+      'Content-Type': 'application/json',
+      Accept: 'application/json',
+      ...veterinarianAuthorization(),
+    },
+    body: JSON.stringify({ estado }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.mensaje || data?.message || 'No fue posible registrar el resultado de la cita.');
+  }
+  return data as AppointmentOutcomeResponse;
 }
 
 // ──────────────────────────────────────────────

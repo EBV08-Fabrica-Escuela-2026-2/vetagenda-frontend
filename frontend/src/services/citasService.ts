@@ -1,6 +1,6 @@
 import { API_BASE_URL } from './api';
 
-export type EstadoCita = 'PROGRAMADA' | 'CONFIRMADA' | 'COMPLETADA' | 'CANCELADA';
+export type EstadoCita = 'PROGRAMADA' | 'CONFIRMADA' | 'COMPLETADA' | 'NO_ASISTIO' | 'CANCELADA';
 
 export interface Profesional {
   id: string;
@@ -72,6 +72,7 @@ type CitaDetalleApi = {
 function normalizarEstado(estado: string): EstadoCita {
   if (estado === 'ANULADA' || estado.startsWith('CANCELADA')) return 'CANCELADA';
   if (estado === 'COMPLETADA') return 'COMPLETADA';
+  if (estado === 'NO_ASISTIO') return 'NO_ASISTIO';
   if (estado === 'PROGRAMADA' || estado === 'PENDIENTE') return 'PROGRAMADA';
   if (estado === 'CONFIRMADA') return 'CONFIRMADA';
   throw new Error('El backend devolvió un estado de cita no reconocido.');

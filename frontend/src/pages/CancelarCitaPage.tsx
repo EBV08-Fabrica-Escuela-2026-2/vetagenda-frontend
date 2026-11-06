@@ -30,8 +30,21 @@ import {
 } from '../services/api';
 import type { Cita } from '../services/api';
 
-type FiltroEstado = 'TODAS' | 'PROGRAMADA' | 'CANCELADA';
+type FiltroEstado = 'TODAS' | 'PROGRAMADA' | 'HISTORIAL';
 type ModoVista = 'lista' | 'tarjetas';
+
+function AppointmentStatusBadge({ estado }: { estado: Cita['estado'] }) {
+  if (estado === 'PROGRAMADA') {
+    return <span className="inline-flex rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-800">Activa</span>;
+  }
+  if (estado === 'COMPLETADA') {
+    return <span className="inline-flex rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-800">Completada</span>;
+  }
+  if (estado === 'NO_ASISTIO') {
+    return <span className="inline-flex rounded-md border border-orange-200 bg-orange-50 px-2 py-0.5 text-[11px] font-bold text-orange-800">No asistió</span>;
+  }
+  return <span className="inline-flex rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700">Anulada</span>;
+}
 
 function searchable(value: unknown) {
   return String(value ?? '').toLocaleLowerCase('es-CO');
@@ -79,7 +92,10 @@ export const CancelarCitaPage: React.FC = () => {
   const citasFiltradas = useMemo(() => {
     return citas.filter((cita) => {
       // Filtro por estado
-      if (filtroEstado !== 'TODAS' && cita.estado !== filtroEstado) {
+      if (filtroEstado === 'PROGRAMADA' && cita.estado !== 'PROGRAMADA') {
+        return false;
+      }
+      if (filtroEstado === 'HISTORIAL' && cita.estado === 'PROGRAMADA') {
         return false;
       }
 
@@ -111,8 +127,8 @@ export const CancelarCitaPage: React.FC = () => {
     () => citas.filter((c) => c.estado === 'PROGRAMADA').length,
     [citas]
   );
-  const totalCanceladas = useMemo(
-    () => citas.filter((c) => c.estado === 'CANCELADA').length,
+  const totalHistorial = useMemo(
+    () => citas.filter((c) => c.estado !== 'PROGRAMADA').length,
     [citas]
   );
 
@@ -183,9 +199,9 @@ export const CancelarCitaPage: React.FC = () => {
                   <CalendarCheck className="h-4 w-4 text-emerald-600" />
                   <span>{totalProgramadas} Activas</span>
                 </div>
-                <div className="flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50/70 px-3 py-1.5 text-xs font-bold text-rose-800 shadow-2xs">
-                  <CalendarX className="h-4 w-4 text-rose-600" />
-                  <span>{totalCanceladas} Anuladas</span>
+                <div className="flex items-center gap-2 rounded-xl border border-sky-200 bg-sky-50/70 px-3 py-1.5 text-xs font-bold text-sky-800 shadow-2xs">
+                  <CalendarX className="h-4 w-4 text-sky-600" />
+                  <span>{totalHistorial} Históricas</span>
                 </div>
                 <Link
                   to="/citas/reservar"
@@ -248,14 +264,14 @@ export const CancelarCitaPage: React.FC = () => {
                 </button>
                 <button
                   type="button"
-                  onClick={() => setFiltroEstado('CANCELADA')}
+                  onClick={() => setFiltroEstado('HISTORIAL')}
                   className={`rounded-lg px-3 py-1 font-semibold transition ${
-                    filtroEstado === 'CANCELADA'
-                      ? 'bg-white text-rose-800 shadow-2xs'
-                      : 'text-slate-600 hover:text-rose-700'
+                    filtroEstado === 'HISTORIAL'
+                      ? 'bg-white text-sky-800 shadow-2xs'
+                      : 'text-slate-600 hover:text-sky-700'
                   }`}
                 >
-                  Anuladas ({totalCanceladas})
+                  Historial ({totalHistorial})
                 </button>
               </div>
 
@@ -373,12 +389,13 @@ export const CancelarCitaPage: React.FC = () => {
                 <tbody className="divide-y divide-slate-100">
                   {citasFiltradas.map((cita) => {
                     const estaCancelada = cita.estado === 'CANCELADA';
+                    const estaFinalizada = cita.estado !== 'PROGRAMADA';
 
                     return (
                       <tr
                         key={cita.id}
                         className={`transition hover:bg-sky-50/30 ${
-                          estaCancelada ? 'bg-slate-50/60' : 'bg-white'
+                          estaFinalizada ? 'bg-slate-50/60' : 'bg-white'
                         }`}
                       >
                         {/* Columna: Reserva y Estado */}
@@ -389,21 +406,13 @@ export const CancelarCitaPage: React.FC = () => {
                           <div className="mt-1.5 flex flex-col gap-1 items-start">
                             {estaCancelada ? (
                               <>
-                                <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 text-[11px] font-bold text-rose-700">
-                                  <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />
-                                  Anulada
-                                </span>
+                                <AppointmentStatusBadge estado={cita.estado} />
                                 <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-emerald-200 bg-emerald-50/80 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
                                   <CheckCircle2 className="h-3 w-3 text-emerald-600" />
                                   Cupo liberado
                                 </span>
                               </>
-                            ) : (
-                              <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-800">
-                                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                                Activa
-                              </span>
-                            )}
+                            ) : <AppointmentStatusBadge estado={cita.estado} />}
                           </div>
                         </td>
 
@@ -487,7 +496,7 @@ export const CancelarCitaPage: React.FC = () => {
                               <span>Detalle</span>
                             </Link>
 
-                            {!estaCancelada && (
+                            {!estaFinalizada && (
                               <Link
                                 to={`/reprogramar-cita/${cita.id}`}
                                 className="inline-flex items-center gap-1 rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-bold text-amber-800 transition hover:bg-amber-100 hover:border-amber-300 shadow-2xs"
@@ -498,10 +507,10 @@ export const CancelarCitaPage: React.FC = () => {
                               </Link>
                             )}
 
-                            {estaCancelada ? (
+                            {estaFinalizada ? (
                               <div className="inline-flex items-center gap-1 rounded-xl border border-slate-200 bg-slate-100/80 px-2.5 py-1.5 text-xs font-semibold text-slate-500 whitespace-nowrap">
                                 <CheckCircle2 className="h-3.5 w-3.5 text-slate-400" />
-                                <span>Liberado</span>
+                                <span>{estaCancelada ? 'Liberado' : 'Finalizada'}</span>
                               </div>
                             ) : (
                               <button
@@ -527,12 +536,13 @@ export const CancelarCitaPage: React.FC = () => {
             <div className="md:hidden divide-y divide-slate-100">
               {citasFiltradas.map((cita) => {
                 const estaCancelada = cita.estado === 'CANCELADA';
+                const estaFinalizada = cita.estado !== 'PROGRAMADA';
 
                 return (
                   <div
                     key={cita.id}
                     className={`p-3.5 transition ${
-                      estaCancelada ? 'bg-slate-50/70 text-slate-600' : 'bg-white'
+                      estaFinalizada ? 'bg-slate-50/70 text-slate-600' : 'bg-white'
                     }`}
                   >
                     <div className="flex items-center justify-between gap-2">
@@ -548,18 +558,12 @@ export const CancelarCitaPage: React.FC = () => {
                       <div className="flex items-center gap-1.5">
                         {estaCancelada ? (
                           <>
-                            <span className="rounded-md border border-rose-200 bg-rose-50 px-2 py-0.5 text-[10px] font-bold text-rose-700">
-                              Anulada
-                            </span>
+                            <AppointmentStatusBadge estado={cita.estado} />
                             <span className="rounded-md border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[10px] font-semibold text-emerald-700">
                               Cupo libre
                             </span>
                           </>
-                        ) : (
-                          <span className="rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[10px] font-bold text-emerald-800">
-                            Activa
-                          </span>
-                        )}
+                        ) : <AppointmentStatusBadge estado={cita.estado} />}
                       </div>
                     </div>
 
@@ -604,7 +608,7 @@ export const CancelarCitaPage: React.FC = () => {
                           <Eye className="h-3.5 w-3.5 text-sky-600" />
                           <span>Detalle</span>
                         </Link>
-                        {!estaCancelada && (
+                        {!estaFinalizada && (
                           <Link
                             to={`/reprogramar-cita/${cita.id}`}
                             className="inline-flex items-center gap-1 rounded-xl border border-amber-200 bg-amber-50 px-2.5 py-1.5 text-xs font-bold text-amber-800 hover:bg-amber-100"
@@ -614,8 +618,8 @@ export const CancelarCitaPage: React.FC = () => {
                             <span>Reprogramar</span>
                           </Link>
                         )}
-                        {estaCancelada ? (
-                          <span className="text-[11px] font-semibold text-slate-400">Cupo liberado</span>
+                        {estaFinalizada ? (
+                          <span className="text-[11px] font-semibold text-slate-400">{estaCancelada ? 'Cupo liberado' : 'Cita finalizada'}</span>
                         ) : (
                           <button
                             type="button"
@@ -640,12 +644,13 @@ export const CancelarCitaPage: React.FC = () => {
           <div className="grid gap-4 md:grid-cols-2">
             {citasFiltradas.map((cita) => {
               const estaCancelada = cita.estado === 'CANCELADA';
+              const estaFinalizada = cita.estado !== 'PROGRAMADA';
 
               return (
                 <article
                   key={cita.id}
                   className={`group relative flex flex-col justify-between overflow-hidden rounded-2xl border p-5 shadow-xs transition duration-200 ${
-                    estaCancelada
+                    estaFinalizada
                       ? 'border-slate-200/80 bg-slate-50/70'
                       : 'border-slate-200 bg-white hover:border-sky-300 hover:shadow-sm'
                   }`}
@@ -668,21 +673,13 @@ export const CancelarCitaPage: React.FC = () => {
                       <div className="flex flex-col items-end gap-1">
                         {estaCancelada ? (
                           <>
-                            <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-rose-200 bg-rose-50 px-2.5 py-0.5 text-xs font-bold text-rose-700">
-                              <span className="h-1.5 w-1.5 rounded-full bg-rose-500 animate-pulse" />
-                              Anulada
-                            </span>
+                            <AppointmentStatusBadge estado={cita.estado} />
                             <span className="inline-flex items-center gap-1 whitespace-nowrap rounded-md border border-emerald-200 bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
                               <CheckCircle2 className="h-3 w-3 text-emerald-600" />
                               Cupo liberado
                             </span>
                           </>
-                        ) : (
-                          <span className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-md border border-emerald-200 bg-emerald-50 px-2.5 py-0.5 text-xs font-bold text-emerald-800">
-                            <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                            Confirmada · Activa
-                          </span>
-                        )}
+                        ) : <AppointmentStatusBadge estado={cita.estado} />}
                       </div>
                     </div>
 
@@ -756,7 +753,7 @@ export const CancelarCitaPage: React.FC = () => {
                       </Link>
 
                       <div className="flex flex-wrap items-center gap-2">
-                        {!estaCancelada && (
+                        {!estaFinalizada && (
                           <Link
                             to={`/reprogramar-cita/${cita.id}`}
                             className="inline-flex items-center gap-1.5 rounded-xl border border-amber-200 bg-amber-50 px-3 py-1.5 text-xs font-bold text-amber-800 transition hover:bg-amber-100"
@@ -766,10 +763,10 @@ export const CancelarCitaPage: React.FC = () => {
                             <span>Reprogramar</span>
                           </Link>
                         )}
-                        {estaCancelada ? (
+                        {estaFinalizada ? (
                           <span className="inline-flex items-center gap-1 rounded-lg bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-500">
                             <CheckCircle2 className="h-3 w-3 text-slate-400" />
-                            Turno liberado
+                            {estaCancelada ? 'Turno liberado' : 'Cita finalizada'}
                           </span>
                         ) : (
                           <button

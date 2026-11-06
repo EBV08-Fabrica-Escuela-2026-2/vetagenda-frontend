@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { CalendarDays, Clock3, Plus, Stethoscope } from 'lucide-react';
+import { CalendarDays, CheckCircle2, Clock3, Plus, Stethoscope, UserX } from 'lucide-react';
 import { BackToHomeButton } from '../components/BackToHomeButton';
 import { BrandHeader } from '../components/BrandHeader';
 import { ClientSessionActions } from '../components/ClientSessionActions';
@@ -8,12 +8,15 @@ import {
   cancelVeterinarianAppointment,
   getVeterinarianSession,
   listVeterinarianAppointments,
+  minutesUntilClinicDateTime,
+  updateVeterinarianAppointmentOutcome,
+  type AppointmentOutcome,
   type VeterinarianAppointmentApi,
 } from '../services/api';
 
 const MIN_REASON_LENGTH = 10;
 
-type AppointmentStatus = 'Programada' | 'Completada' | 'Cancelada';
+type AppointmentStatus = 'Programada' | 'Pendiente de cierre' | 'Completada' | 'No asistió' | 'Cancelada';
 
 type Appointment = {
   id: number;
@@ -27,11 +30,16 @@ type Appointment = {
 };
 
 function mapAppointment(item: VeterinarianAppointmentApi): Appointment {
-  const status: AppointmentStatus = item.estado === 'CONFIRMADA'
-    ? 'Programada'
-    : item.estado === 'COMPLETADA'
-      ? 'Completada'
-      : 'Cancelada';
+  let status: AppointmentStatus;
+  if (item.estado === 'CONFIRMADA') {
+    status = minutesUntilClinicDateTime(item.fechaHoraFin) <= 0 ? 'Pendiente de cierre' : 'Programada';
+  } else if (item.estado === 'COMPLETADA') {
+    status = 'Completada';
+  } else if (item.estado === 'NO_ASISTIO') {
+    status = 'No asistió';
+  } else {
+    status = 'Cancelada';
+  }
   const petDetails = [item.mascotaNombre, item.mascotaEspecie, item.mascotaRaza].filter(Boolean).join(' · ');
   return {
     id: item.id,
@@ -57,7 +65,9 @@ function formatAppointmentDate(value: string) {
 function StatusBadge({ status }: { status: AppointmentStatus }) {
   const styles: Record<AppointmentStatus, string> = {
     Programada: 'bg-sky-100 text-sky-800',
+    'Pendiente de cierre': 'bg-amber-100 text-amber-800',
     Completada: 'bg-emerald-100 text-emerald-800',
+    'No asistió': 'bg-orange-100 text-orange-800',
     Cancelada: 'bg-rose-100 text-rose-800',
   };
 
@@ -185,9 +195,116 @@ function CancellationDialog({ appointment, onClose, onConfirm }: CancellationDia
   );
 }
 
+type OutcomeDialogProps = {
+  appointment: Appointment;
+  onClose: () => void;
+  onConfirm: (appointmentId: number, outcome: AppointmentOutcome) => void;
+};
+
+function OutcomeDialog({ appointment, onClose, onConfirm }: OutcomeDialogProps) {
+  const [outcome, setOutcome] = useState<AppointmentOutcome>('COMPLETADA');
+
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') onClose();
+    }
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-950/50 p-4 backdrop-blur-sm"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <section
+        aria-labelledby="outcome-dialog-title"
+        aria-modal="true"
+        className="my-auto w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl sm:p-8"
+        role="dialog"
+      >
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.2em] text-amber-700">Cerrar atención</p>
+            <h2 id="outcome-dialog-title" className="mt-2 text-2xl font-black text-slate-900">
+              Registrar resultado de la cita
+            </h2>
+          </div>
+          <button
+            type="button"
+            aria-label="Cerrar ventana"
+            onClick={onClose}
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xl text-slate-500 transition hover:bg-slate-100"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="mt-5 rounded-2xl bg-slate-50 p-4">
+          <p className="font-bold text-slate-900">{appointment.client} · {appointment.pet}</p>
+          <p className="mt-1 text-sm text-slate-600">{appointment.service}</p>
+          <p className="mt-2 text-sm font-semibold capitalize text-slate-700">
+            {formatAppointmentDate(appointment.date)} · {appointment.time}
+          </p>
+        </div>
+
+        <fieldset className="mt-5 grid gap-3 sm:grid-cols-2">
+          <legend className="mb-3 text-sm font-bold text-slate-800">¿Qué ocurrió con la cita?</legend>
+          <label className={`cursor-pointer rounded-2xl border p-4 transition ${outcome === 'COMPLETADA' ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-100' : 'border-slate-200 hover:border-emerald-300'}`}>
+            <input
+              type="radio"
+              name="appointment-outcome"
+              value="COMPLETADA"
+              checked={outcome === 'COMPLETADA'}
+              onChange={() => setOutcome('COMPLETADA')}
+              className="sr-only"
+            />
+            <CheckCircle2 className="h-6 w-6 text-emerald-600" aria-hidden="true" />
+            <span className="mt-3 block font-bold text-slate-900">Atención completada</span>
+            <span className="mt-1 block text-sm text-slate-600">La mascota fue atendida normalmente.</span>
+          </label>
+          <label className={`cursor-pointer rounded-2xl border p-4 transition ${outcome === 'NO_ASISTIO' ? 'border-orange-500 bg-orange-50 ring-2 ring-orange-100' : 'border-slate-200 hover:border-orange-300'}`}>
+            <input
+              type="radio"
+              name="appointment-outcome"
+              value="NO_ASISTIO"
+              checked={outcome === 'NO_ASISTIO'}
+              onChange={() => setOutcome('NO_ASISTIO')}
+              className="sr-only"
+            />
+            <UserX className="h-6 w-6 text-orange-600" aria-hidden="true" />
+            <span className="mt-3 block font-bold text-slate-900">No asistió</span>
+            <span className="mt-1 block text-sm text-slate-600">El cliente no se presentó a la cita.</span>
+          </label>
+        </fieldset>
+
+        <p className="mt-4 rounded-xl bg-sky-50 px-4 py-3 text-sm text-sky-900">
+          El resultado quedará visible en el historial del cliente y de su mascota.
+        </p>
+
+        <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+          <button type="button" onClick={onClose} className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50">
+            Volver
+          </button>
+          <button
+            type="button"
+            onClick={() => onConfirm(appointment.id, outcome)}
+            className="rounded-xl bg-sky-700 px-5 py-3 text-sm font-bold text-white transition hover:bg-sky-800"
+          >
+            Guardar resultado
+          </button>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export function VeterinarianAppointmentsPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);
+  const [appointmentToClose, setAppointmentToClose] = useState<Appointment | null>(null);
   const [notification, setNotification] = useState<string | null>(null);
   const [showAll, setShowAll] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -214,8 +331,9 @@ export function VeterinarianAppointmentsPage() {
   );
   const visibleAppointments = showAll
     ? orderedAppointments
-    : orderedAppointments.filter((appointment) => appointment.status === 'Programada');
+    : orderedAppointments.filter((appointment) => ['Programada', 'Pendiente de cierre'].includes(appointment.status));
   const pendingCount = appointments.filter((appointment) => appointment.status === 'Programada').length;
+  const closureCount = appointments.filter((appointment) => appointment.status === 'Pendiente de cierre').length;
 
   async function cancelAppointment(appointmentId: number, reason: string) {
     const appointment = appointments.find((item) => item.id === appointmentId);
@@ -230,6 +348,22 @@ export function VeterinarianAppointmentsPage() {
     } catch (error) {
       setSelectedAppointment(null);
       setNotification(error instanceof Error ? error.message : 'No fue posible cancelar la cita.');
+    }
+  }
+
+  async function closeAppointment(appointmentId: number, outcome: AppointmentOutcome) {
+    const appointment = appointments.find((item) => item.id === appointmentId);
+    if (!appointment || appointment.status !== 'Pendiente de cierre') return;
+    try {
+      const result = await updateVeterinarianAppointmentOutcome(appointmentId, outcome);
+      setAppointments((current) => current.map((item) => item.id === appointmentId
+        ? { ...item, status: outcome === 'COMPLETADA' ? 'Completada' : 'No asistió' }
+        : item));
+      setAppointmentToClose(null);
+      setNotification(result.mensaje);
+    } catch (error) {
+      setAppointmentToClose(null);
+      setNotification(error instanceof Error ? error.message : 'No fue posible guardar el resultado de la cita.');
     }
   }
 
@@ -263,8 +397,8 @@ export function VeterinarianAppointmentsPage() {
                 <p className="mt-2 text-3xl font-black">{pendingCount}</p>
               </div>
               <div className="rounded-2xl bg-white/12 p-4 ring-1 ring-white/20 backdrop-blur-sm">
-                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-cyan-100">Total citas</p>
-                <p className="mt-2 text-3xl font-black">{appointments.length}</p>
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] text-cyan-100">Por cerrar</p>
+                <p className="mt-2 text-3xl font-black">{closureCount}</p>
               </div>
             </div>
           </div>
@@ -380,9 +514,20 @@ export function VeterinarianAppointmentsPage() {
                       >
                         Cancelar cita
                       </button>
+                    ) : appointment.status === 'Pendiente de cierre' ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setNotification(null);
+                          setAppointmentToClose(appointment);
+                        }}
+                        className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-2.5 text-sm font-bold text-amber-800 transition hover:border-amber-400 hover:bg-amber-100"
+                      >
+                        Registrar resultado
+                      </button>
                     ) : (
                       <span className="text-xs font-medium text-slate-400">
-                        {appointment.status === 'Completada' ? 'Cita finalizada' : 'No se puede modificar'}
+                        {appointment.status === 'Completada' ? 'Cita finalizada' : appointment.status === 'No asistió' ? 'Ausencia registrada' : 'No se puede modificar'}
                       </span>
                     )}
                   </div>
@@ -392,9 +537,6 @@ export function VeterinarianAppointmentsPage() {
           )}
         </section>
 
-        <p className="mt-5 text-center text-xs text-slate-500">
-          Agenda sincronizada con VetAgenda. Los cambios se reflejan también en las citas del cliente.
-        </p>
       </div>
 
       {selectedAppointment && (
@@ -402,6 +544,13 @@ export function VeterinarianAppointmentsPage() {
           appointment={selectedAppointment}
           onClose={() => setSelectedAppointment(null)}
           onConfirm={cancelAppointment}
+        />
+      )}
+      {appointmentToClose && (
+        <OutcomeDialog
+          appointment={appointmentToClose}
+          onClose={() => setAppointmentToClose(null)}
+          onConfirm={closeAppointment}
         />
       )}
     </main>
