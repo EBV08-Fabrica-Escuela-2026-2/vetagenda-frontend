@@ -2,7 +2,13 @@ import { useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { BackToHomeButton } from '../components/BackToHomeButton';
 import { Logo } from '../components/Logo';
-import { getCurrentClient, loginUser, saveClientSession } from '../services/api';
+import {
+  ADMIN_DEMO_CREDENTIALS,
+  getCurrentClient,
+  loginAdminDemo,
+  loginUser,
+  saveClientSession,
+} from '../services/api';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -22,6 +28,12 @@ export default function LoginPage() {
     }
 
     try {
+      if (loginAdminDemo(email, password)) {
+        setError('');
+        navigate(returnTo === '/cliente' ? '/admin/analitica/ocupacion' : returnTo, { replace: true });
+        return;
+      }
+
       const response = await loginUser(email, password);
       if (!response?.token) {
         throw new Error('El servidor no devolvió un token de acceso.');
@@ -47,10 +59,32 @@ export default function LoginPage() {
           Inicia sesión para agendar y gestionar las citas de tus mascotas.
         </p>
 
+        <aside className="mt-6 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
+            <p className="font-bold">Acceso temporal de administrador (demostración)</p>
+            <p className="mt-2">Correo: <code className="font-bold">{ADMIN_DEMO_CREDENTIALS.email}</code></p>
+            <p>Contraseña: <code className="font-bold">{ADMIN_DEMO_CREDENTIALS.password}</code></p>
+            <p className="mt-2 text-xs leading-5">
+              Acceso temporal de demostración: no es autenticación segura. No usar con información sensible.
+            </p>
+            <button
+              className="mt-3 min-h-11 rounded-xl border border-amber-800 px-3 py-2 text-xs font-bold text-amber-950 hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 focus-visible:ring-offset-2"
+              onClick={() => {
+                setEmail(ADMIN_DEMO_CREDENTIALS.email);
+                setPassword(ADMIN_DEMO_CREDENTIALS.password);
+                setError('');
+              }}
+              type="button"
+            >
+              Usar credenciales de prueba
+            </button>
+        </aside>
+
         <div className="mt-8 space-y-4">
           <div>
             <label className="mb-1 block text-sm font-semibold text-slate-700">Correo</label>
             <input
+              autoComplete="username"
+              aria-label="Correo"
               type="email"
               value={email}
               onChange={(event) => setEmail(event.target.value)}
@@ -61,6 +95,8 @@ export default function LoginPage() {
           <div>
             <label className="mb-1 block text-sm font-semibold text-slate-700">Contraseña</label>
             <input
+              autoComplete="current-password"
+              aria-label="Contraseña"
               type="password"
               value={password}
               onChange={(event) => setPassword(event.target.value)}

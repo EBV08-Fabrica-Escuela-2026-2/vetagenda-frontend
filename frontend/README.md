@@ -31,8 +31,18 @@ Las rutas disponibles en la interfaz son:
 - `/servicios/registro` - Registro de servicio asistencial
 - `/mascotas/registro` - Registro de mascota
 - `/catalogo` - Catálogo de servicios
+- `/admin/analitica/ocupacion` - Reporte de demostración de ocupación asistencial
 
 > El alcance actual del proyecto es la landing page y las 5 historias de usuario; no existe login funcional en este repositorio.
+
+El reporte de ocupación usa las citas locales de demostración y una estimación de 16 slots habilitados por día hábil. La protección de la ruta es solo una restricción de interfaz: el backend actual no implementa cuentas ni autorización para el rol `ADMIN`, por lo que este reporte no debe usarse con datos clínicos reales hasta integrar una API autorizada en servidor.
+
+Se puede probar el dashboard con estas credenciales temporales en `/login`, también en el build de producción:
+
+- Correo: `admin@vetagenda.test`
+- Contraseña: `Admin123!`
+
+Las credenciales se validan en el frontend y quedan visibles en el código distribuido al navegador; por tanto, cualquier persona puede inspeccionarlas o saltarse la validación. Este acceso solo sirve para demostración temporal y no reemplaza la autenticación real del backend. No debe proteger información sensible ni considerarse una barrera de seguridad.
 
 ## Levantar en desarrollo local
 
