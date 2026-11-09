@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ADMIN_DEMO_CREDENTIALS,
-  loginAdminDemo,
   loginUser,
   saveSessionFromLogin,
 } from '../services/api';
@@ -72,12 +71,6 @@ export function ClientAccessModal({ isOpen, onClose }: ClientAccessModalProps) {
     setIsSubmitting(true);
     setError('');
     try {
-      if (loginAdminDemo(email, password)) {
-        onClose();
-        navigate('/admin/analitica/ocupacion');
-        return;
-      }
-
       const auth = await loginUser(email.trim(), password);
       const session = await saveSessionFromLogin(email.trim(), auth);
       onClose();
@@ -171,11 +164,11 @@ export function ClientAccessModal({ isOpen, onClose }: ClientAccessModalProps) {
         </form>
 
         <aside className="mt-5 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
-          <p className="font-bold">Acceso temporal de administrador (demostración)</p>
+          <p className="font-bold">Cuenta administrativa de demostración</p>
           <p className="mt-2">Correo: <code className="font-bold">{ADMIN_DEMO_CREDENTIALS.email}</code></p>
           <p>Contraseña: <code className="font-bold">{ADMIN_DEMO_CREDENTIALS.password}</code></p>
           <p className="mt-2 text-xs leading-5">
-            Credenciales de demostración del frontend; no usar para proteger información sensible.
+            Cuenta académica autenticada por el backend; no uses información personal real.
           </p>
           <button
             className="mt-3 min-h-11 rounded-xl border border-amber-800 px-3 py-2 text-xs font-bold text-amber-950 hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 focus-visible:ring-offset-2"
