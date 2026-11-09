@@ -269,6 +269,8 @@ export type LoginResponse = {
   token: string;
   tipoToken: string;
   expiraEnMs: number;
+  rol?: 'CLIENTE' | 'VETERINARIO' | 'ADMINISTRADOR';
+  roles?: Array<'CLIENTE' | 'VETERINARIO' | 'ADMINISTRADOR'>;
 };
 
 export type ClientSession = {
@@ -381,13 +383,46 @@ export function loginAdminDemo(email: string, password: string): boolean {
 
 export function hasAuthenticatedAdminDemoSession(): boolean {
   if (localStorage.getItem('vetagenda_session') !== 'true') return false;
-  if (localStorage.getItem('vetagenda_token') !== ADMIN_DEMO_TOKEN) return false;
+  if (!localStorage.getItem('vetagenda_token')) return false;
   try {
     const user: unknown = JSON.parse(localStorage.getItem('vetagenda_user') || 'null');
     return typeof user === 'object' && user !== null && 'rol' in user && user.rol === 'ADMIN';
   } catch {
     return false;
   }
+}
+
+export function saveAdminSession(email: string, token: string) {
+  const session: AdminDemoSession = {
+    id: 0,
+    nombre: 'Administrador',
+    rol: 'ADMIN',
+    email,
+    token,
+  };
+  localStorage.setItem('vetagenda_user', JSON.stringify(session));
+  localStorage.setItem('vetagenda_session', 'true');
+  localStorage.setItem('vetagenda_role', 'Administrador');
+  localStorage.setItem('vetagenda_token', token);
+  localStorage.removeItem('vetagenda_documento');
+  window.dispatchEvent(new Event(CLIENT_SESSION_EVENT));
+}
+
+export async function saveSessionFromLogin(email: string, response: LoginResponse): Promise<AuthenticatedSession> {
+  if (response.rol === 'ADMINISTRADOR' || response.roles?.includes('ADMINISTRADOR')) {
+    saveAdminSession(email, response.token);
+    return getAuthenticatedSession() as AdminDemoSession;
+  }
+
+  if (response.rol === 'VETERINARIO' || response.roles?.includes('VETERINARIO')) {
+    const profile = await getCurrentVeterinarian(response.token);
+    saveVeterinarianSession(profile, response.token);
+    return getAuthenticatedSession() as VeterinarianSession;
+  }
+
+  const profile = await getCurrentClient(response.token);
+  saveClientSession(profile, response.token);
+  return getAuthenticatedSession() as ClientSession;
 }
 
 export async function registerClientCredentials(payload: {
@@ -546,7 +581,14 @@ export function getVeterinarianSession(): VeterinarianSession | null {
 }
 
 export function getAuthenticatedSession(): AuthenticatedSession | null {
-  return getClientSession() ?? getVeterinarianSession();
+  const regularSession = getClientSession() ?? getVeterinarianSession();
+  if (regularSession) return regularSession;
+  if (!hasAuthenticatedAdminDemoSession()) return null;
+  try {
+    return JSON.parse(localStorage.getItem('vetagenda_user') || 'null') as AdminDemoSession;
+  } catch {
+    return null;
+  }
 }
 
 export function hasAuthenticatedVeterinarianSession(): boolean {
@@ -556,6 +598,91 @@ export function hasAuthenticatedVeterinarianSession(): boolean {
 export function clearClientSession() {
   CLIENT_SESSION_KEYS.forEach((key) => localStorage.removeItem(key));
   window.dispatchEvent(new Event(CLIENT_SESSION_EVENT));
+}
+
+export async function logoutCurrentSession(token: string): Promise<void> {
+  if (token === ADMIN_DEMO_TOKEN) return;
+  const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok && response.status !== 401) {
+    throw new Error('No fue posible cerrar la sesión en el servidor.');
+  }
+}
+
+export type AdminUser = {
+  id: number;
+  nombre: string;
+  correo: string;
+  rol: string;
+  roles: string[];
+  activo: boolean;
+  clienteId: number | null;
+  veterinarioId: number | null;
+  actualizadoEn: string | null;
+};
+
+export type PetHistoryEntry = {
+  idCita: number;
+  estado: string;
+  etiquetaEstado: string;
+  fechaHoraInicio: string;
+  fechaHoraFin: string;
+  veterinarioNombre: string;
+  veterinarioEspecialidad?: string | null;
+  servicioNombre: string;
+  servicioCategoria?: string | null;
+  diagnostico?: string | null;
+  tratamiento?: string | null;
+  notasClinicas?: string | null;
+  motivoCancelacion?: string | null;
+};
+
+export type PetHistory = {
+  mascotaId: number;
+  mascotaNombre: string;
+  contenido: PetHistoryEntry[];
+  pagina: number;
+  limite: number;
+  totalElementos: number;
+  totalPaginas: number;
+};
+
+export async function getPetHistory(petId: number, page = 0, limit = 10): Promise<PetHistory> {
+  const session = getAuthenticatedSession();
+  if (!session) throw new Error('Debes iniciar sesión para consultar el historial.');
+  const response = await fetch(`${API_BASE_URL}/mascotas/${petId}/historial?page=${page}&limit=${limit}`, {
+    headers: { Accept: 'application/json', Authorization: `Bearer ${session.token}` },
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(data?.mensaje || data?.detail || 'No fue posible consultar el historial clínico.');
+  return data;
+}
+
+function adminHeaders(): Record<string, string> {
+  const session = getAuthenticatedSession();
+  if (!session || session.rol !== 'ADMIN') throw new Error('Debes iniciar sesión como administrador.');
+  return { Accept: 'application/json', 'Content-Type': 'application/json', Authorization: `Bearer ${session.token}` };
+}
+
+export async function listAdminUsers(filters: { buscar?: string; rol?: string; activo?: string } = {}): Promise<AdminUser[]> {
+  const params = new URLSearchParams();
+  if (filters.buscar) params.set('buscar', filters.buscar);
+  if (filters.rol) params.set('rol', filters.rol);
+  if (filters.activo) params.set('activo', filters.activo);
+  const response = await fetch(`${API_BASE_URL}/admin/usuarios${params.size ? `?${params}` : ''}`, { headers: adminHeaders() });
+  if (!response.ok) throw new Error(response.status === 403 ? 'No tienes permisos de administración.' : 'No fue posible consultar los usuarios.');
+  return response.json();
+}
+
+export async function updateAdminUserStatus(id: number, activo: boolean): Promise<AdminUser> {
+  const response = await fetch(`${API_BASE_URL}/admin/usuarios/${id}/estado`, {
+    method: 'PATCH', headers: adminHeaders(), body: JSON.stringify({ activo }),
+  });
+  const data = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(data?.mensaje || data?.detail || 'No fue posible actualizar el usuario.');
+  return data;
 }
 
 // ──────────────────────────────────────────────

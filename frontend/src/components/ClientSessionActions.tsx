@@ -5,6 +5,7 @@ import {
   CLIENT_SESSION_EVENT,
   clearClientSession,
   getAuthenticatedSession,
+  logoutCurrentSession,
   type AuthenticatedSession,
 } from '../services/api';
 
@@ -38,11 +39,16 @@ export function ClientSessionActions({
     };
   }, []);
 
-  const handleLogout = () => {
-    clearClientSession();
-    setSession(null);
-    onAction?.();
-    navigate('/', { replace: true });
+  const handleLogout = async () => {
+    if (!session) return;
+    try {
+      await logoutCurrentSession(session.token);
+    } finally {
+      clearClientSession();
+      setSession(null);
+      onAction?.();
+      navigate('/', { replace: true });
+    }
   };
 
   const containerClass = stacked
@@ -103,7 +109,7 @@ export function ClientSessionActions({
 
       {showPortalLink && (
         <Link
-          to={session.rol === 'VETERINARIO' ? '/veterinario/agenda' : '/cliente'}
+          to={session.rol === 'ADMIN' ? '/admin/usuarios' : session.rol === 'VETERINARIO' ? '/veterinario/agenda' : '/cliente'}
           onClick={onAction}
           className={`${stacked ? 'w-full justify-start' : ''} inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-[#0D5C75] transition hover:bg-[#F0F7F7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488]`}
         >

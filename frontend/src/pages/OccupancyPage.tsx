@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, LogOut, RefreshCw } from 'lucide-react';
+import { ArrowLeft, LogOut, RefreshCw, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { OccupancyChart } from '../components/analytics/OccupancyChart';
 import { OccupancyEmptyState } from '../components/analytics/OccupancyEmptyState';
@@ -11,7 +11,7 @@ import { OccupancySkeleton } from '../components/analytics/OccupancySkeleton';
 import { OccupancyTable } from '../components/analytics/OccupancyTable';
 import { BrandHeader } from '../components/BrandHeader';
 import { getOccupancyReport, OCCUPANCY_VETERINARIANS } from '../services/occupancy';
-import { clearClientSession } from '../services/api';
+import { clearClientSession, getAuthenticatedSession, logoutCurrentSession } from '../services/api';
 import type { OccupancyFilter, OccupancyReportResponse } from '../types/occupancy';
 
 function toLocalDateInput(date: Date): string {
@@ -95,11 +95,24 @@ export default function OccupancyPage() {
               >
                 <ArrowLeft aria-hidden="true" size={17} /> Inicio
               </Link>
+              <Link
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D5C75] focus-visible:ring-offset-2"
+                to="/admin/usuarios"
+              >
+                <Users aria-hidden="true" size={17} /> Usuarios
+              </Link>
               <button
                 className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D5C75] focus-visible:ring-offset-2"
                 onClick={() => {
-                  clearClientSession();
-                  navigate('/login', { replace: true });
+                  const session = getAuthenticatedSession();
+                  void (async () => {
+                    try {
+                      if (session) await logoutCurrentSession(session.token);
+                    } finally {
+                      clearClientSession();
+                      navigate('/login', { replace: true });
+                    }
+                  })();
                 }}
                 type="button"
               >

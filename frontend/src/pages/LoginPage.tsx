@@ -4,10 +4,9 @@ import { BackToHomeButton } from '../components/BackToHomeButton';
 import { Logo } from '../components/Logo';
 import {
   ADMIN_DEMO_CREDENTIALS,
-  getCurrentClient,
   loginAdminDemo,
   loginUser,
-  saveClientSession,
+  saveSessionFromLogin,
 } from '../services/api';
 
 export default function LoginPage() {
@@ -38,10 +37,14 @@ export default function LoginPage() {
       if (!response?.token) {
         throw new Error('El servidor no devolvió un token de acceso.');
       }
-      const profile = await getCurrentClient(response.token);
-      saveClientSession(profile, response.token);
+      const session = await saveSessionFromLogin(email.trim(), response);
       setError('');
-      navigate(returnTo, { replace: true });
+      const defaultRoute = session.rol === 'ADMIN'
+        ? '/admin/usuarios'
+        : session.rol === 'VETERINARIO'
+          ? '/veterinario/agenda'
+          : '/cliente';
+      navigate(returnTo === '/cliente' ? defaultRoute : returnTo, { replace: true });
     } catch (error: unknown) {
       setError(error instanceof Error ? error.message : 'No fue posible iniciar sesión. Intenta nuevamente.');
     }

@@ -1,4 +1,4 @@
-import { AlertCircle, PawPrint, Plus, X } from 'lucide-react';
+import { AlertCircle, ClipboardList, PawPrint, Plus, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getClientSession, listClientPets, type PetProfile } from '../services/api';
@@ -171,6 +171,13 @@ export function ClientPetsModal({ isOpen, onClose }: ClientPetsModalProps) {
                   {pet.observaciones && (
                     <p className="mt-3 text-sm leading-6 text-slate-600">{pet.observaciones}</p>
                   )}
+                  <Link
+                    to={`/mascotas/${pet.id}/historial`}
+                    onClick={onClose}
+                    className="mt-4 inline-flex min-h-10 w-full items-center justify-center gap-2 rounded-lg border border-[#0D5C75] px-3 py-2 text-sm font-bold text-[#0D5C75] hover:bg-[#F0F7F7]"
+                  >
+                    <ClipboardList className="h-4 w-4" /> Ver historial
+                  </Link>
                 </li>
               ))}
             </ul>

@@ -2,10 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ADMIN_DEMO_CREDENTIALS,
-  getCurrentClient,
   loginAdminDemo,
   loginUser,
-  saveClientSession,
+  saveSessionFromLogin,
 } from '../services/api';
 
 const DEMO_EMAIL = 'carolina.restrepo@vetagenda.com';
@@ -80,10 +79,9 @@ export function ClientAccessModal({ isOpen, onClose }: ClientAccessModalProps) {
       }
 
       const auth = await loginUser(email.trim(), password);
-      const profile = await getCurrentClient(auth.token);
-      saveClientSession(profile, auth.token);
+      const session = await saveSessionFromLogin(email.trim(), auth);
       onClose();
-      navigate('/cliente');
+      navigate(session.rol === 'ADMIN' ? '/admin/usuarios' : session.rol === 'VETERINARIO' ? '/veterinario/agenda' : '/cliente');
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : 'No fue posible iniciar sesión.');
     } finally {
@@ -96,8 +94,7 @@ export function ClientAccessModal({ isOpen, onClose }: ClientAccessModalProps) {
     setError('');
     try {
       const auth = await loginUser(DEMO_EMAIL, DEMO_PASSWORD);
-      const profile = await getCurrentClient(auth.token);
-      saveClientSession(profile, auth.token);
+      await saveSessionFromLogin(DEMO_EMAIL, auth);
       onClose();
       navigate('/cliente');
     } catch (loginError) {

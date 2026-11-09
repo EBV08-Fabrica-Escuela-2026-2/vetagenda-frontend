@@ -17,6 +17,8 @@ import { ConfigurarHorariosPage } from './pages/ConfigurarHorariosPage';
 import { ContactPage, PrivacyPage, TermsPage } from './pages/InformationPages';
 import { ClientPortalPage } from './pages/ClientPortalPage';
 import OccupancyPage from './pages/OccupancyPage';
+import AdminUsersPage from './pages/AdminUsersPage';
+import { PetHistoryPage } from './pages/PetHistoryPage';
 import {
   hasAuthenticatedAdminDemoSession,
   hasAuthenticatedClientSession,
@@ -101,6 +103,14 @@ function App() {
             </AdminProtectedRoute>
           )}
         />
+        <Route
+          path="/admin/usuarios"
+          element={(
+            <AdminProtectedRoute>
+              <AdminUsersPage />
+            </AdminProtectedRoute>
+          )}
+        />
         <Route path="/inicio" element={<LandingPage />} />
         <Route path="/registro" element={<RegisterPage />} />
         <Route path="/veterinarios/registro" element={<RegisterVeterinarianPage />} />
@@ -125,6 +135,14 @@ function App() {
           element={(
             <ClientProtectedRoute>
               <RegistroMascotaPage />
+            </ClientProtectedRoute>
+          )}
+        />
+        <Route
+          path="/mascotas/:id/historial"
+          element={(
+            <ClientProtectedRoute>
+              <PetHistoryPage />
             </ClientProtectedRoute>
           )}
         />
