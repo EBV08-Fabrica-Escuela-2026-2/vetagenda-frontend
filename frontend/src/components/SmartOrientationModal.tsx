@@ -1,13 +1,13 @@
-import { AlertCircle, AlertTriangle, ArrowLeft, Brain, CalendarDays, Clock3, PawPrint, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, ArrowLeft, Brain, CalendarDays, Clock3, PawPrint, RefreshCw, X } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
-  fetchCatalogo,
   getClientSession,
   listClientPets,
-  type CatalogService,
+  requestSmartOrientation,
   type PetProfile,
-  type VeterinarioConServicios,
+  type SmartOrientationRequest,
+  type SmartOrientationResult,
 } from '../services/api';
 
 type SmartOrientationModalProps = {
@@ -17,11 +17,6 @@ type SmartOrientationModalProps = {
 
 type ConcernLevel = 'bajo' | 'moderado' | 'alto';
 type DurationUnit = 'horas' | 'dias' | 'semanas';
-
-type ServiceRecommendation = {
-  service: CatalogService;
-  veterinarians: Array<Pick<VeterinarioConServicios, 'id' | 'nombre'>>;
-};
 
 const concernLevels: Array<{ value: ConcernLevel; label: string; description: string }> = [
   { value: 'bajo', label: 'Bajo', description: 'Los síntomas son leves.' },
@@ -48,10 +43,10 @@ export function SmartOrientationModal({ isOpen, onClose }: SmartOrientationModal
   const [petsError, setPetsError] = useState('');
   const [formError, setFormError] = useState('');
   const [loadAttempt, setLoadAttempt] = useState(0);
-  const [recommendations, setRecommendations] = useState<ServiceRecommendation[] | null>(null);
+  const [orientationResult, setOrientationResult] = useState<SmartOrientationResult | null>(null);
   const [recommendationError, setRecommendationError] = useState('');
   const [isLoadingRecommendations, setIsLoadingRecommendations] = useState(false);
-  const [submittedConcern, setSubmittedConcern] = useState<ConcernLevel | ''>('');
+  const [lastRequest, setLastRequest] = useState<SmartOrientationRequest | null>(null);
 
   useEffect(() => {
     if (isOpen) return;
@@ -62,10 +57,10 @@ export function SmartOrientationModal({ isOpen, onClose }: SmartOrientationModal
     setDurationUnit('dias');
     setConcern('');
     setFormError('');
-    setRecommendations(null);
+    setOrientationResult(null);
     setRecommendationError('');
     setIsLoadingRecommendations(false);
-    setSubmittedConcern('');
+    setLastRequest(null);
   }, [isOpen]);
 
   useEffect(() => {
@@ -149,55 +144,29 @@ export function SmartOrientationModal({ isOpen, onClose }: SmartOrientationModal
   }, [isOpen, loadAttempt]);
 
   useEffect(() => {
-    if (recommendations !== null) resultsHeadingRef.current?.focus();
-  }, [recommendations]);
+    if (orientationResult !== null) resultsHeadingRef.current?.focus();
+  }, [orientationResult]);
 
   if (!isOpen) return null;
 
-  async function loadRecommendations(level: ConcernLevel) {
+  async function loadRecommendations(request: SmartOrientationRequest) {
+    const session = getClientSession();
+    if (!session) {
+      setRecommendationError('Tu sesión terminó. Inicia sesión nuevamente para solicitar orientación.');
+      return;
+    }
+
     const requestId = requestSequence.current + 1;
     requestSequence.current = requestId;
-    setSubmittedConcern(level);
+    setLastRequest(request);
     setIsLoadingRecommendations(true);
     setRecommendationError('');
     setFormError('');
 
     try {
-      const catalog = await fetchCatalogo();
+      const result = await requestSmartOrientation(request, session.token);
       if (requestSequence.current !== requestId) return;
-
-      const servicesById = new Map<number, ServiceRecommendation>();
-      catalog.forEach((veterinarian) => {
-        if (
-          !Number.isInteger(veterinarian.id)
-          || veterinarian.id <= 0
-          || typeof veterinarian.nombre !== 'string'
-          || !veterinarian.nombre.trim()
-        ) return;
-
-        veterinarian.servicios.forEach((service) => {
-          if (
-            !Number.isInteger(service.id)
-            || service.id <= 0
-            || typeof service.nombre !== 'string'
-            || !service.nombre.trim()
-          ) return;
-
-          const recommendation = servicesById.get(service.id) || { service, veterinarians: [] };
-          if (!recommendation.veterinarians.some((item) => item.id === veterinarian.id)) {
-            recommendation.veterinarians.push({ id: veterinarian.id, nombre: veterinarian.nombre });
-          }
-          servicesById.set(service.id, recommendation);
-        });
-      });
-
-      const availableRecommendations = [...servicesById.values()]
-        .filter((recommendation) => recommendation.veterinarians.length > 0)
-        .sort((first, second) => first.service.nombre.localeCompare(second.service.nombre, 'es'));
-      availableRecommendations.forEach((recommendation) => {
-        recommendation.veterinarians.sort((first, second) => first.nombre.localeCompare(second.nombre, 'es'));
-      });
-      setRecommendations(availableRecommendations);
+      setOrientationResult(result);
     } catch (requestError: unknown) {
       if (requestSequence.current !== requestId) return;
       setRecommendationError(
@@ -231,12 +200,18 @@ export function SmartOrientationModal({ isOpen, onClose }: SmartOrientationModal
       return;
     }
 
-    void loadRecommendations(concern);
+    void loadRecommendations({
+      mascotaId: Number(petId),
+      sintomas: symptoms.trim(),
+      duracionValor: parsedDuration,
+      duracionUnidad: durationUnit,
+      nivelPreocupacion: concern,
+    });
   }
 
-  function goToBooking(service: CatalogService, veterinarian: ServiceRecommendation['veterinarians'][number]) {
+  function goToBooking(serviceId: number, veterinarian: SmartOrientationResult['recomendaciones'][number]['veterinarios'][number]) {
     const query = new URLSearchParams({
-      servicioId: String(service.id),
+      servicioId: String(serviceId),
       veterinarioId: String(veterinarian.id),
       mascotaId: String(petId),
     });
@@ -293,7 +268,12 @@ export function SmartOrientationModal({ isOpen, onClose }: SmartOrientationModal
               </p>
             </div>
 
-            {recommendations === null && (
+            <p className="text-xs leading-5 text-slate-500">
+              Al solicitar orientación, los síntomas, la especie y la edad se envían a Google Gemini para analizarlos.
+              No enviamos tu nombre, contacto ni el nombre o identificador de tu mascota al proveedor de IA.
+            </p>
+
+            {orientationResult === null && (
               <>
             {isLoadingPets && (
               <div role="status" className="flex items-center gap-3 py-2 text-sm font-medium text-slate-600">
@@ -457,7 +437,7 @@ export function SmartOrientationModal({ isOpen, onClose }: SmartOrientationModal
             {isLoadingRecommendations && (
               <div role="status" aria-live="polite" className="flex items-center gap-3 rounded-lg bg-slate-50 p-4 text-sm font-medium text-slate-700">
                 <span className="h-5 w-5 animate-spin rounded-full border-2 border-slate-200 border-t-[#0D9488]" />
-                Consultando servicios y profesionales registrados...
+                Analizando síntomas y servicios disponibles...
               </div>
             )}
 
@@ -466,8 +446,8 @@ export function SmartOrientationModal({ isOpen, onClose }: SmartOrientationModal
                 <p className="text-sm font-semibold">{recommendationError}</p>
                 <button
                   type="button"
-                  onClick={() => submittedConcern && void loadRecommendations(submittedConcern)}
-                  disabled={isLoadingRecommendations}
+                  onClick={() => lastRequest && void loadRecommendations(lastRequest)}
+                  disabled={!lastRequest || isLoadingRecommendations}
                   className="mt-2 min-h-10 font-bold underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-700 disabled:opacity-60"
                 >
                   Reintentar consulta
@@ -475,7 +455,7 @@ export function SmartOrientationModal({ isOpen, onClose }: SmartOrientationModal
               </div>
             )}
 
-            {recommendations !== null && !isLoadingRecommendations && !recommendationError && (
+            {orientationResult !== null && !isLoadingRecommendations && !recommendationError && (
               <section aria-labelledby={`${ids}-results-title`} aria-live="polite">
                 <h3
                   ref={resultsHeadingRef}
@@ -483,51 +463,58 @@ export function SmartOrientationModal({ isOpen, onClose }: SmartOrientationModal
                   tabIndex={-1}
                   className="text-lg font-bold text-slate-950 focus:outline-none"
                 >
-                  Servicios y profesionales disponibles
+                  Orientación para {pets.find((pet) => String(pet.id) === petId)?.nombre}
                 </h3>
-                <p className="mt-1 text-sm leading-6 text-slate-600">
-                  Mascota: {pets.find((pet) => String(pet.id) === petId)?.nombre}. Se muestran opciones registradas en el
-                  catálogo; la descripción informa qué ofrece cada servicio, pero no determina cuál es adecuado para los síntomas.
-                </p>
+                <p className="mt-1 text-sm leading-6 text-slate-700">{orientationResult.mensaje}</p>
 
-                {submittedConcern === 'alto' && (
+                {orientationResult.modoRespaldo && (
+                  <div role="status" className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
+                    <p>El análisis de IA no está disponible; se muestran solo coincidencias claras encontradas en el catálogo, si las hay.</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (!lastRequest) return;
+                        setOrientationResult(null);
+                        void loadRecommendations(lastRequest);
+                      }}
+                      disabled={isLoadingRecommendations || !lastRequest}
+                      className="mt-2 inline-flex min-h-10 items-center gap-2 font-bold underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-800 disabled:opacity-60"
+                    >
+                      <RefreshCw className="h-4 w-4" aria-hidden="true" />
+                      Reintentar análisis
+                    </button>
+                  </div>
+                )}
+
+                {orientationResult.urgente && (
                   <p role="alert" className="mt-4 flex gap-3 rounded-lg border border-red-300 bg-red-50 p-4 text-sm font-semibold leading-6 text-red-900">
                     <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-                    Indicaste un nivel de preocupación alto. Busca atención veterinaria inmediata; esta herramienta no puede evaluar urgencias.
+                    {orientationResult.mensajeUrgencia || 'Busca atención veterinaria inmediata. Esta herramienta no puede evaluar ni descartar urgencias.'}
                   </p>
                 )}
 
-                {recommendations.length === 0 ? (
+                {orientationResult.recomendaciones.length === 0 ? (
                   <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
                     <p className="text-sm leading-6 text-slate-700">
-                      El catálogo no tiene servicios asociados a veterinarios para mostrar. No podemos sugerir profesionales sin datos registrados.
+                      No se encontraron servicios del catálogo suficientemente relacionados con lo descrito. No sugeriremos opciones que puedan no corresponder.
                     </p>
                   </div>
                 ) : (
                   <ul className="mt-4 space-y-3">
-                    {recommendations.map(({ service, veterinarians }) => (
-                      <li key={service.id} className="rounded-lg border border-slate-200 p-4">
+                    {orientationResult.recomendaciones.map((recommendation) => (
+                      <li key={recommendation.servicioId} className="rounded-lg border border-slate-200 p-4">
                         <div className="flex flex-wrap items-start justify-between gap-2">
-                          <h4 className="font-bold text-slate-950">{service.nombre}</h4>
-                          <span className="text-sm font-semibold text-slate-700">
-                            {typeof service.precio === 'number' ? `$${service.precio.toLocaleString('es-CO')}` : service.precio}
-                          </span>
+                          <h4 className="font-bold text-slate-950">{recommendation.nombre}</h4>
                         </div>
-                        <p className="mt-2 text-sm leading-6 text-slate-600">
-                          {(typeof service.descripcion === 'string' && service.descripcion.trim())
-                            || 'El catálogo no registra una descripción para este servicio.'}
-                        </p>
-                        {Number.isFinite(service.duracionMinutos) && service.duracionMinutos && service.duracionMinutos > 0 && (
-                          <p className="mt-1 text-xs text-slate-500">Duración registrada: {service.duracionMinutos} minutos.</p>
-                        )}
+                        <p className="mt-2 text-sm leading-6 text-slate-600">{recommendation.explicacion}</p>
                         <div className="mt-4 border-t border-slate-100 pt-3">
                           <p className="text-sm font-semibold text-slate-800">Profesionales que ofrecen este servicio</p>
                           <ul className="mt-2 flex flex-wrap gap-2">
-                            {veterinarians.map((veterinarian) => (
+                            {recommendation.veterinarios.map((veterinarian) => (
                               <li key={veterinarian.id}>
                                 <button
                                   type="button"
-                                  onClick={() => goToBooking(service, veterinarian)}
+                                  onClick={() => goToBooking(recommendation.servicioId, veterinarian)}
                                   className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-[#0D5C75] px-3 py-2 text-sm font-bold text-[#0D5C75] transition hover:bg-teal-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488] focus-visible:ring-offset-2"
                                 >
                                   <CalendarDays className="h-4 w-4" aria-hidden="true" />
@@ -541,12 +528,13 @@ export function SmartOrientationModal({ isOpen, onClose }: SmartOrientationModal
                     ))}
                   </ul>
                 )}
+                <p className="mt-4 text-xs leading-5 text-slate-500">{orientationResult.advertencia}</p>
               </section>
             )}
           </div>
 
           <div className="flex flex-col-reverse gap-3 border-t border-slate-200 bg-slate-50 px-5 py-4 sm:flex-row sm:justify-end sm:px-7">
-            {recommendations === null ? (
+            {orientationResult === null ? (
               <>
                 <button
                   type="button"
@@ -576,7 +564,7 @@ export function SmartOrientationModal({ isOpen, onClose }: SmartOrientationModal
                 <button
                   type="button"
                   onClick={() => {
-                    setRecommendations(null);
+                    setOrientationResult(null);
                     setRecommendationError('');
                     window.setTimeout(() => petSelectRef.current?.focus(), 0);
                   }}

@@ -37,6 +37,8 @@ Las rutas disponibles en la interfaz son:
 
 El reporte de ocupación usa las citas locales de demostración y una estimación de 16 slots habilitados por día hábil. La protección de la ruta es solo una restricción de interfaz: el backend actual no implementa cuentas ni autorización para el rol `ADMIN`, por lo que este reporte no debe usarse con datos clínicos reales hasta integrar una API autorizada en servidor.
 
+El portal de clientes incluye la orientación HU21, que envía síntomas al backend autenticado para analizar servicios del catálogo con Gemini. La clave de Gemini se configura solo en el backend como `GEMINI_API_KEY`; el frontend nunca debe recibirla. Si el proveedor no está configurado o falla, la API solo devuelve coincidencias claras del catálogo o ninguna sugerencia.
+
 Se puede probar el dashboard con estas credenciales temporales desde el botón **Ingresar** de la página principal o en `/login`, también en el build de producción:
 
 - Correo: `admin@vetagenda.test`
