@@ -111,6 +111,14 @@ function App() {
             </AdminProtectedRoute>
           )}
         />
+        <Route
+          path="/dashboard"
+          element={(
+            <AdminProtectedRoute>
+              <AdminUsersPage />
+            </AdminProtectedRoute>
+          )}
+        />
         <Route path="/inicio" element={<LandingPage />} />
         <Route path="/registro" element={<RegisterPage />} />
         <Route path="/veterinarios/registro" element={<RegisterVeterinarianPage />} />
@@ -166,6 +174,7 @@ function App() {
         <Route path="/mis-citas" element={<Navigate to="/cliente/citas" replace />} />
         <Route path="/citas/consultar" element={<Navigate to="/cliente/citas" replace />} />
         <Route path="/veterinario/agenda" element={<VeterinarianProtectedRoute><VeterinarianAppointmentsPage /></VeterinarianProtectedRoute>} />
+        <Route path="/agenda" element={<VeterinarianProtectedRoute><VeterinarianAppointmentsPage /></VeterinarianProtectedRoute>} />
         <Route path="/veterinario/disponibilidad" element={<VeterinarianProtectedRoute><ConfigurarHorariosPage /></VeterinarianProtectedRoute>} />
         <Route path="/veterinarios/horarios" element={<Navigate to="/veterinario/disponibilidad" replace />} />
         <Route path="/disponibilidad" element={<AvailabilityPage />} />

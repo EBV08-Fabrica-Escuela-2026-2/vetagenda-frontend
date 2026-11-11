@@ -264,14 +264,32 @@ export async function fetchDisponibilidad(
 // Autenticación
 // ──────────────────────────────────────────────
 
+export type UserRole = 'CLIENTE' | 'VETERINARIO' | 'ADMINISTRADOR';
+
+export type LoginRequest = {
+  email: string;
+  password: string;
+};
+
 export type LoginResponse = {
   mensaje: string;
   token: string;
   tipoToken: string;
   expiraEnMs: number;
-  rol?: 'CLIENTE' | 'VETERINARIO' | 'ADMINISTRADOR';
-  roles?: Array<'CLIENTE' | 'VETERINARIO' | 'ADMINISTRADOR'>;
+  rol?: UserRole;
+  roles?: UserRole[];
 };
+
+export class LoginApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly retryAfterSeconds: number | null = null,
+  ) {
+    super(message);
+    this.name = 'LoginApiError';
+  }
+}
 
 export type ClientSession = {
   id: number;
@@ -313,10 +331,6 @@ export type AdminDemoSession = {
 export type AuthenticatedSession = ClientSession | VeterinarianSession | AdminDemoSession;
 
 export const CLIENT_SESSION_EVENT = 'vetagenda-session-changed';
-export const ADMIN_DEMO_CREDENTIALS = {
-  email: 'admin@vetagenda.com',
-  password: 'Demo2026!',
-} as const;
 
 const CLIENT_SESSION_KEYS = [
   'vetagenda_user',
@@ -326,7 +340,31 @@ const CLIENT_SESSION_KEYS = [
   'vetagenda_documento',
 ];
 
-export async function loginUser(email: string, password: string): Promise<LoginResponse> {
+function getRetryAfterSeconds(response: Response, data: unknown): number | null {
+  const retryAfterHeader = response.headers.get('Retry-After');
+  if (retryAfterHeader) {
+    const seconds = Number(retryAfterHeader);
+    if (Number.isFinite(seconds) && seconds > 0) return Math.ceil(seconds);
+
+    const retryAt = Date.parse(retryAfterHeader);
+    if (Number.isFinite(retryAt)) {
+      const secondsUntilRetry = Math.ceil((retryAt - Date.now()) / 1000);
+      if (secondsUntilRetry > 0) return secondsUntilRetry;
+    }
+  }
+
+  if (data && typeof data === 'object') {
+    const payload = data as Record<string, unknown>;
+    const seconds = payload.retryAfterSeconds ?? payload.tiempoEsperaSegundos;
+    if (typeof seconds === 'number' && Number.isFinite(seconds) && seconds > 0) {
+      return Math.ceil(seconds);
+    }
+  }
+
+  return null;
+}
+
+export async function loginUser(request: LoginRequest): Promise<LoginResponse> {
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -335,22 +373,31 @@ export async function loginUser(email: string, password: string): Promise<LoginR
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },
-      body: JSON.stringify({ correo: email, password }),
+      body: JSON.stringify({ correo: request.email, password: request.password }),
     });
   } catch {
-    throw new Error('No fue posible conectar con el servidor de autenticación.');
+    throw new LoginApiError('No fue posible conectar con el servidor de autenticación.', 0);
   }
 
   const data: unknown = await response.json().catch(() => null);
   if (!response.ok) {
-    const mensaje = data && typeof data === 'object' && 'mensaje' in data && typeof data.mensaje === 'string'
-      ? data.mensaje
-      : 'No se pudo iniciar sesión. Verifica tus credenciales.';
-    throw new Error(mensaje);
+    if (response.status === 429) {
+      throw new LoginApiError(
+        'Tu acceso está bloqueado temporalmente. Espera antes de volver a intentarlo.',
+        response.status,
+        getRetryAfterSeconds(response, data),
+      );
+    }
+
+    if (response.status === 401 || response.status === 403) {
+      throw new LoginApiError('Credenciales incorrectas', response.status);
+    }
+
+    throw new LoginApiError('No fue posible iniciar sesión. Intenta nuevamente.', response.status);
   }
 
   if (!data || typeof data !== 'object' || !('token' in data) || typeof data.token !== 'string') {
-    throw new Error('El servidor no devolvió un token de acceso válido.');
+    throw new LoginApiError('El servidor no devolvió un token de acceso válido.', response.status);
   }
 
   return data as LoginResponse;
