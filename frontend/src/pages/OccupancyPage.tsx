@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, LogOut, RefreshCw, Users } from 'lucide-react';
+import { ArrowLeft, BarChart3, LogOut, RefreshCw, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { OccupancyChart } from '../components/analytics/OccupancyChart';
 import { OccupancyEmptyState } from '../components/analytics/OccupancyEmptyState';
@@ -100,6 +100,12 @@ export default function OccupancyPage() {
                 to="/admin/usuarios"
               >
                 <Users aria-hidden="true" size={17} /> Usuarios
+              </Link>
+              <Link
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D5C75] focus-visible:ring-offset-2"
+                to="/admin/reportes/uso-servicios"
+              >
+                <BarChart3 aria-hidden="true" size={17} /> Uso de servicios
               </Link>
               <button
                 className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D5C75] focus-visible:ring-offset-2"

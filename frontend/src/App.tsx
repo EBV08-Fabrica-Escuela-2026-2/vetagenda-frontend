@@ -18,6 +18,7 @@ import { ContactPage, PrivacyPage, TermsPage } from './pages/InformationPages';
 import { ClientPortalPage } from './pages/ClientPortalPage';
 import OccupancyPage from './pages/OccupancyPage';
 import AdminUsersPage from './pages/AdminUsersPage';
+import UsoServiciosPage from './pages/UsoServiciosPage';
 import { PetHistoryPage } from './pages/PetHistoryPage';
 import {
   hasAuthenticatedAdminDemoSession,
@@ -108,6 +109,14 @@ function App() {
           element={(
             <AdminProtectedRoute>
               <AdminUsersPage />
+            </AdminProtectedRoute>
+          )}
+        />
+        <Route
+          path="/admin/reportes/uso-servicios"
+          element={(
+            <AdminProtectedRoute>
+              <UsoServiciosPage />
             </AdminProtectedRoute>
           )}
         />
