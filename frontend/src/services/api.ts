@@ -167,7 +167,7 @@ export type SmartOrientationRequest = {
 
 export type SmartOrientationResult = {
   urgente: boolean;
-  mensajeUrgencia: string | null;
+  mensajeUrgencia?: string | null;
   modoRespaldo: boolean;
   mensaje: string;
   recomendaciones: Array<{
@@ -795,7 +795,9 @@ function isSmartOrientationResult(value: unknown): value is SmartOrientationResu
   if (!value || typeof value !== 'object') return false;
   const result = value as Partial<SmartOrientationResult>;
   return typeof result.urgente === 'boolean'
-    && (typeof result.mensajeUrgencia === 'string' || result.mensajeUrgencia === null)
+    && (typeof result.mensajeUrgencia === 'string'
+      || result.mensajeUrgencia === null
+      || result.mensajeUrgencia === undefined)
     && typeof result.modoRespaldo === 'boolean'
     && typeof result.mensaje === 'string'
     && typeof result.advertencia === 'string'
