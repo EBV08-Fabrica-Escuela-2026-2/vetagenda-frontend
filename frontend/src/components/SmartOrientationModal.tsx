@@ -1,4 +1,4 @@
-import { AlertCircle, AlertTriangle, ArrowLeft, Brain, CalendarDays, Clock3, PawPrint, RefreshCw, X } from 'lucide-react';
+import { AlertCircle, AlertTriangle, ArrowLeft, Brain, CalendarDays, Clock3, PawPrint, X } from 'lucide-react';
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import {
@@ -204,6 +204,10 @@ export function SmartOrientationModal({ isOpen, onClose }: SmartOrientationModal
     navigate(`/citas/reservar?${query.toString()}`);
   }
 
+  const selectedPetName = pets.find((pet) => String(pet.id) === petId)?.nombre ?? 'tu mascota';
+  const primaryRecommendation = orientationResult?.recomendaciones[0];
+  const primaryVeterinarian = primaryRecommendation?.veterinarios[0];
+
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm"
@@ -245,18 +249,21 @@ export function SmartOrientationModal({ isOpen, onClose }: SmartOrientationModal
 
         <form onSubmit={handleSubmit} noValidate className="min-h-0 flex-1 overflow-y-auto">
           <div className="space-y-5 px-5 py-5 sm:px-7">
-            <div className="flex gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950">
-              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
-              <p className="text-sm leading-6">
-                Esta orientación no reemplaza la valoración ni el diagnóstico de un veterinario. Si tu mascota presenta
-                síntomas graves o empeora rápidamente, busca atención veterinaria inmediata.
-              </p>
-            </div>
-
-            <p className="text-xs leading-5 text-slate-500">
-              Al solicitar orientación, los síntomas, la especie y la edad se envían a Google Gemini para analizarlos.
-              No enviamos tu nombre, contacto ni el nombre o identificador de tu mascota al proveedor de IA.
-            </p>
+            {orientationResult === null && (
+              <>
+                <div className="flex gap-3 rounded-lg border border-amber-300 bg-amber-50 p-4 text-amber-950">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0" aria-hidden="true" />
+                  <p className="text-sm leading-6">
+                    Esta orientación no reemplaza la valoración de un veterinario. Si tu mascota presenta síntomas graves
+                    o empeora rápidamente, busca atención veterinaria inmediata.
+                  </p>
+                </div>
+                <p className="text-xs leading-5 text-slate-500">
+                  Los síntomas, la especie y la edad se envían a Google Gemini para analizarlos. No se envían datos
+                  personales ni identificadores de tu mascota.
+                </p>
+              </>
+            )}
 
             {orientationResult === null && (
               <>
@@ -419,28 +426,15 @@ export function SmartOrientationModal({ isOpen, onClose }: SmartOrientationModal
                   tabIndex={-1}
                   className="text-lg font-bold text-slate-950 focus:outline-none"
                 >
-                  Orientación para {pets.find((pet) => String(pet.id) === petId)?.nombre}
+                  Recomendación para {selectedPetName}
                 </h3>
-                <p className="mt-1 text-sm leading-6 text-slate-700">{orientationResult.mensaje}</p>
-
-                {orientationResult.modoRespaldo && (
-                  <div role="status" className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-950">
-                    <p>El análisis de IA no está disponible; se muestran solo coincidencias claras encontradas en el catálogo, si las hay.</p>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        if (!lastRequest) return;
-                        setOrientationResult(null);
-                        void loadRecommendations(lastRequest);
-                      }}
-                      disabled={isLoadingRecommendations || !lastRequest}
-                      className="mt-2 inline-flex min-h-10 items-center gap-2 font-bold underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-800 disabled:opacity-60"
-                    >
-                      <RefreshCw className="h-4 w-4" aria-hidden="true" />
-                      Reintentar análisis
-                    </button>
-                  </div>
-                )}
+                <p className="mt-1 text-sm leading-6 text-slate-700">
+                  {primaryRecommendation
+                    ? primaryVeterinarian
+                      ? `Para ${selectedPetName}, te recomendamos ${primaryRecommendation.nombre}. Agenda una valoración con ${primaryVeterinarian.nombre} para revisar lo que describes.`
+                      : `Para ${selectedPetName}, ${primaryRecommendation.nombre} es el servicio más relacionado con lo que describes.`
+                    : `No encontramos un servicio relacionado para ${selectedPetName}. Contacta a la clínica para recibir orientación.`}
+                </p>
 
                 {orientationResult.urgente && (
                   <p role="alert" className="mt-4 flex gap-3 rounded-lg border border-red-300 bg-red-50 p-4 text-sm font-semibold leading-6 text-red-900">
@@ -450,11 +444,7 @@ export function SmartOrientationModal({ isOpen, onClose }: SmartOrientationModal
                 )}
 
                 {orientationResult.recomendaciones.length === 0 ? (
-                  <div className="mt-4 rounded-lg border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-sm leading-6 text-slate-700">
-                      No se encontraron servicios del catálogo suficientemente relacionados con lo descrito. No sugeriremos opciones que puedan no corresponder.
-                    </p>
-                  </div>
+                  null
                 ) : (
                   <ul className="mt-4 space-y-3">
                     {orientationResult.recomendaciones.map((recommendation) => (
@@ -464,7 +454,7 @@ export function SmartOrientationModal({ isOpen, onClose }: SmartOrientationModal
                         </div>
                         <p className="mt-2 text-sm leading-6 text-slate-600">{recommendation.explicacion}</p>
                         <div className="mt-4 border-t border-slate-100 pt-3">
-                          <p className="text-sm font-semibold text-slate-800">Profesionales que ofrecen este servicio</p>
+                          <p className="text-sm font-semibold text-slate-800">Agenda tu cita</p>
                           <ul className="mt-2 flex flex-wrap gap-2">
                             {recommendation.veterinarios.map((veterinarian) => (
                               <li key={veterinarian.id}>
@@ -479,12 +469,17 @@ export function SmartOrientationModal({ isOpen, onClose }: SmartOrientationModal
                               </li>
                             ))}
                           </ul>
+                          {recommendation.veterinarios.length === 0 && (
+                            <p className="mt-2 text-sm text-slate-600">
+                              No hay profesionales disponibles para agendar este servicio por ahora.
+                            </p>
+                          )}
                         </div>
                       </li>
                     ))}
                   </ul>
                 )}
-                <p className="mt-4 text-xs leading-5 text-slate-500">{orientationResult.advertencia}</p>
+                <p className="mt-4 text-xs leading-5 text-slate-500">Orientación inicial; no es un diagnóstico.</p>
               </section>
             )}
           </div>
