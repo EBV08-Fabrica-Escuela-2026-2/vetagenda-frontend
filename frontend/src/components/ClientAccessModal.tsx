@@ -1,13 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import {
-  ADMIN_DEMO_CREDENTIALS,
-  loginUser,
-  saveSessionFromLogin,
-} from '../services/api';
-
-const DEMO_EMAIL = 'carolina.restrepo@vetagenda.com';
-const DEMO_PASSWORD = 'Demo2026!';
+import { loginUser, saveSessionFromLogin } from '../services/api';
 
 type ClientAccessModalProps = {
   isOpen: boolean;
@@ -71,27 +64,12 @@ export function ClientAccessModal({ isOpen, onClose }: ClientAccessModalProps) {
     setIsSubmitting(true);
     setError('');
     try {
-      const auth = await loginUser(email.trim(), password);
+      const auth = await loginUser({ email: email.trim(), password });
       const session = await saveSessionFromLogin(email.trim(), auth);
       onClose();
       navigate(session.rol === 'ADMIN' ? '/admin/usuarios' : session.rol === 'VETERINARIO' ? '/veterinario/agenda' : '/cliente');
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : 'No fue posible iniciar sesión.');
-    } finally {
-      setIsSubmitting(false);
-    }
-  }
-
-  async function handleDemoLogin() {
-    setIsSubmitting(true);
-    setError('');
-    try {
-      const auth = await loginUser(DEMO_EMAIL, DEMO_PASSWORD);
-      await saveSessionFromLogin(DEMO_EMAIL, auth);
-      onClose();
-      navigate('/cliente');
-    } catch (loginError) {
-      setError(loginError instanceof Error ? loginError.message : 'No fue posible cargar el perfil de Carolina.');
     } finally {
       setIsSubmitting(false);
     }
@@ -163,26 +141,6 @@ export function ClientAccessModal({ isOpen, onClose }: ClientAccessModalProps) {
           </button>
         </form>
 
-        <aside className="mt-5 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-950">
-          <p className="font-bold">Cuenta administrativa de demostración</p>
-          <p className="mt-2">Correo: <code className="font-bold">{ADMIN_DEMO_CREDENTIALS.email}</code></p>
-          <p>Contraseña: <code className="font-bold">{ADMIN_DEMO_CREDENTIALS.password}</code></p>
-          <p className="mt-2 text-xs leading-5">
-            Cuenta académica autenticada por el backend; no uses información personal real.
-          </p>
-          <button
-            className="mt-3 min-h-11 rounded-xl border border-amber-800 px-3 py-2 text-xs font-bold text-amber-950 hover:bg-amber-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-700 focus-visible:ring-offset-2"
-            onClick={() => {
-              setEmail(ADMIN_DEMO_CREDENTIALS.email);
-              setPassword(ADMIN_DEMO_CREDENTIALS.password);
-              setError('');
-            }}
-            type="button"
-          >
-            Usar credenciales de administrador
-          </button>
-        </aside>
-
         <div className="mt-5 flex items-center gap-3 text-xs font-bold uppercase tracking-[0.14em] text-slate-400">
           <span className="h-px flex-1 bg-slate-200" />
           <span>o</span>
@@ -200,14 +158,6 @@ export function ClientAccessModal({ isOpen, onClose }: ClientAccessModalProps) {
           Crear cuenta de cliente
         </button>
 
-        <button
-          type="button"
-          onClick={handleDemoLogin}
-          disabled={isSubmitting}
-          className="mt-3 w-full px-4 py-2 text-sm font-semibold text-slate-600 underline decoration-slate-300 underline-offset-4 hover:text-[#0D5C75]"
-        >
-          {isSubmitting ? 'Cargando perfil…' : 'Explorar con Carolina (modo demo)'}
-        </button>
       </div>
     </div>
   );
