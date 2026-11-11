@@ -15,14 +15,7 @@ type SmartOrientationModalProps = {
   onClose: () => void;
 };
 
-type ConcernLevel = 'bajo' | 'moderado' | 'alto';
 type DurationUnit = 'horas' | 'dias' | 'semanas';
-
-const concernLevels: Array<{ value: ConcernLevel; label: string; description: string }> = [
-  { value: 'bajo', label: 'Bajo', description: 'Los síntomas son leves.' },
-  { value: 'moderado', label: 'Moderado', description: 'Me preocupa y quiero orientación.' },
-  { value: 'alto', label: 'Alto', description: 'Los síntomas son intensos o empeoran.' },
-];
 
 export function SmartOrientationModal({ isOpen, onClose }: SmartOrientationModalProps) {
   const navigate = useNavigate();
@@ -38,7 +31,6 @@ export function SmartOrientationModal({ isOpen, onClose }: SmartOrientationModal
   const [symptoms, setSymptoms] = useState('');
   const [durationValue, setDurationValue] = useState('');
   const [durationUnit, setDurationUnit] = useState<DurationUnit>('dias');
-  const [concern, setConcern] = useState<ConcernLevel | ''>('');
   const [isLoadingPets, setIsLoadingPets] = useState(false);
   const [petsError, setPetsError] = useState('');
   const [formError, setFormError] = useState('');
@@ -55,7 +47,6 @@ export function SmartOrientationModal({ isOpen, onClose }: SmartOrientationModal
     setSymptoms('');
     setDurationValue('');
     setDurationUnit('dias');
-    setConcern('');
     setFormError('');
     setOrientationResult(null);
     setRecommendationError('');
@@ -195,17 +186,11 @@ export function SmartOrientationModal({ isOpen, onClose }: SmartOrientationModal
       setFormError('Indica una duración entre 1 y 365.');
       return;
     }
-    if (!concern) {
-      setFormError('Selecciona el nivel de preocupación.');
-      return;
-    }
-
     void loadRecommendations({
       mascotaId: Number(petId),
       sintomas: symptoms.trim(),
       duracionValor: parsedDuration,
       duracionUnidad: durationUnit,
-      nivelPreocupacion: concern,
     });
   }
 
@@ -393,35 +378,6 @@ export function SmartOrientationModal({ isOpen, onClose }: SmartOrientationModal
                   </div>
                   <p id={`${ids}-duration-hint`} className="mt-1 text-xs text-slate-500">Indica un valor entre 1 y 365.</p>
                 </div>
-
-                <fieldset>
-                  <legend className="mb-2 text-sm font-bold text-slate-800">
-                    ¿Qué tan preocupante te parece? <span className="text-red-700" aria-hidden="true">*</span>
-                  </legend>
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    {concernLevels.map((level) => (
-                      <label
-                        key={level.value}
-                        className={`flex cursor-pointer gap-3 rounded-lg border p-3 transition focus-within:ring-2 focus-within:ring-[#0D9488] ${
-                          concern === level.value ? 'border-[#0D9488] bg-teal-50' : 'border-slate-200 hover:border-slate-300'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name={`${ids}-concern`}
-                          value={level.value}
-                          checked={concern === level.value}
-                          onChange={() => setConcern(level.value)}
-                          className="mt-1 h-4 w-4 accent-[#0D5C75]"
-                        />
-                        <span>
-                          <span className="block text-sm font-bold text-slate-900">{level.label}</span>
-                          <span className="mt-0.5 block text-xs leading-5 text-slate-600">{level.description}</span>
-                        </span>
-                      </label>
-                    ))}
-                  </div>
-                </fieldset>
               </>
             )}
 

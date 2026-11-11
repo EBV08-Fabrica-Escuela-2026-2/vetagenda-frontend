@@ -163,7 +163,6 @@ export type SmartOrientationRequest = {
   sintomas: string;
   duracionValor: number;
   duracionUnidad: 'horas' | 'dias' | 'semanas';
-  nivelPreocupacion: 'bajo' | 'moderado' | 'alto';
 };
 
 export type SmartOrientationResult = {
