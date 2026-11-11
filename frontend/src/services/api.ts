@@ -158,6 +158,27 @@ export type DisponibilidadConsultaApi = {
   fechaDisponibleMasCercana?: string | null;
 };
 
+export type SmartOrientationRequest = {
+  mascotaId: number;
+  sintomas: string;
+  duracionValor: number;
+  duracionUnidad: 'horas' | 'dias' | 'semanas';
+};
+
+export type SmartOrientationResult = {
+  urgente: boolean;
+  mensajeUrgencia: string | null;
+  modoRespaldo: boolean;
+  mensaje: string;
+  recomendaciones: Array<{
+    servicioId: number;
+    nombre: string;
+    explicacion: string;
+    veterinarios: Array<{ id: number; nombre: string }>;
+  }>;
+  advertencia: string;
+};
+
 // ──────────────────────────────────────────────
 // Configuración base
 // ──────────────────────────────────────────────
@@ -737,6 +758,57 @@ export async function listClientPets(documentoIdentidad: string, token: string):
 
   const data: unknown = await response.json();
   return Array.isArray(data) ? data as PetProfile[] : [];
+}
+
+export async function requestSmartOrientation(
+  request: SmartOrientationRequest,
+  token: string,
+): Promise<SmartOrientationResult> {
+  const response = await fetch(`${API_BASE_URL}/orientacion`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify(request),
+  });
+
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const errorData = data as { mensaje?: unknown; detail?: unknown } | null;
+    const message = typeof errorData?.mensaje === 'string'
+      ? errorData.mensaje
+      : typeof errorData?.detail === 'string'
+        ? errorData.detail
+        : 'No fue posible analizar los síntomas. Inténtalo nuevamente.';
+    throw new Error(message);
+  }
+
+  if (!isSmartOrientationResult(data)) {
+    throw new Error('El servicio de orientación devolvió una respuesta inválida.');
+  }
+  return data;
+}
+
+function isSmartOrientationResult(value: unknown): value is SmartOrientationResult {
+  if (!value || typeof value !== 'object') return false;
+  const result = value as Partial<SmartOrientationResult>;
+  return typeof result.urgente === 'boolean'
+    && (typeof result.mensajeUrgencia === 'string' || result.mensajeUrgencia === null)
+    && typeof result.modoRespaldo === 'boolean'
+    && typeof result.mensaje === 'string'
+    && typeof result.advertencia === 'string'
+    && Array.isArray(result.recomendaciones)
+    && result.recomendaciones.every((recommendation) => (
+      Number.isInteger(recommendation.servicioId)
+      && typeof recommendation.nombre === 'string'
+      && typeof recommendation.explicacion === 'string'
+      && Array.isArray(recommendation.veterinarios)
+      && recommendation.veterinarios.every((veterinarian) => (
+        Number.isInteger(veterinarian.id) && typeof veterinarian.nombre === 'string'
+      ))
+    ));
 }
 
 // ──────────────────────────────────────────────
