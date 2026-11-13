@@ -24,6 +24,7 @@ import {
   hasAuthenticatedClientSession,
   hasAuthenticatedVeterinarianSession,
 } from './services/api';
+import { SessionInactivityTimer } from './components/SessionInactivityTimer';
 
 function HashScrollHandler() {
   const { hash, pathname } = useLocation();
@@ -92,6 +93,7 @@ function App() {
   return (
     <BrowserRouter>
       <HashScrollHandler />
+      <SessionInactivityTimer />
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
