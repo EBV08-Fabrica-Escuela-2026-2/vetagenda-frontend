@@ -1,0 +1,17 @@
+# dependencias
+node_modules
+frontend/node_modules
+
+# build
+dist
+frontend/dist
+*.tsbuildinfo
+
+# entorno
+.env
+.env*.local
+
+# misc
+.DS_Store
+*.log
+.vercel
