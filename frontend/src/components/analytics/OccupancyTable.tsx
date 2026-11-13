@@ -18,16 +18,16 @@ export function OccupancyTable({ details }: Props) {
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
       <div className="px-5 py-4">
-        <h2 className="text-lg font-extrabold text-slate-900">Detalle de ocupación</h2>
-        <p className="mt-1 text-sm text-slate-600">Capacidad y demanda para cada profesional.</p>
+        <h2 className="text-lg font-extrabold text-slate-900">Detalle por periodo</h2>
+        <p className="mt-1 text-sm text-slate-600">Capacidad y demanda según la agrupación seleccionada.</p>
       </div>
       <div className="overflow-x-auto">
         <table className="w-full min-w-[900px] border-collapse text-left text-sm">
-          <caption className="sr-only">Detalle de slots y ocupación por veterinario</caption>
+          <caption className="sr-only">Detalle de slots y ocupación por periodo</caption>
           <thead className="bg-slate-50 text-xs uppercase tracking-wide text-slate-700">
             <tr>
-              <th className="px-5 py-3 font-bold" scope="col">Veterinario / Especialidad</th>
-              <th className="px-4 py-3 font-bold" scope="col">Sede</th>
+              <th className="px-5 py-3 font-bold" scope="col">Periodo / Rango</th>
+              <th className="px-4 py-3 font-bold" scope="col">Agrupación</th>
               <th className="px-4 py-3 text-right font-bold" scope="col">Slots habilitados</th>
               <th className="px-4 py-3 text-right font-bold" scope="col">Citas efectivas</th>
               <th className="px-4 py-3 text-right font-bold" scope="col">Slots libres</th>

@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, LogOut, RefreshCw, Users } from 'lucide-react';
+import { ArrowLeft, BarChart3, LogOut, RefreshCw, Users } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { OccupancyChart } from '../components/analytics/OccupancyChart';
 import { OccupancyEmptyState } from '../components/analytics/OccupancyEmptyState';
@@ -10,8 +10,8 @@ import { OccupancyKpiGrid } from '../components/analytics/OccupancyKpiGrid';
 import { OccupancySkeleton } from '../components/analytics/OccupancySkeleton';
 import { OccupancyTable } from '../components/analytics/OccupancyTable';
 import { BrandHeader } from '../components/BrandHeader';
-import { getOccupancyReport, OCCUPANCY_VETERINARIANS } from '../services/occupancy';
-import { clearClientSession, getAuthenticatedSession, logoutCurrentSession } from '../services/api';
+import { getOccupancyReport } from '../services/occupancy';
+import { clearClientSession, getAuthenticatedSession, listVeterinarians, logoutCurrentSession } from '../services/api';
 import type { OccupancyFilter, OccupancyReportResponse } from '../types/occupancy';
 
 function toLocalDateInput(date: Date): string {
@@ -42,10 +42,7 @@ export default function OccupancyPage() {
   const [report, setReport] = useState<OccupancyReportResponse | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const filterOptions = useMemo(
-    () => OCCUPANCY_VETERINARIANS.map(({ id, nombre }) => ({ id, nombre })),
-    [],
-  );
+  const [filterOptions, setFilterOptions] = useState<Array<{ id: string; nombre: string }>>([]);
 
   const loadReport = useCallback(async (query: OccupancyFilter) => {
     setIsLoading(true);
@@ -65,6 +62,12 @@ export default function OccupancyPage() {
   useEffect(() => {
     void loadReport(initialFilters());
   }, [loadReport]);
+
+  useEffect(() => {
+    void listVeterinarians().then((items) => {
+      setFilterOptions(items.map(({ id, nombre }) => ({ id: String(id), nombre })));
+    });
+  }, []);
 
   function resetToCurrentWeek() {
     const resetFilters: OccupancyFilter = {
@@ -101,6 +104,12 @@ export default function OccupancyPage() {
               >
                 <Users aria-hidden="true" size={17} /> Usuarios
               </Link>
+              <Link
+                className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D5C75] focus-visible:ring-offset-2"
+                to="/admin/analitica/servicios"
+              >
+                <BarChart3 aria-hidden="true" size={17} /> Uso de servicios
+              </Link>
               <button
                 className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D5C75] focus-visible:ring-offset-2"
                 onClick={() => {
@@ -128,9 +137,7 @@ export default function OccupancyPage() {
           <p className="mt-2 max-w-3xl text-sm leading-6 text-slate-600">
             Analiza la capacidad instalada y la distribución de turnos para optimizar la agenda de tus consultorios.
           </p>
-          <p className="mt-2 text-xs font-medium text-slate-500">
-            Reporte de demostración calculado a partir de las citas locales y una capacidad estimada de 16 slots por día hábil.
-          </p>
+          <p className="mt-2 text-xs font-medium text-slate-500">Información calculada con las agendas y citas registradas en VetAgenda.</p>
         </header>
 
         {isLoading ? (

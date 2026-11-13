@@ -12,7 +12,7 @@ export function OccupancyEmptyState({ onReset }: Props) {
         No hay registros de turnos para el periodo seleccionado
       </h2>
       <p className="mt-2 max-w-lg text-sm leading-6 text-slate-600">
-        Verifica el rango de fechas seleccionado o ajusta los filtros de sede y profesional para consultar otro periodo.
+        Verifica el rango de fechas seleccionado o ajusta el filtro de profesional para consultar otro periodo.
       </p>
       <button
         className="mt-6 min-h-11 rounded-xl bg-[#0D5C75] px-5 py-2.5 text-sm font-bold text-white transition hover:bg-[#09485d] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D5C75] focus-visible:ring-offset-2"

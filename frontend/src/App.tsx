@@ -17,6 +17,7 @@ import { ConfigurarHorariosPage } from './pages/ConfigurarHorariosPage';
 import { ContactPage, PrivacyPage, TermsPage } from './pages/InformationPages';
 import { ClientPortalPage } from './pages/ClientPortalPage';
 import OccupancyPage from './pages/OccupancyPage';
+import ServiceUsagePage from './pages/ServiceUsagePage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import { PetHistoryPage } from './pages/PetHistoryPage';
 import {
@@ -100,6 +101,14 @@ function App() {
           element={(
             <AdminProtectedRoute>
               <OccupancyPage />
+            </AdminProtectedRoute>
+          )}
+        />
+        <Route
+          path="/admin/analitica/servicios"
+          element={(
+            <AdminProtectedRoute>
+              <ServiceUsagePage />
             </AdminProtectedRoute>
           )}
         />

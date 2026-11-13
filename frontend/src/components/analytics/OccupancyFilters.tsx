@@ -65,7 +65,7 @@ export function OccupancyFilters({ filters, veterinarians, onChange, onSubmit }:
         ))}
       </div>
 
-      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+      <div className="mt-4 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <label className="text-sm font-semibold text-slate-700">
           Fecha de inicio
           <input
@@ -89,18 +89,6 @@ export function OccupancyFilters({ filters, veterinarians, onChange, onSubmit }:
             type="date"
             value={filters.endDate}
           />
-        </label>
-        <label className="text-sm font-semibold text-slate-700">
-          Sede
-          <select
-            className={`${fieldClass} mt-1`}
-            onChange={(event) => onChange({ ...filters, sedeId: event.target.value })}
-            value={filters.sedeId}
-          >
-            <option value="">Todas las Sedes</option>
-            <option value="Sede Laureles">Sede Laureles</option>
-            <option value="Sede Belén">Sede Belén</option>
-          </select>
         </label>
         <label className="text-sm font-semibold text-slate-700">
           Profesional

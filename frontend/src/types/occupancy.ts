@@ -27,4 +27,5 @@ export interface OccupancyReportResponse {
   veterinarioMayorDemanda: VetOccupancyDetail | null;
   veterinarioMenorDemanda: VetOccupancyDetail | null;
   detallesPorVeterinario: VetOccupancyDetail[];
+  mensaje?: string | null;
 }

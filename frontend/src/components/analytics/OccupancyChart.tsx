@@ -9,8 +9,8 @@ export function OccupancyChart({ details }: Props) {
     <section className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <h2 className="text-lg font-extrabold text-slate-900">Distribución por veterinario</h2>
-          <p className="mt-1 text-sm text-slate-600">Turnos ocupados frente a capacidad disponible.</p>
+          <h2 className="text-lg font-extrabold text-slate-900">Evolución de la ocupación</h2>
+          <p className="mt-1 text-sm text-slate-600">Turnos ocupados frente a la capacidad de cada periodo.</p>
         </div>
         <div className="flex flex-wrap gap-4 text-xs font-semibold text-slate-700">
           <span className="flex items-center gap-2"><i className="h-3 w-3 rounded-sm bg-[#0D5C75]" /> Slots ocupados</span>
