@@ -25,6 +25,7 @@ export function ClientSessionActions({
   stacked = false,
 }: ClientSessionActionsProps) {
   const [session, setSession] = useState<AuthenticatedSession | null>(() => getAuthenticatedSession());
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -120,12 +121,54 @@ export function ClientSessionActions({
 
       <button
         type="button"
-        onClick={handleLogout}
+        onClick={() => setIsLogoutModalOpen(true)}
         className={`${stacked ? 'w-full justify-start' : ''} inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-slate-600 transition hover:bg-rose-50 hover:text-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400`}
       >
         <LogOut className="h-4 w-4" />
         Cerrar sesión
       </button>
+      {isLogoutModalOpen && (
+  <div
+    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+    role="presentation"
+  >
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="logout-title"
+      className="w-full max-w-md rounded-xl bg-white p-6 shadow-xl"
+    >
+      <h2 id="logout-title" className="text-xl font-bold text-slate-900">
+        ¿Deseas cerrar sesión?
+      </h2>
+
+      <p className="mt-3 text-sm text-slate-600">
+        Tendrás que iniciar sesión nuevamente para acceder a tu cuenta.
+      </p>
+
+      <div className="mt-6 flex justify-end gap-3">
+        <button
+          type="button"
+          onClick={() => setIsLogoutModalOpen(false)}
+          className="rounded-lg border border-slate-300 px-4 py-2"
+        >
+          Cancelar
+        </button>
+
+        <button
+          type="button"
+          onClick={() => {
+            setIsLogoutModalOpen(false);
+            void handleLogout();
+          }}
+          className="rounded-lg bg-[#0D5C75] px-4 py-2 font-semibold text-white"
+        >
+          Sí, cerrar sesión
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }
