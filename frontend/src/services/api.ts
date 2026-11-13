@@ -192,19 +192,19 @@ export const DEFAULT_SERVICES: CatalogService[] = [
   {
     id: 1,
     nombre: 'Consulta general',
-    descripcion: 'Valoración clínica inicial, revisión general y recomendaciones para el cuidado de la mascota.',
+    descripcion: 'Valoración clínica inicial para revisar el estado general de la mascota, identificar necesidades de atención y orientar los siguientes pasos con el veterinario.',
     precio: '$65.000',
   },
   {
     id: 2,
     nombre: 'Vacunación',
-    descripcion: 'Aplicación de vacunas según el esquema veterinario y control de salud preventiva.',
+    descripcion: 'Aplicación o actualización de vacunas según la edad, antecedentes y esquema preventivo de la mascota, previa revisión del profesional.',
     precio: '$90.000',
   },
   {
     id: 3,
     nombre: 'Desparasitación',
-    descripcion: 'Tratamiento de parásitos internos y externos para mantener la salud del paciente.',
+    descripcion: 'Atención preventiva frente a parásitos internos o externos; el veterinario define el producto y la pauta adecuados para cada mascota.',
     precio: '$50.000',
   },
 ];
@@ -872,10 +872,10 @@ export const DEFAULT_CATALOGO: VeterinarioConServicios[] = [
     telefono: '3101234567',
     horarioAtencion: '8:00 AM - 6:00 PM',
     servicios: [
-      { id: 1, nombre: 'Consulta general', descripcion: 'Revisión completa del paciente', precio: '$85.000', duracionMinutos: 30 },
-      { id: 2, nombre: 'Vacunación', descripcion: 'Aplicación de vacunas al paciente', precio: '$45.000', duracionMinutos: 20 },
-      { id: 3, nombre: 'Cirugía Mayor', descripcion: 'Procedimiento quirúrgico complejo', precio: '$350.000', duracionMinutos: 120 },
-      { id: 4, nombre: 'Desparasitación', descripcion: 'Tratamiento antiparasitario interno y externo', precio: '$35.000', duracionMinutos: 15 },
+      { id: 1, nombre: 'Consulta general', descripcion: 'Valoración clínica inicial para revisar el estado general de la mascota, identificar necesidades de atención y orientar los siguientes pasos con el veterinario.', precio: '$85.000', duracionMinutos: 30 },
+      { id: 2, nombre: 'Vacunación', descripcion: 'Aplicación o actualización de vacunas según la edad, antecedentes y esquema preventivo de la mascota, previa revisión del profesional.', precio: '$45.000', duracionMinutos: 20 },
+      { id: 3, nombre: 'Cirugía Mayor', descripcion: 'Atención para procedimientos quirúrgicos de mayor complejidad cuando, tras la valoración veterinaria, se determina que son necesarios.', precio: '$350.000', duracionMinutos: 120 },
+      { id: 4, nombre: 'Desparasitación', descripcion: 'Atención preventiva frente a parásitos internos o externos; el veterinario define el producto y la pauta adecuados para cada mascota.', precio: '$35.000', duracionMinutos: 15 },
     ],
   },
   {
@@ -885,9 +885,9 @@ export const DEFAULT_CATALOGO: VeterinarioConServicios[] = [
     telefono: '3159876543',
     horarioAtencion: '9:00 AM - 5:00 PM',
     servicios: [
-      { id: 5, nombre: 'Dermatología', descripcion: 'Tratamiento de problemas de piel', precio: '$120.000', duracionMinutos: 45 },
-      { id: 6, nombre: 'Odontología', descripcion: 'Limpieza y tratamiento dental', precio: '$150.000', duracionMinutos: 60 },
-      { id: 7, nombre: 'Ecografía', descripcion: 'Examen de ultrasonido', precio: '$95.000', duracionMinutos: 30 },
+      { id: 5, nombre: 'Dermatología', descripcion: 'Valoración de alteraciones de piel y pelo, como picazón, irritación, enrojecimiento, lesiones o caída de pelo, para orientar su atención.', precio: '$120.000', duracionMinutos: 45 },
+      { id: 6, nombre: 'Odontología', descripcion: 'Evaluación de dientes y encías y atención de necesidades de higiene o salud oral, según los hallazgos del veterinario.', precio: '$150.000', duracionMinutos: 60 },
+      { id: 7, nombre: 'Ecografía', descripcion: 'Examen de diagnóstico por imagen que permite evaluar órganos y tejidos internos mediante ultrasonido, cuando el veterinario lo indica.', precio: '$95.000', duracionMinutos: 30 },
     ],
   },
   {
@@ -906,8 +906,8 @@ export const DEFAULT_CATALOGO: VeterinarioConServicios[] = [
     telefono: '3012345678',
     horarioAtencion: '7:00 AM - 3:00 PM',
     servicios: [
-      { id: 8, nombre: 'Cirugía Cardíaca', descripcion: 'Procedimiento cardíaco especializado', precio: '$2.500.000', duracionMinutos: 180 },
-      { id: 9, nombre: 'Rehabilitación', descripcion: 'Terapia física y rehabilitación', precio: '$180.000', duracionMinutos: 60 },
+      { id: 8, nombre: 'Cirugía Cardíaca', descripcion: 'Valoración y atención quirúrgica especializada de afecciones del corazón; requiere evaluación previa y criterio del equipo veterinario.', precio: '$2.500.000', duracionMinutos: 180 },
+      { id: 9, nombre: 'Rehabilitación', descripcion: 'Atención de apoyo para movilidad y recuperación funcional mediante ejercicios o terapias definidos según la valoración profesional.', precio: '$180.000', duracionMinutos: 60 },
     ],
   },
 ];

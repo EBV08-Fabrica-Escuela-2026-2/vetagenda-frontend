@@ -107,6 +107,9 @@ export function HeroSearch({ services, isLoading }: HeroSearchProps) {
                 {!isLoading && services.length === 0 && <option value="">No hay servicios disponibles</option>}
                 {services.map((option) => <option key={option.id} value={option.id}>{option.nombre}</option>)}
               </select>
+              {selectedService?.descripcion && (
+                <span className="mt-1 block text-xs leading-5 text-slate-500">{selectedService.descripcion}</span>
+              )}
             </label>
 
             <label className="block min-w-0 border-t border-slate-100 px-2 py-3 sm:border-l sm:border-t-0 sm:py-1">

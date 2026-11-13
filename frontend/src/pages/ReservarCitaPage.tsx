@@ -256,6 +256,9 @@ export function ReservarCitaPage() {
                       <option value="">Selecciona un servicio</option>
                       {services.map((service) => <option key={service.id} value={service.id}>{service.nombre}</option>)}
                     </select>
+                    {selectedService?.descripcion && (
+                      <span className="text-sm leading-5 text-slate-600">{selectedService.descripcion}</span>
+                    )}
                   </label>
                 </div>
               )}

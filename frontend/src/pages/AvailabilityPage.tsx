@@ -15,6 +15,7 @@ import {
 export type AvailabilityService = {
   id: string;
   name: string;
+  description: string;
   duration: number;
   price: string;
 };
@@ -115,6 +116,7 @@ function extractServicesFromCatalog(catalogo: VeterinarioConServicios[]): Availa
         map.set(key, {
           id: key,
           name,
+          description: String(s.descripcion ?? '').trim(),
           duration: Number(s.duracionMinutos) > 0 ? Number(s.duracionMinutos) : 30,
           price: typeof s.precio === 'number' ? `$${s.precio.toLocaleString('es-CO')}` : String(s.precio ?? 'Por confirmar'),
         });
@@ -231,6 +233,7 @@ export function AvailabilityPage() {
     () => services.find((s) => s.id === selectedServiceId) ?? services[0] ?? {
       id: '',
       name: '',
+      description: '',
       duration: 0,
       price: '',
     },
@@ -513,6 +516,9 @@ export function AvailabilityPage() {
                 <span className="mt-1 block text-xs text-slate-500">
                   {selectedService.id ? `${selectedService.duration} min · ${selectedService.price}` : 'Esperando el catálogo real'}
                 </span>
+                {selectedService.description && (
+                  <span className="mt-1 block text-xs leading-5 text-slate-500">{selectedService.description}</span>
+                )}
               </label>
 
               <label className="block">
