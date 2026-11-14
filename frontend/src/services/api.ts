@@ -667,8 +667,18 @@ export async function listAdminUsers(filters: { buscar?: string; rol?: string; a
   if (filters.rol) params.set('rol', filters.rol);
   if (filters.activo) params.set('activo', filters.activo);
   const response = await fetch(`${API_BASE_URL}/admin/usuarios${params.size ? `?${params}` : ''}`, { headers: adminHeaders() });
-  if (!response.ok) throw new Error(response.status === 403 ? 'No tienes permisos de administración.' : 'No fue posible consultar los usuarios.');
-  return response.json();
+  if (!response.ok) {
+    const data = await response.json().catch(() => null);
+    const message = typeof data?.mensaje === 'string' ? data.mensaje
+      : typeof data?.detail === 'string' ? data.detail
+        : response.status === 401 ? 'Tu sesión ha expirado. Inicia sesión nuevamente.'
+          : response.status === 403 ? 'No tienes permisos de administración.'
+            : 'No fue posible consultar los usuarios.';
+    throw new Error(message);
+  }
+  const data: unknown = await response.json();
+  if (!Array.isArray(data)) throw new Error('El servidor devolvió una lista de usuarios inválida.');
+  return data as AdminUser[];
 }
 
 export async function updateAdminUserStatus(id: number, activo: boolean): Promise<AdminUser> {
@@ -676,8 +686,18 @@ export async function updateAdminUserStatus(id: number, activo: boolean): Promis
     method: 'PATCH', headers: adminHeaders(), body: JSON.stringify({ activo }),
   });
   const data = await response.json().catch(() => null);
-  if (!response.ok) throw new Error(data?.mensaje || data?.detail || 'No fue posible actualizar el usuario.');
-  return data;
+  if (!response.ok) {
+    const message = typeof data?.mensaje === 'string' ? data.mensaje
+      : typeof data?.detail === 'string' ? data.detail
+        : response.status === 401 ? 'Tu sesión ha expirado. Inicia sesión nuevamente.'
+          : response.status === 403 ? 'No tienes permisos para modificar esta cuenta.'
+            : 'No fue posible actualizar el usuario.';
+    throw new Error(message);
+  }
+  if (!data || typeof data !== 'object' || typeof data.id !== 'number' || typeof data.activo !== 'boolean') {
+    throw new Error('El servidor no devolvió la cuenta actualizada en el formato esperado.');
+  }
+  return data as AdminUser;
 }
 
 // ──────────────────────────────────────────────
