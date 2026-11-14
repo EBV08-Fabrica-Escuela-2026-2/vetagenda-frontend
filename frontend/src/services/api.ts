@@ -264,12 +264,28 @@ export async function fetchDisponibilidad(
 // Autenticación
 // ──────────────────────────────────────────────
 
-export type UserRole = 'CLIENTE' | 'VETERINARIO' | 'ADMINISTRADOR';
+export type UserRole = 'CLIENTE' | 'VETERINARIO' | 'ADMIN' | 'ADMINISTRADOR';
 
 export type LoginRequest = {
   email: string;
   password: string;
 };
+
+export function normalizeRole(role: unknown): UserRole | null {
+  if (typeof role !== 'string') return null;
+
+  switch (role.trim().toUpperCase()) {
+    case 'CLIENTE':
+      return 'CLIENTE';
+    case 'VETERINARIO':
+      return 'VETERINARIO';
+    case 'ADMIN':
+    case 'ADMINISTRADOR':
+      return 'ADMIN';
+    default:
+      return null;
+  }
+}
 
 export type LoginResponse = {
   mensaje: string;
@@ -404,13 +420,33 @@ export async function loginUser(request: LoginRequest): Promise<LoginResponse> {
 }
 
 export function hasAuthenticatedAdminDemoSession(): boolean {
-  if (localStorage.getItem('vetagenda_session') !== 'true') return false;
-  if (!localStorage.getItem('vetagenda_token')) return false;
+  return getAdminSession() !== null;
+}
+
+function getAdminSession(): AdminDemoSession | null {
+  if (localStorage.getItem('vetagenda_session') !== 'true') return null;
+  const token = localStorage.getItem('vetagenda_token');
+  if (!token) return null;
   try {
     const user: unknown = JSON.parse(localStorage.getItem('vetagenda_user') || 'null');
-    return typeof user === 'object' && user !== null && 'rol' in user && user.rol === 'ADMIN';
+    if (
+      typeof user !== 'object'
+      || user === null
+      || !('rol' in user)
+      || normalizeRole(user.rol) !== 'ADMIN'
+    ) {
+      return null;
+    }
+
+    return {
+      id: typeof user.id === 'number' ? user.id : 0,
+      nombre: typeof user.nombre === 'string' ? user.nombre : 'Administrador',
+      rol: 'ADMIN',
+      email: typeof user.email === 'string' ? user.email : '',
+      token,
+    };
   } catch {
-    return false;
+    return null;
   }
 }
 
@@ -431,12 +467,13 @@ export function saveAdminSession(email: string, token: string) {
 }
 
 export async function saveSessionFromLogin(email: string, response: LoginResponse): Promise<AuthenticatedSession> {
-  if (response.rol === 'ADMINISTRADOR' || response.roles?.includes('ADMINISTRADOR')) {
+  const roles = [response.rol, ...(response.roles ?? [])].map(normalizeRole);
+  if (roles.includes('ADMIN')) {
     saveAdminSession(email, response.token);
     return getAuthenticatedSession() as AdminDemoSession;
   }
 
-  if (response.rol === 'VETERINARIO' || response.roles?.includes('VETERINARIO')) {
+  if (roles.includes('VETERINARIO')) {
     const profile = await getCurrentVeterinarian(response.token);
     saveVeterinarianSession(profile, response.token);
     return getAuthenticatedSession() as VeterinarianSession;
@@ -605,12 +642,7 @@ export function getVeterinarianSession(): VeterinarianSession | null {
 export function getAuthenticatedSession(): AuthenticatedSession | null {
   const regularSession = getClientSession() ?? getVeterinarianSession();
   if (regularSession) return regularSession;
-  if (!hasAuthenticatedAdminDemoSession()) return null;
-  try {
-    return JSON.parse(localStorage.getItem('vetagenda_user') || 'null') as AdminDemoSession;
-  } catch {
-    return null;
-  }
+  return getAdminSession();
 }
 
 export function hasAuthenticatedVeterinarianSession(): boolean {
