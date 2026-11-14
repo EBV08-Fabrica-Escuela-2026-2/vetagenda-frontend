@@ -143,7 +143,7 @@ function RegisterPage() {
         setRegistrationStage(nextStage);
       }
 
-      const auth = await loginUser(form.email.trim(), form.password);
+      const auth = await loginUser({ email: form.email.trim(), password: form.password });
       const profile = await getCurrentClient(auth.token);
       saveClientSession(profile, auth.token);
       setShowSuccessModal(true);

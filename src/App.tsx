@@ -16,8 +16,14 @@ import { CancelarCitaPage } from './pages/CancelarCitaPage';
 import { ConfigurarHorariosPage } from './pages/ConfigurarHorariosPage';
 import { ContactPage, PrivacyPage, TermsPage } from './pages/InformationPages';
 import { ClientPortalPage } from './pages/ClientPortalPage';
+import OccupancyPage from './pages/OccupancyPage';
+import AdminUsersPage from './pages/AdminUsersPage';
 import { SkipLink } from './components/SkipLink';
-import { hasAuthenticatedClientSession, hasAuthenticatedVeterinarianSession } from './services/api';
+import {
+  hasAuthenticatedAdminDemoSession,
+  hasAuthenticatedClientSession,
+  hasAuthenticatedVeterinarianSession,
+} from './services/api';
 
 function HashScrollHandler() {
   const { hash, pathname } = useLocation();
@@ -72,6 +78,17 @@ function VeterinarianProtectedRoute({ children }: { children: ReactElement }) {
   return <Navigate to={`/?returnTo=${encodeURIComponent(returnTo)}#portales`} replace />;
 }
 
+function AdminProtectedRoute({ children }: { children: ReactElement }) {
+  const location = useLocation();
+
+  if (hasAuthenticatedClientSession()) return <Navigate to="/cliente" replace />;
+  if (hasAuthenticatedVeterinarianSession()) return <Navigate to="/veterinario/agenda" replace />;
+  if (hasAuthenticatedAdminDemoSession()) return children;
+
+  const returnTo = `${location.pathname}${location.search}`;
+  return <Navigate to={`/login?returnTo=${encodeURIComponent(returnTo)}`} replace />;
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -80,6 +97,30 @@ function App() {
       <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/admin/analitica/ocupacion"
+          element={(
+            <AdminProtectedRoute>
+              <OccupancyPage />
+            </AdminProtectedRoute>
+          )}
+        />
+        <Route
+          path="/admin/usuarios"
+          element={(
+            <AdminProtectedRoute>
+              <AdminUsersPage />
+            </AdminProtectedRoute>
+          )}
+        />
+        <Route
+          path="/dashboard"
+          element={(
+            <AdminProtectedRoute>
+              <AdminUsersPage />
+            </AdminProtectedRoute>
+          )}
+        />
         <Route path="/inicio" element={<LandingPage />} />
         <Route path="/registro" element={<RegisterPage />} />
         <Route path="/veterinarios/registro" element={<RegisterVeterinarianPage />} />
@@ -120,6 +161,7 @@ function App() {
         <Route path="/mis-citas" element={<Navigate to="/cliente/citas" replace />} />
         <Route path="/citas/consultar" element={<Navigate to="/cliente/citas" replace />} />
         <Route path="/veterinario/agenda" element={<VeterinarianProtectedRoute><VeterinarianAppointmentsPage /></VeterinarianProtectedRoute>} />
+        <Route path="/agenda" element={<VeterinarianProtectedRoute><VeterinarianAppointmentsPage /></VeterinarianProtectedRoute>} />
         <Route path="/veterinario/disponibilidad" element={<VeterinarianProtectedRoute><ConfigurarHorariosPage /></VeterinarianProtectedRoute>} />
         <Route path="/veterinarios/horarios" element={<Navigate to="/veterinario/disponibilidad" replace />} />
         <Route path="/disponibilidad" element={<AvailabilityPage />} />

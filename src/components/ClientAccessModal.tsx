@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getCurrentClient, loginUser, saveClientSession } from '../services/api';
+import { loginUser, saveSessionFromLogin } from '../services/api';
 import { useModalAccessibility } from '../utils/useModalAccessibility';
 
 const DEMO_EMAIL = 'carolina.restrepo@vetagenda.com';
@@ -40,11 +40,16 @@ export function ClientAccessModal({ isOpen, onClose }: ClientAccessModalProps) {
     setIsSubmitting(true);
     setError('');
     try {
-      const auth = await loginUser(email.trim(), password);
-      const profile = await getCurrentClient(auth.token);
-      saveClientSession(profile, auth.token);
+      const auth = await loginUser({ email: email.trim(), password });
+      const session = await saveSessionFromLogin(email.trim(), auth);
       onClose();
-      navigate('/cliente');
+      navigate(
+        session.rol === 'ADMIN'
+          ? '/dashboard'
+          : session.rol === 'VETERINARIO'
+            ? '/veterinario/agenda'
+            : '/cliente',
+      );
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : 'No fue posible iniciar sesión.');
     } finally {
@@ -56,11 +61,16 @@ export function ClientAccessModal({ isOpen, onClose }: ClientAccessModalProps) {
     setIsSubmitting(true);
     setError('');
     try {
-      const auth = await loginUser(DEMO_EMAIL, DEMO_PASSWORD);
-      const profile = await getCurrentClient(auth.token);
-      saveClientSession(profile, auth.token);
+      const auth = await loginUser({ email: DEMO_EMAIL, password: DEMO_PASSWORD });
+      const session = await saveSessionFromLogin(DEMO_EMAIL, auth);
       onClose();
-      navigate('/cliente');
+      navigate(
+        session.rol === 'ADMIN'
+          ? '/dashboard'
+          : session.rol === 'VETERINARIO'
+            ? '/veterinario/agenda'
+            : '/cliente',
+      );
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : 'No fue posible cargar el perfil de Carolina.');
     } finally {

@@ -444,12 +444,50 @@ function formatApiSlotTime(time: string) {
 // Autenticación
 // ──────────────────────────────────────────────
 
+export type UserRole = 'CLIENTE' | 'VETERINARIO' | 'ADMIN';
+
+type LoginRole = UserRole | 'ADMINISTRADOR';
+
+export type LoginRequest = {
+  email: string;
+  password: string;
+};
+
+export function normalizeRole(role: unknown): UserRole | null {
+  if (typeof role !== 'string') return null;
+
+  switch (role.trim().toUpperCase()) {
+    case 'CLIENTE':
+      return 'CLIENTE';
+    case 'VETERINARIO':
+      return 'VETERINARIO';
+    case 'ADMIN':
+    case 'ADMINISTRADOR':
+      return 'ADMIN';
+    default:
+      return null;
+  }
+}
+
 export type LoginResponse = {
   mensaje: string;
   token: string;
   tipoToken: string;
   expiraEnMs: number;
+  rol?: LoginRole;
+  roles?: LoginRole[];
 };
+
+export class LoginApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+    public readonly retryAfterSeconds: number | null = null,
+  ) {
+    super(message);
+    this.name = 'LoginApiError';
+  }
+}
 
 export type ClientSession = {
   id: number;
@@ -480,7 +518,15 @@ export type VeterinarianSession = {
   token: string;
 };
 
-export type AuthenticatedSession = ClientSession | VeterinarianSession;
+export type AdminDemoSession = {
+  id: number;
+  nombre: string;
+  rol: 'ADMIN';
+  email: string;
+  token: string;
+};
+
+export type AuthenticatedSession = ClientSession | VeterinarianSession | AdminDemoSession;
 
 export const CLIENT_SESSION_EVENT = 'vetagenda-session-changed';
 
@@ -492,53 +538,70 @@ const CLIENT_SESSION_KEYS = [
   'vetagenda_documento',
 ];
 
-export async function loginUser(email: string, password: string): Promise<LoginResponse> {
+function getRetryAfterSeconds(response: Response, data: unknown): number | null {
+  const retryAfter = response.headers.get('Retry-After');
+  if (retryAfter) {
+    const seconds = Number(retryAfter);
+    if (Number.isFinite(seconds) && seconds > 0) return Math.ceil(seconds);
+
+    const retryAt = Date.parse(retryAfter);
+    if (Number.isFinite(retryAt)) {
+      const secondsUntilRetry = Math.ceil((retryAt - Date.now()) / 1000);
+      if (secondsUntilRetry > 0) return secondsUntilRetry;
+    }
+  }
+
+  if (data && typeof data === 'object') {
+    const payload = data as Record<string, unknown>;
+    const seconds = payload.retryAfterSeconds ?? payload.tiempoEsperaSegundos;
+    if (typeof seconds === 'number' && Number.isFinite(seconds) && seconds > 0) {
+      return Math.ceil(seconds);
+    }
+  }
+
+  return null;
+}
+
+export async function loginUser(request: LoginRequest): Promise<LoginResponse> {
+  let response: Response;
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    response = await fetch(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         Accept: 'application/json',
       },
-      body: JSON.stringify({ correo: email, password }),
+      body: JSON.stringify({ correo: request.email, password: request.password }),
     });
-
-    if (response.ok) {
-      const data = await response.json();
-      if (data && typeof data === 'object' && 'token' in data) {
-        return data as LoginResponse;
-      }
-    }
   } catch {
-    // Backend offline: usar soporte de credenciales local
+    throw new LoginApiError('No fue posible conectar con el servidor de autenticación.', 0);
   }
 
-  // Comprobar credenciales demo o registradas
-  const registeredRaw = localStorage.getItem(REGISTERED_CLIENTS_KEY);
-  const registeredClients: ClientPayload[] = registeredRaw ? JSON.parse(registeredRaw) : [];
-  const found = registeredClients.find((c) => c.correo.toLowerCase() === email.toLowerCase());
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    if (response.status === 429) {
+      throw new LoginApiError(
+        'Tu acceso está bloqueado temporalmente. Espera antes de volver a intentarlo.',
+        response.status,
+        getRetryAfterSeconds(response, data),
+      );
+    }
 
-  if (email.toLowerCase() === 'carolina.restrepo@vetagenda.com' || found) {
-    const token = `mock-token-${Date.now()}`;
-    return {
-      mensaje: 'Inicio de sesión exitoso',
-      token,
-      tipoToken: 'Bearer',
-      expiraEnMs: 86400000,
-    };
+    if (response.status === 401 || response.status === 403) {
+      throw new LoginApiError('Credenciales incorrectas', response.status);
+    }
+
+    const message = data && typeof data === 'object' && 'mensaje' in data && typeof data.mensaje === 'string'
+      ? data.mensaje
+      : 'No fue posible iniciar sesión. Intenta nuevamente.';
+    throw new LoginApiError(message, response.status);
   }
 
-  // Permitir ingresar si hay contraseña válida
-  if (email && password) {
-    return {
-      mensaje: 'Inicio de sesión exitoso',
-      token: `mock-token-${Date.now()}`,
-      tipoToken: 'Bearer',
-      expiraEnMs: 86400000,
-    };
+  if (!data || typeof data !== 'object' || !('token' in data) || typeof data.token !== 'string') {
+    throw new LoginApiError('El servidor no devolvió un token de acceso válido.', response.status);
   }
 
-  throw new Error('Credenciales inválidas.');
+  return data as LoginResponse;
 }
 
 export async function registerClientCredentials(payload: {
@@ -683,6 +746,79 @@ export function saveVeterinarianSession(profile: VeterinarianProfile, token: str
   window.dispatchEvent(new Event(CLIENT_SESSION_EVENT));
 }
 
+function getAdminSession(): AdminDemoSession | null {
+  if (localStorage.getItem('vetagenda_session') !== 'true') return null;
+  const token = localStorage.getItem('vetagenda_token');
+  if (!token) return null;
+
+  try {
+    const user: unknown = JSON.parse(localStorage.getItem('vetagenda_user') || 'null');
+    if (
+      typeof user !== 'object'
+      || user === null
+      || !('rol' in user)
+      || normalizeRole(user.rol) !== 'ADMIN'
+    ) {
+      return null;
+    }
+
+    const adminUser = user as Record<string, unknown>;
+    return {
+      id: typeof adminUser.id === 'number' ? adminUser.id : 0,
+      nombre: typeof adminUser.nombre === 'string' ? adminUser.nombre : 'Administrador',
+      rol: 'ADMIN',
+      email: typeof adminUser.email === 'string' ? adminUser.email : '',
+      token,
+    };
+  } catch {
+    return null;
+  }
+}
+
+export function hasAuthenticatedAdminDemoSession(): boolean {
+  return getAdminSession() !== null;
+}
+
+export function saveAdminSession(email: string, token: string) {
+  const session: AdminDemoSession = {
+    id: 0,
+    nombre: 'Administrador',
+    rol: 'ADMIN',
+    email,
+    token,
+  };
+  localStorage.setItem('vetagenda_user', JSON.stringify(session));
+  localStorage.setItem('vetagenda_session', 'true');
+  localStorage.setItem('vetagenda_role', 'Administrador');
+  localStorage.setItem('vetagenda_token', token);
+  localStorage.removeItem('vetagenda_documento');
+  window.dispatchEvent(new Event(CLIENT_SESSION_EVENT));
+}
+
+export async function saveSessionFromLogin(email: string, response: LoginResponse): Promise<AuthenticatedSession> {
+  const roles = [response.rol, ...(response.roles ?? [])].map(normalizeRole);
+  if (roles.includes('ADMIN')) {
+    saveAdminSession(email, response.token);
+    const session = getAuthenticatedSession();
+    if (session?.rol !== 'ADMIN') throw new Error('No fue posible guardar la sesión administrativa.');
+    return session;
+  }
+
+  if (roles.includes('VETERINARIO')) {
+    const profile = await getCurrentVeterinarian(response.token);
+    saveVeterinarianSession(profile, response.token);
+    const session = getAuthenticatedSession();
+    if (session?.rol !== 'VETERINARIO') throw new Error('No fue posible guardar la sesión veterinaria.');
+    return session;
+  }
+
+  const profile = await getCurrentClient(response.token);
+  saveClientSession(profile, response.token);
+  const session = getAuthenticatedSession();
+  if (session?.rol !== 'CLIENTE') throw new Error('No fue posible guardar la sesión del cliente.');
+  return session;
+}
+
 export function getClientSession(): ClientSession | null {
   const token = localStorage.getItem('vetagenda_token');
   const sessionActive = localStorage.getItem('vetagenda_session') === 'true';
@@ -743,7 +879,7 @@ export function getVeterinarianSession(): VeterinarianSession | null {
 }
 
 export function getAuthenticatedSession(): AuthenticatedSession | null {
-  return getClientSession() ?? getVeterinarianSession();
+  return getClientSession() ?? getVeterinarianSession() ?? getAdminSession();
 }
 
 export function hasAuthenticatedVeterinarianSession(): boolean {
@@ -753,6 +889,70 @@ export function hasAuthenticatedVeterinarianSession(): boolean {
 export function clearClientSession() {
   CLIENT_SESSION_KEYS.forEach((key) => localStorage.removeItem(key));
   window.dispatchEvent(new Event(CLIENT_SESSION_EVENT));
+}
+
+export async function logoutCurrentSession(token: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+    method: 'POST',
+    headers: { Accept: 'application/json', Authorization: `Bearer ${token}` },
+  });
+  if (!response.ok && response.status !== 401) {
+    throw new Error('No fue posible cerrar la sesión en el servidor.');
+  }
+}
+
+export type AdminUser = {
+  id: number;
+  nombre: string;
+  correo: string;
+  rol: string;
+  roles: string[];
+  activo: boolean;
+  clienteId: number | null;
+  veterinarioId: number | null;
+  actualizadoEn: string | null;
+};
+
+function adminHeaders(): Record<string, string> {
+  const session = getAuthenticatedSession();
+  if (!session || session.rol !== 'ADMIN') throw new Error('Debes iniciar sesión como administrador.');
+  return {
+    Accept: 'application/json',
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${session.token}`,
+  };
+}
+
+export async function listAdminUsers(
+  filters: { buscar?: string; rol?: string; activo?: string } = {},
+): Promise<AdminUser[]> {
+  const params = new URLSearchParams();
+  if (filters.buscar) params.set('buscar', filters.buscar);
+  if (filters.rol) params.set('rol', filters.rol);
+  if (filters.activo) params.set('activo', filters.activo);
+
+  const query = params.size > 0 ? `?${params.toString()}` : '';
+  const response = await fetch(`${API_BASE_URL}/admin/usuarios${query}`, { headers: adminHeaders() });
+  if (!response.ok) {
+    throw new Error(response.status === 403 ? 'No tienes permisos de administración.' : 'No fue posible consultar los usuarios.');
+  }
+  return response.json();
+}
+
+export async function updateAdminUserStatus(id: number, activo: boolean): Promise<AdminUser> {
+  const response = await fetch(`${API_BASE_URL}/admin/usuarios/${id}/estado`, {
+    method: 'PATCH',
+    headers: adminHeaders(),
+    body: JSON.stringify({ activo }),
+  });
+  const data: unknown = await response.json().catch(() => null);
+  if (!response.ok) {
+    const message = data && typeof data === 'object' && 'mensaje' in data && typeof data.mensaje === 'string'
+      ? data.mensaje
+      : 'No fue posible actualizar el usuario.';
+    throw new Error(message);
+  }
+  return data as AdminUser;
 }
 
 // ──────────────────────────────────────────────
