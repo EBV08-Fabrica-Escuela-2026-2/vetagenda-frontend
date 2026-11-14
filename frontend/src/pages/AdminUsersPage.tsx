@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, RefreshCw, Search, ShieldCheck, UserCheck, UserX } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { BrandHeader } from '../components/BrandHeader';
 import { ClientSessionActions } from '../components/ClientSessionActions';
-import { listAdminUsers, updateAdminUserStatus, type AdminUser } from '../services/api';
+import { getAuthenticatedSession, listAdminUsers, updateAdminUserStatus, type AdminUser } from '../services/api';
 
 type PendingChange = { user: AdminUser; activo: boolean } | null;
 
@@ -16,35 +16,75 @@ export default function AdminUsersPage() {
   const [error, setError] = useState('');
   const [pending, setPending] = useState<PendingChange>(null);
   const [saving, setSaving] = useState(false);
+  const requestId = useRef(0);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const session = getAuthenticatedSession();
+  const adminEmail = session?.rol === 'ADMIN' ? session.email.trim().toLowerCase() : '';
 
   const loadUsers = useCallback(async () => {
+    const currentRequest = ++requestId.current;
     setLoading(true);
     setError('');
     try {
-      setUsers(await listAdminUsers({ buscar: search.trim(), rol: role, activo: status }));
+      const result = await listAdminUsers({ buscar: search.trim(), rol: role, activo: status });
+      if (currentRequest === requestId.current) setUsers(result);
     } catch (requestError) {
-      setError(requestError instanceof Error ? requestError.message : 'No fue posible consultar los usuarios.');
+      if (currentRequest === requestId.current) {
+        setError(requestError instanceof Error ? requestError.message : 'No fue posible consultar los usuarios.');
+      }
     } finally {
-      setLoading(false);
+      if (currentRequest === requestId.current) setLoading(false);
     }
   }, [role, search, status]);
 
-  useEffect(() => { void loadUsers(); }, [loadUsers]);
+  useEffect(() => {
+    void loadUsers();
+    return () => { requestId.current += 1; };
+  }, [loadUsers]);
+
+  useEffect(() => {
+    if (!pending) return;
+    cancelButtonRef.current?.focus();
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape' && !saving) setPending(null);
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [pending, saving]);
+
+  function isOwnAccount(user: AdminUser): boolean {
+    return Boolean(adminEmail && user.correo.trim().toLowerCase() === adminEmail);
+  }
+
+  function requestStatusChange(user: AdminUser) {
+    if (saving || (user.activo && isOwnAccount(user))) return;
+    setError('');
+    setPending({ user, activo: !user.activo });
+  }
 
   async function confirmChange() {
-    if (!pending) return;
+    if (!pending || saving) return;
+    if (!pending.activo && isOwnAccount(pending.user)) {
+      setError('No puedes desactivar tu propia cuenta de administrador.');
+      setPending(null);
+      return;
+    }
     setSaving(true);
     setError('');
     try {
-      const updated = await updateAdminUserStatus(pending.user.id, pending.activo);
-      setUsers((current) => current.map((user) => user.id === updated.id ? updated : user));
+      await updateAdminUserStatus(pending.user.id, pending.activo);
       setPending(null);
+      // Volvemos a consultar para respetar los filtros activos y los datos del servidor.
+      await loadUsers();
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'No fue posible actualizar el usuario.');
     } finally {
       setSaving(false);
     }
   }
+
+  const activeCount = users.filter((user) => user.activo).length;
+  const inactiveCount = users.length - activeCount;
 
   return (
     <main className="min-h-screen bg-slate-50 px-4 py-6 text-slate-900 sm:px-6 lg:px-8">
@@ -86,34 +126,49 @@ export default function AdminUsersPage() {
               <option value="true">Activos</option>
               <option value="false">Inactivos</option>
             </select>
-            <button type="button" onClick={() => void loadUsers()} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#0D5C75] px-4 text-sm font-bold text-white hover:bg-[#09485d]">
-              <RefreshCw size={16} /> Actualizar
+            <button type="button" onClick={() => void loadUsers()} disabled={loading || saving} className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-[#0D5C75] px-4 text-sm font-bold text-white hover:bg-[#09485d] disabled:opacity-60">
+              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Actualizar
             </button>
           </div>
         </section>
 
         {error && <p role="alert" className="mt-4 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm font-semibold text-rose-800">{error}</p>}
 
-        <section className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+        {!loading && (
+          <div className="mt-5 grid gap-3 sm:grid-cols-3" aria-label="Resumen de usuarios filtrados">
+            <div className="rounded-xl border border-slate-200 bg-white p-4"><p className="text-sm text-slate-600">Usuarios encontrados</p><p className="mt-1 text-2xl font-black">{users.length}</p></div>
+            <div className="rounded-xl border border-emerald-200 bg-white p-4"><p className="text-sm text-slate-600">Activos</p><p className="mt-1 text-2xl font-black text-emerald-700">{activeCount}</p></div>
+            <div className="rounded-xl border border-slate-200 bg-white p-4"><p className="text-sm text-slate-600">Inactivos</p><p className="mt-1 text-2xl font-black">{inactiveCount}</p></div>
+          </div>
+        )}
+
+        <section className="mt-5 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm" aria-label="Listado de usuarios">
           {loading ? (
-            <p className="p-8 text-center text-sm font-medium text-slate-500">Consultando usuarios…</p>
+            <p className="p-8 text-center text-sm font-medium text-slate-500" role="status">Consultando usuarios…</p>
           ) : users.length === 0 ? (
             <p className="p-8 text-center text-sm font-medium text-slate-500">No se encontraron usuarios con estos filtros.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[760px] text-left text-sm">
                 <thead className="bg-slate-100 text-xs uppercase tracking-wide text-slate-600">
-                  <tr><th className="px-5 py-4">Usuario</th><th className="px-5 py-4">Roles</th><th className="px-5 py-4">Estado</th><th className="px-5 py-4 text-right">Acción</th></tr>
+                  <tr><th scope="col" className="px-5 py-4">Usuario</th><th scope="col" className="px-5 py-4">Roles</th><th scope="col" className="px-5 py-4">Estado</th><th scope="col" className="px-5 py-4 text-right">Acción</th></tr>
                 </thead>
                 <tbody className="divide-y divide-slate-200">
-                  {users.map((user) => (
-                    <tr key={user.id} className="hover:bg-slate-50">
-                      <td className="px-5 py-4"><p className="font-bold text-slate-900">{user.nombre}</p><p className="mt-1 text-slate-500">{user.correo}</p></td>
-                      <td className="px-5 py-4"><div className="flex flex-wrap gap-1.5">{user.roles.map((item) => <span key={item} className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-bold text-sky-800">{item}</span>)}</div></td>
-                      <td className="px-5 py-4"><span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold ${user.activo ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}><span className={`h-2 w-2 rounded-full ${user.activo ? 'bg-emerald-500' : 'bg-slate-400'}`} />{user.activo ? 'Activo' : 'Inactivo'}</span></td>
-                      <td className="px-5 py-4 text-right"><button type="button" onClick={() => setPending({ user, activo: !user.activo })} className={`inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold ${user.activo ? 'border-rose-200 text-rose-700 hover:bg-rose-50' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'}`}>{user.activo ? <UserX size={16} /> : <UserCheck size={16} />}{user.activo ? 'Desactivar' : 'Activar'}</button></td>
-                    </tr>
-                  ))}
+                  {users.map((user) => {
+                    const ownActiveAccount = user.activo && isOwnAccount(user);
+                    return (
+                      <tr key={user.id} className="hover:bg-slate-50">
+                        <td className="px-5 py-4"><p className="font-bold text-slate-900">{user.nombre}</p><p className="mt-1 text-slate-500">{user.correo}</p></td>
+                        <td className="px-5 py-4"><div className="flex flex-wrap gap-1.5">{(user.roles ?? []).map((item) => <span key={item} className="rounded-full bg-sky-50 px-2.5 py-1 text-xs font-bold text-sky-800">{item}</span>)}</div></td>
+                        <td className="px-5 py-4"><span className={`inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-bold ${user.activo ? 'bg-emerald-50 text-emerald-800' : 'bg-slate-100 text-slate-600'}`}><span className={`h-2 w-2 rounded-full ${user.activo ? 'bg-emerald-500' : 'bg-slate-400'}`} />{user.activo ? 'Activo' : 'Inactivo'}</span></td>
+                        <td className="px-5 py-4 text-right">
+                          <button type="button" disabled={saving || ownActiveAccount} title={ownActiveAccount ? 'No puedes desactivar tu propia cuenta' : undefined} onClick={() => requestStatusChange(user)} className={`inline-flex min-h-10 items-center gap-2 rounded-lg border px-3 py-2 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50 ${user.activo ? 'border-rose-200 text-rose-700 hover:bg-rose-50' : 'border-emerald-200 text-emerald-700 hover:bg-emerald-50'}`}>
+                            {user.activo ? <UserX size={16} /> : <UserCheck size={16} />}{ownActiveAccount ? 'Tu cuenta' : user.activo ? 'Desactivar' : 'Activar'}
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -123,12 +178,15 @@ export default function AdminUsersPage() {
 
       {pending && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4" role="presentation">
-          <section role="dialog" aria-modal="true" aria-labelledby="confirm-user-title" className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+          <section role="dialog" aria-modal="true" aria-labelledby="confirm-user-title" aria-describedby="confirm-user-description" className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
             <ShieldCheck className="h-9 w-9 text-[#0D5C75]" />
             <h2 id="confirm-user-title" className="mt-4 text-xl font-black">{pending.activo ? '¿Activar esta cuenta?' : '¿Desactivar esta cuenta?'}</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">{pending.user.nombre} · {pending.user.correo}{!pending.activo && ' perderá acceso inmediatamente y sus sesiones abiertas serán invalidadas.'}</p>
+            <p id="confirm-user-description" className="mt-2 text-sm leading-6 text-slate-600">
+              <strong>{pending.user.nombre}</strong> · {pending.user.correo}
+              {pending.activo ? ' podrá volver a acceder a VetAgenda.' : ' perderá acceso a VetAgenda. El servidor determinará la invalidación de sus sesiones abiertas.'}
+            </p>
             <div className="mt-6 flex justify-end gap-3">
-              <button type="button" disabled={saving} onClick={() => setPending(null)} className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-bold text-slate-700">Cancelar</button>
+              <button ref={cancelButtonRef} type="button" disabled={saving} onClick={() => setPending(null)} className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-bold text-slate-700">Cancelar</button>
               <button type="button" disabled={saving} onClick={() => void confirmChange()} className="min-h-11 rounded-xl bg-[#0D5C75] px-4 text-sm font-bold text-white disabled:opacity-60">{saving ? 'Guardando…' : 'Confirmar cambio'}</button>
             </div>
           </section>
