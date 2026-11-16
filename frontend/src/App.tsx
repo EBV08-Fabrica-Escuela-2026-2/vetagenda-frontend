@@ -20,6 +20,7 @@ import OccupancyPage from './pages/OccupancyPage';
 import ServiceUsagePage from './pages/ServiceUsagePage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import { PetHistoryPage } from './pages/PetHistoryPage';
+import { SkipLink } from './components/SkipLink';
 import {
   hasAuthenticatedAdminDemoSession,
   hasAuthenticatedClientSession,
@@ -92,8 +93,10 @@ function AdminProtectedRoute({ children }: { children: ReactElement }) {
 function App() {
   return (
     <BrowserRouter>
+      <SkipLink />
       <HashScrollHandler />
-      <Routes>
+      <div id="main-content" tabIndex={-1}>
+        <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route
@@ -216,7 +219,8 @@ function App() {
         <Route path="/terminos" element={<TermsPage />} />
         <Route path="/contacto" element={<ContactPage />} />
         <Route path="*" element={<Navigate to="/" />} />
-      </Routes>
+        </Routes>
+      </div>
     </BrowserRouter>
   );
 }

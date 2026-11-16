@@ -459,11 +459,13 @@ function getAdminSession(): AdminDemoSession | null {
       return null;
     }
 
+    const payload = user as Record<string, unknown>;
+
     return {
-      id: typeof user.id === 'number' ? user.id : 0,
-      nombre: typeof user.nombre === 'string' ? user.nombre : 'Administrador',
+      id: typeof payload.id === 'number' ? payload.id : 0,
+      nombre: typeof payload.nombre === 'string' ? payload.nombre : 'Administrador',
       rol: 'ADMIN',
-      email: typeof user.email === 'string' ? user.email : '',
+      email: typeof payload.email === 'string' ? payload.email : '',
       token,
     };
   } catch {

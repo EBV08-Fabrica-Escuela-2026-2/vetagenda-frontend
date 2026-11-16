@@ -1,6 +1,0 @@
-  feature/h11-detalle-de-cita            [m 5c8e474 [[34morigin/feature/h11-detalle-de-cita[m] Feat(HU11):Se elimino información simulada
-  feature/hu03-iniciar-sesión            [m 6f35337 [[34morigin/feature/hu03-iniciar-sesión[m] feature/(hu03):se completaron las 2 tasks
-  feature/hu13-Reprogramar-cita          [m e1afa1b [[34morigin/feature/hu13-Reprogramar-cita[m] Feat(HU13): Se conecto la Reprogramación de citas con la API
-  feature/hu18-Consultar-uso-de-servicios[m 7d208e0 [[34morigin/feature/hu18-Consultar-uso-de-servicios[m] feature(hu18):Se incorporo el uso de servicios para el administrador
-* [32mmain                                   [m 4c13e89 [[34morigin/main[m: ahead 1, behind 8] Fix admin role normalization
-  samuel-veterinario                     [m 5a2fe89 [[34morigin/samuel-veterinario[m] feat(HU02): manejo de estados de carga y modal de confirmacion exitosa (Task 3)
