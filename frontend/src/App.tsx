@@ -27,6 +27,7 @@ import {
   hasAuthenticatedAdminDemoSession,
   hasAuthenticatedClientSession,
   hasAuthenticatedVeterinarianSession,
+  getAuthenticatedSession,
 } from './services/api';
 
 function HashScrollHandler() {
@@ -92,6 +93,14 @@ function AdminProtectedRoute({ children }: { children: ReactElement }) {
   return <Navigate to={`/login?returnTo=${encodeURIComponent(returnTo)}`} replace />;
 }
 
+function PortalEntryRoute() {
+  const session = getAuthenticatedSession();
+  if (!session) return <Navigate to="/#portales" replace />;
+  if (session.rol === 'ADMIN') return <Navigate to="/admin/usuarios" replace />;
+  if (session.rol === 'VETERINARIO') return <Navigate to="/veterinario/agenda" replace />;
+  return <Navigate to="/cliente" replace />;
+}
+
 function App() {
   return (
     <BrowserRouter>
@@ -103,6 +112,8 @@ function App() {
         <Routes>
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
+        <Route path="/portal" element={<PortalEntryRoute />} />
+        <Route path="/portales" element={<PortalEntryRoute />} />
         <Route
           path="/admin/analitica/ocupacion"
           element={(

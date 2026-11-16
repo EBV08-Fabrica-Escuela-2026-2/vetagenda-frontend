@@ -4,7 +4,7 @@ import { HeroSearch } from './components/HeroSearch';
 import { ClientAccessModal } from './components/ClientAccessModal';
 import { MockRoleSwitcher, type DemoProfile } from './components/MockRoleSwitcher';
 import { Navbar } from './components/Navbar';
-import { PortalsGrid } from './components/PortalsGrid';
+import { PortalsGrid, type PortalRole } from './components/PortalsGrid';
 import { Footer } from './components/Footer';
 import { Icon, type IconName } from './components/Icon';
 import { FaqSection, HowItWorks } from './components/LandingSections';
@@ -108,6 +108,15 @@ function LandingPage() {
     }
   }
 
+  function openPortal(role: PortalRole) {
+    const destination = role === 'ADMIN'
+      ? '/admin/usuarios'
+      : role === 'VETERINARIO'
+        ? '/veterinario/agenda'
+        : '/cliente';
+    navigate(`/login?returnTo=${encodeURIComponent(destination)}`);
+  }
+
   return (
     <main className="min-h-screen bg-white text-slate-900">
       <Navbar onOpenRoleSwitcher={() => {
@@ -167,14 +176,13 @@ function LandingPage() {
         </div>
       </section>
 
-      <PortalsGrid onOpenDemo={(role) => {
-        if (role === 'CLIENTE') {
-          setIsClientAccessOpen(true);
-          return;
-        }
-        setPreferredRole(role);
-        setIsLoginOpen(true);
-      }} />
+      <PortalsGrid
+        onOpenPortal={openPortal}
+        onOpenVeterinarianDemo={() => {
+          setPreferredRole('VETERINARIO');
+          setIsLoginOpen(true);
+        }}
+      />
 
       <FaqSection />
 

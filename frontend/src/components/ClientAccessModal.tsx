@@ -92,14 +92,14 @@ export function ClientAccessModal({ isOpen, onClose }: ClientAccessModalProps) {
       >
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#0D9488]">Acceso a VetAgenda</p>
+            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#0D9488]">Acceso seguro a VetAgenda</p>
             <h2 id="client-access-title" className="mt-2 text-2xl font-black text-slate-900">Inicia sesión</h2>
-            <p id="client-access-description" className="mt-2 text-sm leading-6 text-slate-600">Ingresa a tu portal para consultar mascotas y administrar citas.</p>
+            <p id="client-access-description" className="mt-2 text-sm leading-6 text-slate-600">Usaremos el rol de tu cuenta para llevarte al portal correcto.</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Cerrar acceso de clientes"
+            aria-label="Cerrar inicio de sesión"
             className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-xl text-slate-700 hover:bg-slate-200"
           >
             ×

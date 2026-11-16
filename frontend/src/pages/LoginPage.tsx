@@ -88,7 +88,7 @@ export default function LoginPage() {
         <Logo />
         <h1 className="mt-4 text-3xl font-black text-slate-900">Iniciar sesión</h1>
         <p className="mt-2 text-sm text-slate-500">
-          Inicia sesión para agendar y gestionar las citas de tus mascotas.
+          Usa tu cuenta para entrar al portal correspondiente a tu rol en VetAgenda.
         </p>
 
         {inactiveSession && (

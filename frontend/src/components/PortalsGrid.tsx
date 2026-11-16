@@ -1,14 +1,15 @@
 import { Icon, type IconName } from './Icon';
 import { Reveal } from './Reveal';
 
-type DemoRole = 'CLIENTE' | 'VETERINARIO';
+export type PortalRole = 'CLIENTE' | 'VETERINARIO' | 'ADMIN';
 
 type PortalsGridProps = {
-  onOpenDemo: (role: DemoRole) => void;
+  onOpenPortal: (role: PortalRole) => void;
+  onOpenVeterinarianDemo: () => void;
 };
 
 const portals: {
-  id: DemoRole;
+  id: PortalRole;
   title: string;
   description: string;
   icon: IconName;
@@ -44,11 +45,26 @@ const portals: {
       'Agrega servicios a tu catálogo',
       'Gestiona cancelaciones por imprevistos',
     ],
-    action: 'Acceso Veterinarios Demo',
+    action: 'Ingresar como veterinario',
+  },
+  {
+    id: 'ADMIN',
+    title: 'Portal Administrativo',
+    description: 'Control operativo y métricas para tomar mejores decisiones.',
+    icon: 'shield',
+    style: 'bg-[#F1F5F9] border-[#dbe3ec]',
+    sectionId: 'portal-administracion',
+    bullets: [
+      'Gestiona usuarios y estados de acceso',
+      'Consulta ocupación de profesionales',
+      'Analiza el uso de los servicios',
+      'Accede a indicadores del producto',
+    ],
+    action: 'Ingresar como administrador',
   },
 ];
 
-export function PortalsGrid({ onOpenDemo }: PortalsGridProps) {
+export function PortalsGrid({ onOpenPortal, onOpenVeterinarianDemo }: PortalsGridProps) {
   return (
     <section id="portales" className="scroll-mt-28 bg-white px-5 py-16 md:px-10 md:py-24">
       <div className="mx-auto max-w-7xl">
@@ -58,11 +74,11 @@ export function PortalsGrid({ onOpenDemo }: PortalsGridProps) {
             Una experiencia para cada integrante de la clínica.
           </h2>
           <p className="mt-3 leading-7 text-slate-600">
-            Herramientas pensadas para las familias y los profesionales veterinarios.
+            Una sola plataforma con espacios protegidos para clientes, profesionales veterinarios y administración.
           </p>
         </div>
 
-        <div className="mt-9 grid gap-5 lg:grid-cols-2">
+        <div className="mt-9 grid gap-5 lg:grid-cols-3">
           {portals.map((portal, index) => (
             <Reveal key={portal.id} delay={index * 120}>
             <article
@@ -82,11 +98,20 @@ export function PortalsGrid({ onOpenDemo }: PortalsGridProps) {
               </ul>
               <button
                 type="button"
-                onClick={() => onOpenDemo(portal.id)}
+                onClick={() => onOpenPortal(portal.id)}
                 className="mt-auto min-h-12 rounded-full bg-[#0D5C75] px-5 py-3 text-sm font-bold text-white transition-all duration-300 hover:bg-[#094356] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488] focus-visible:ring-offset-2"
               >
                 {portal.action}
               </button>
+              {portal.id === 'VETERINARIO' && (
+                <button
+                  type="button"
+                  onClick={onOpenVeterinarianDemo}
+                  className="mt-3 min-h-11 rounded-full border border-[#0D5C75] px-5 py-2.5 text-sm font-bold text-[#0D5C75] transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488] focus-visible:ring-offset-2"
+                >
+                  Probar perfil veterinario demo
+                </button>
+              )}
             </article>
             </Reveal>
           ))}
