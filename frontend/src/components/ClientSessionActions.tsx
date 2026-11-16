@@ -8,6 +8,7 @@ import {
   logoutCurrentSession,
   type AuthenticatedSession,
 } from '../services/api';
+import { announceToScreenReader } from '../accessibility/announcer';
 
 type ClientSessionActionsProps = {
   className?: string;
@@ -45,6 +46,7 @@ export function ClientSessionActions({
       await logoutCurrentSession(session.token);
     } finally {
       clearClientSession();
+      announceToScreenReader('Sesión cerrada correctamente.');
       setSession(null);
       onAction?.();
       navigate('/', { replace: true });

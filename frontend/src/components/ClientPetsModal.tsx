@@ -100,13 +100,14 @@ export function ClientPetsModal({ isOpen, onClose }: ClientPetsModalProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="client-pets-title"
+        aria-describedby="client-pets-description"
         className="my-auto flex max-h-[calc(100vh-2rem)] w-full max-w-2xl flex-col overflow-hidden rounded-lg bg-white shadow-2xl shadow-slate-950/20"
       >
         <div className="flex items-start justify-between gap-4 border-b border-slate-200 px-5 py-5 sm:px-6">
           <div>
             <p className="text-xs font-bold uppercase text-[#0D9488]">Perfil de cliente</p>
             <h2 id="client-pets-title" className="mt-1 text-2xl font-bold text-slate-950">Mis mascotas</h2>
-            <p className="mt-1 text-sm leading-6 text-slate-600">Pacientes asociados a tu cuenta de VetAgenda.</p>
+            <p id="client-pets-description" className="mt-1 text-sm leading-6 text-slate-600">Pacientes asociados a tu cuenta de VetAgenda.</p>
           </div>
           <button
             ref={closeButtonRef}

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { BackToHomeButton } from '../components/BackToHomeButton';
 import { BrandHeader } from '../components/BrandHeader';
@@ -16,6 +16,8 @@ import {
   saveVetAvailability,
   VeterinarioListaItem,
 } from '../services/api';
+import { useDialogAccessibility } from '../accessibility/dialog';
+import { announceToScreenReader } from '../accessibility/announcer';
 
 const DURACION_TURNO_MINUTOS = 30;
 const RANGO_INVALIDO = 'El rango de horario no es válido: la hora de finalización debe ser posterior a la de inicio.';
@@ -157,6 +159,22 @@ export function ConfigurarHorariosPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const cancelDeleteButtonRef = useRef<HTMLButtonElement>(null);
+  const successButtonRef = useRef<HTMLButtonElement>(null);
+  const closeDeleteDialog = useCallback(() => {
+    if (!isDeleting) setPorEliminar(null);
+  }, [isDeleting]);
+  const closeSuccessDialog = useCallback(() => setSuccessModal(null), []);
+  const deleteDialogRef = useDialogAccessibility({ isOpen: porEliminar !== null, onClose: closeDeleteDialog, initialFocusRef: cancelDeleteButtonRef });
+  const successDialogRef = useDialogAccessibility({ isOpen: successModal !== null, onClose: closeSuccessDialog, initialFocusRef: successButtonRef });
+
+  useEffect(() => {
+    if (successModal) announceToScreenReader(`${successModal.titulo}. ${successModal.mensaje}`);
+  }, [successModal]);
+
+  useEffect(() => {
+    if (statusMessage) announceToScreenReader(statusMessage);
+  }, [statusMessage]);
 
   // El veterinario autenticado solo puede administrar su propia disponibilidad.
   useEffect(() => {
@@ -675,11 +693,11 @@ export function ConfigurarHorariosPage() {
 
       {/* Confirmación de eliminación */}
       {porEliminar && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/50 px-4" role="dialog" aria-modal="true" aria-labelledby="titulo-eliminar">
-          <div className="w-full max-w-[420px] rounded-2xl bg-white p-8 text-center shadow-2xl">
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/50 px-4">
+          <div ref={deleteDialogRef} role="dialog" aria-modal="true" aria-labelledby="titulo-eliminar" aria-describedby="descripcion-eliminar" tabIndex={-1} className="w-full max-w-[420px] rounded-2xl bg-white p-8 text-center shadow-2xl">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-red-100 text-2xl">🗑️</div>
             <h3 id="titulo-eliminar" className="text-xl font-black text-slate-900">¿Eliminar esta franja?</h3>
-            <p className="mt-2 text-sm text-slate-500">
+            <p id="descripcion-eliminar" className="mt-2 text-sm text-slate-500">
               {nombreDia(porEliminar.dia)} · {formatoHora(porEliminar.franja.horaInicio)} –{' '}
               {formatoHora(porEliminar.franja.horaFin)}
             </p>
@@ -693,8 +711,9 @@ export function ConfigurarHorariosPage() {
             )}
             <div className="mt-6 flex gap-3">
               <button
+                ref={cancelDeleteButtonRef}
                 type="button"
-                onClick={() => setPorEliminar(null)}
+                onClick={closeDeleteDialog}
                 disabled={isDeleting}
                 className="flex-1 rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
               >
@@ -715,16 +734,17 @@ export function ConfigurarHorariosPage() {
 
       {/* Éxito al guardar */}
       {successModal && (
-        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/50 px-4" role="dialog" aria-modal="true">
-          <div className="w-full max-w-[420px] rounded-2xl bg-white p-8 text-center shadow-2xl">
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/50 px-4">
+          <div ref={successDialogRef} role="dialog" aria-modal="true" aria-labelledby="availability-success-title" aria-describedby="availability-success-description" tabIndex={-1} className="w-full max-w-[420px] rounded-2xl bg-white p-8 text-center shadow-2xl">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-3xl text-emerald-600">
               ✓
             </div>
-            <h3 className="text-xl font-black text-slate-900">{successModal.titulo}</h3>
-            <p className="mt-2 text-sm text-slate-500">{successModal.mensaje}</p>
+            <h3 id="availability-success-title" className="text-xl font-black text-slate-900">{successModal.titulo}</h3>
+            <p id="availability-success-description" className="mt-2 text-sm text-slate-500">{successModal.mensaje}</p>
             <button
+              ref={successButtonRef}
               type="button"
-              onClick={() => setSuccessModal(null)}
+              onClick={closeSuccessDialog}
               className="mt-6 w-full rounded-xl bg-sky-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-sky-700"
             >
               Aceptar

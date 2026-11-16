@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarDays, CheckCircle2, Clock3, Plus, Stethoscope, UserX } from 'lucide-react';
 import { BackToHomeButton } from '../components/BackToHomeButton';
@@ -14,6 +14,7 @@ import {
   type CupoDecision,
   type VeterinarianAppointmentApi,
 } from '../services/api';
+import { useDialogAccessibility } from '../accessibility/dialog';
 
 const MIN_REASON_LENGTH = 10;
 
@@ -90,15 +91,8 @@ function CancellationDialog({ appointment, onClose, onConfirm }: CancellationDia
   const [decision, setDecision] = useState<CupoDecision | ''>('');
   const normalizedReason = reason.trim();
   const isReasonValid = normalizedReason.length >= MIN_REASON_LENGTH;
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') onClose();
-    }
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  const reasonRef = useRef<HTMLTextAreaElement>(null);
+  const dialogRef = useDialogAccessibility<HTMLElement>({ isOpen: true, onClose, initialFocusRef: reasonRef });
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -114,10 +108,13 @@ function CancellationDialog({ appointment, onClose, onConfirm }: CancellationDia
       }}
     >
       <section
+        ref={dialogRef}
         aria-labelledby="cancel-dialog-title"
+        aria-describedby="cancel-dialog-description"
         aria-modal="true"
         className="my-auto w-full max-w-lg rounded-3xl bg-white p-6 shadow-2xl sm:p-8"
         role="dialog"
+        tabIndex={-1}
       >
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -136,7 +133,7 @@ function CancellationDialog({ appointment, onClose, onConfirm }: CancellationDia
           </button>
         </div>
 
-        <div className="mt-5 rounded-2xl bg-slate-50 p-4">
+        <div id="cancel-dialog-description" className="mt-5 rounded-2xl bg-slate-50 p-4">
           <p className="font-bold text-slate-900">{appointment.client} · {appointment.pet}</p>
           <p className="mt-1 text-sm text-slate-600">{appointment.service}</p>
           <p className="mt-2 text-sm font-semibold capitalize text-slate-700">
@@ -152,10 +149,10 @@ function CancellationDialog({ appointment, onClose, onConfirm }: CancellationDia
             Explica brevemente por qué debes cancelar. Mínimo {MIN_REASON_LENGTH} caracteres.
           </p>
           <textarea
+            ref={reasonRef}
             id="cancellation-reason"
             aria-describedby="reason-help reason-counter"
             aria-invalid={reason.length > 0 && !isReasonValid}
-            autoFocus
             maxLength={240}
             onChange={(event) => setReason(event.target.value)}
             placeholder="Escribe el motivo para informar al cliente..."
@@ -245,14 +242,8 @@ type OutcomeDialogProps = {
 
 function OutcomeDialog({ appointment, onClose, onConfirm }: OutcomeDialogProps) {
   const [outcome, setOutcome] = useState<AppointmentOutcome>('COMPLETADA');
-
-  useEffect(() => {
-    function handleKeyDown(event: KeyboardEvent) {
-      if (event.key === 'Escape') onClose();
-    }
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+  const firstOutcomeRef = useRef<HTMLInputElement>(null);
+  const dialogRef = useDialogAccessibility<HTMLElement>({ isOpen: true, onClose, initialFocusRef: firstOutcomeRef });
 
   return (
     <div
@@ -262,10 +253,13 @@ function OutcomeDialog({ appointment, onClose, onConfirm }: OutcomeDialogProps) 
       }}
     >
       <section
+        ref={dialogRef}
         aria-labelledby="outcome-dialog-title"
+        aria-describedby="outcome-dialog-description"
         aria-modal="true"
         className="my-auto w-full max-w-xl rounded-3xl bg-white p-6 shadow-2xl sm:p-8"
         role="dialog"
+        tabIndex={-1}
       >
         <div className="flex items-start justify-between gap-4">
           <div>
@@ -284,7 +278,7 @@ function OutcomeDialog({ appointment, onClose, onConfirm }: OutcomeDialogProps) 
           </button>
         </div>
 
-        <div className="mt-5 rounded-2xl bg-slate-50 p-4">
+        <div id="outcome-dialog-description" className="mt-5 rounded-2xl bg-slate-50 p-4">
           <p className="font-bold text-slate-900">{appointment.client} · {appointment.pet}</p>
           <p className="mt-1 text-sm text-slate-600">{appointment.service}</p>
           <p className="mt-2 text-sm font-semibold capitalize text-slate-700">
@@ -296,6 +290,7 @@ function OutcomeDialog({ appointment, onClose, onConfirm }: OutcomeDialogProps) 
           <legend className="mb-3 text-sm font-bold text-slate-800">¿Qué ocurrió con la cita?</legend>
           <label className={`cursor-pointer rounded-2xl border p-4 transition ${outcome === 'COMPLETADA' ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-100' : 'border-slate-200 hover:border-emerald-300'}`}>
             <input
+              ref={firstOutcomeRef}
               type="radio"
               name="appointment-outcome"
               value="COMPLETADA"

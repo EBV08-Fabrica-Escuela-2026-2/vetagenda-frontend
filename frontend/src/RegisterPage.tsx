@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { BackToHomeButton } from './components/BackToHomeButton';
 import { BrandHeader } from './components/BrandHeader';
@@ -9,6 +9,8 @@ import {
   registerClientCredentials,
   saveClientSession,
 } from './services/api';
+import { useDialogAccessibility } from './accessibility/dialog';
+import { announceToScreenReader } from './accessibility/announcer';
 
 type FormState = {
   fullName: string;
@@ -145,6 +147,7 @@ function App() {
       const profile = await getCurrentClient(auth.token);
       saveClientSession(profile, auth.token);
       setShowSuccessModal(true);
+      announceToScreenReader('Registro guardado correctamente. Tu cuenta está lista.');
     } catch (err) {
       setBackendError(
         err instanceof Error ? err.message : 'No se pudo completar el registro. Intenta nuevamente.',
@@ -162,6 +165,12 @@ function App() {
     setRegistrationStage('profile');
     navigate(returnTo, { replace: true });
   };
+  const successButtonRef = useRef<HTMLButtonElement>(null);
+  const successDialogRef = useDialogAccessibility({
+    isOpen: showSuccessModal,
+    onClose: handleCloseModal,
+    initialFocusRef: successButtonRef,
+  });
 
   return (
     <main className="min-h-screen bg-[#edf7ff] px-4 py-10 text-slate-800 md:px-8">
@@ -350,15 +359,16 @@ function App() {
 
       {showSuccessModal && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/50">
-          <div className="w-[90%] max-w-[400px] rounded-xl bg-white p-8 text-center shadow-2xl">
+          <div ref={successDialogRef} role="dialog" aria-modal="true" aria-labelledby="client-register-success-title" aria-describedby="client-register-success-description" tabIndex={-1} className="w-[90%] max-w-[400px] rounded-xl bg-white p-8 text-center shadow-2xl">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-2xl font-bold text-emerald-600">
               ✓
             </div>
-            <h3 className="mb-2 text-lg font-bold text-slate-900">Registro guardado correctamente</h3>
-            <p className="mb-6 text-sm text-slate-500">
+            <h3 id="client-register-success-title" className="mb-2 text-lg font-bold text-slate-900">Registro guardado correctamente</h3>
+            <p id="client-register-success-description" className="mb-6 text-sm text-slate-500">
               Tu cuenta está lista y ya has iniciado sesión.
             </p>
             <button
+              ref={successButtonRef}
               onClick={handleCloseModal}
               className="w-full rounded-xl bg-[#0ea5e9] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0284c7]"
             >

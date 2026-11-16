@@ -375,6 +375,7 @@ const CLIENT_SESSION_KEYS = [
   'vetagenda_role',
   'vetagenda_token',
   'vetagenda_documento',
+  'vetagenda-last-activity',
 ];
 
 function getRetryAfterSeconds(response: Response, data: unknown): number | null {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import {
   AlertTriangle,
   X,
@@ -11,6 +11,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import type { Cita } from '../services/api';
+import { useDialogAccessibility } from '../accessibility/dialog';
 
 interface ConfirmacionAnulacionModalProps {
   cita: Cita | null;
@@ -39,6 +40,8 @@ export const ConfirmacionAnulacionModal: React.FC<ConfirmacionAnulacionModalProp
   const [motivoSeleccionado, setMotivoSeleccionado] = useState<string>(MOTIVOS_PREDETERMINADOS[0]);
   const [detalleMotivo, setDetalleMotivo] = useState<string>('');
   const [errorValidacion, setErrorValidacion] = useState<string | null>(null);
+  const closeButtonRef = useRef<HTMLButtonElement>(null);
+  const dialogRef = useDialogAccessibility({ isOpen: isOpen && cita !== null, onClose, initialFocusRef: closeButtonRef });
 
   if (!isOpen || !cita) return null;
 
@@ -64,11 +67,8 @@ export const ConfirmacionAnulacionModal: React.FC<ConfirmacionAnulacionModalProp
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center overflow-y-auto bg-slate-900/60 p-4 backdrop-blur-sm transition-opacity animate-in fade-in"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="modal-title"
     >
-      <div className="relative w-full max-w-lg rounded-3xl border border-rose-100 bg-white p-6 shadow-2xl ring-1 ring-slate-900/10 sm:p-7">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-labelledby="cancel-appointment-title" aria-describedby="cancel-appointment-description" tabIndex={-1} className="relative w-full max-w-lg rounded-3xl border border-rose-100 bg-white p-6 shadow-2xl ring-1 ring-slate-900/10 sm:p-7">
         {/* Header con icono de advertencia */}
         <div className="flex items-start gap-3.5">
           <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-rose-100 text-rose-600 ring-4 ring-rose-50">
@@ -78,11 +78,12 @@ export const ConfirmacionAnulacionModal: React.FC<ConfirmacionAnulacionModalProp
             <span className="inline-block rounded-full bg-rose-50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wider text-rose-700">
               HU14 · Anulación de Turno
             </span>
-            <h3 id="modal-title" className="mt-0.5 text-xl font-black text-slate-900 sm:text-2xl">
+            <h3 id="cancel-appointment-title" className="mt-0.5 text-xl font-black text-slate-900 sm:text-2xl">
               ¿Deseas anular esta cita?
             </h3>
           </div>
           <button
+            ref={closeButtonRef}
             type="button"
             onClick={onClose}
             disabled={isSubmitting}
@@ -97,7 +98,7 @@ export const ConfirmacionAnulacionModal: React.FC<ConfirmacionAnulacionModalProp
         <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/90 p-3.5 text-amber-900">
           <div className="flex items-start gap-2.5">
             <CheckCircle2 className="h-5 w-5 shrink-0 text-amber-700 mt-0.5" />
-            <div className="text-xs leading-relaxed sm:text-sm">
+            <div id="cancel-appointment-description" className="text-xs leading-relaxed sm:text-sm">
               <strong className="font-bold text-amber-950">Advertencia sobre liberación de cupo:</strong>
               <p className="mt-0.5 text-amber-900">
                 Al confirmar, este turno quedará <strong>inmediatamente disponible</strong> en la agenda del
@@ -213,7 +214,7 @@ export const ConfirmacionAnulacionModal: React.FC<ConfirmacionAnulacionModalProp
           )}
 
           {errorValidacion && (
-            <p className="text-xs font-semibold text-rose-600 animate-in fade-in">
+            <p role="alert" className="text-xs font-semibold text-rose-600 animate-in fade-in">
               {errorValidacion}
             </p>
           )}

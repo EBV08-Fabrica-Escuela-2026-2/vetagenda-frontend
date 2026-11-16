@@ -21,6 +21,8 @@ import ServiceUsagePage from './pages/ServiceUsagePage';
 import AdminUsersPage from './pages/AdminUsersPage';
 import { PetHistoryPage } from './pages/PetHistoryPage';
 import { SkipLink } from './components/SkipLink';
+import { AccessibilityAnnouncer } from './components/AccessibilityAnnouncer';
+import { IdleSessionManager } from './components/IdleSessionManager';
 import {
   hasAuthenticatedAdminDemoSession,
   hasAuthenticatedClientSession,
@@ -94,6 +96,8 @@ function App() {
   return (
     <BrowserRouter>
       <SkipLink />
+      <AccessibilityAnnouncer />
+      <IdleSessionManager />
       <HashScrollHandler />
       <div id="main-content" tabIndex={-1}>
         <Routes>

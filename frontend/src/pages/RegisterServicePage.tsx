@@ -1,9 +1,11 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { BackToHomeButton } from '../components/BackToHomeButton';
 import { BrandHeader } from '../components/BrandHeader';
 import { ClientSessionActions } from '../components/ClientSessionActions';
 import { createService, fetchCatalogo, getVeterinarianSession } from '../services/api';
+import { useDialogAccessibility } from '../accessibility/dialog';
+import { announceToScreenReader } from '../accessibility/announcer';
 
 type FormState = {
   nombre: string;
@@ -137,6 +139,7 @@ export function RegisterServicePage() {
 
       setExistingServices((current) => [...current, createdService.nombre]);
       setShowSuccessModal(true);
+      announceToScreenReader('Servicio registrado y publicado en el catálogo.');
       setForm({ ...initialForm, veterinarioId: veterinarianId });
       setDescriptionLimitMessage('');
     } catch (err) {
@@ -149,6 +152,8 @@ export function RegisterServicePage() {
   const handleCloseModal = () => {
     setShowSuccessModal(false);
   };
+  const successButtonRef = useRef<HTMLButtonElement>(null);
+  const successDialogRef = useDialogAccessibility({ isOpen: showSuccessModal, onClose: handleCloseModal, initialFocusRef: successButtonRef });
 
   const handleCancel = () => {
     navigate('/veterinario/agenda');
@@ -321,14 +326,15 @@ export function RegisterServicePage() {
 
       {showSuccessModal && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/50 px-4">
-          <div className="w-full max-w-[420px] rounded-2xl bg-white p-8 text-center shadow-2xl">
+          <div ref={successDialogRef} role="dialog" aria-modal="true" aria-labelledby="service-register-success-title" aria-describedby="service-register-success-description" tabIndex={-1} className="w-full max-w-[420px] rounded-2xl bg-white p-8 text-center shadow-2xl">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-3xl text-emerald-600">
               ✓
             </div>
-            <h3 className="text-xl font-black text-slate-900">Registro exitoso</h3>
-            <p className="mt-2 text-sm text-slate-500">El servicio ya aparece asociado a tu perfil y está disponible en el catálogo.</p>
+            <h3 id="service-register-success-title" className="text-xl font-black text-slate-900">Registro exitoso</h3>
+            <p id="service-register-success-description" className="mt-2 text-sm text-slate-500">El servicio ya aparece asociado a tu perfil y está disponible en el catálogo.</p>
             <div className="mt-6 grid gap-3 sm:grid-cols-2">
               <button
+                ref={successButtonRef}
                 type="button"
                 onClick={handleCloseModal}
                 className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"

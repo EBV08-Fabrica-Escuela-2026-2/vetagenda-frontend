@@ -1,9 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, BarChart3, RefreshCw, Search, ShieldCheck, UserCheck, UserX } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { BrandHeader } from '../components/BrandHeader';
 import { ClientSessionActions } from '../components/ClientSessionActions';
 import { listAdminUsers, updateAdminUserStatus, type AdminUser } from '../services/api';
+import { useDialogAccessibility } from '../accessibility/dialog';
+import { announceToScreenReader } from '../accessibility/announcer';
 
 type PendingChange = { user: AdminUser; activo: boolean } | null;
 
@@ -16,6 +18,15 @@ export default function AdminUsersPage() {
   const [error, setError] = useState('');
   const [pending, setPending] = useState<PendingChange>(null);
   const [saving, setSaving] = useState(false);
+  const cancelButtonRef = useRef<HTMLButtonElement>(null);
+  const closePending = useCallback(() => {
+    if (!saving) setPending(null);
+  }, [saving]);
+  const confirmDialogRef = useDialogAccessibility({
+    isOpen: pending !== null,
+    onClose: closePending,
+    initialFocusRef: cancelButtonRef,
+  });
 
   const loadUsers = useCallback(async () => {
     setLoading(true);
@@ -38,6 +49,7 @@ export default function AdminUsersPage() {
     try {
       const updated = await updateAdminUserStatus(pending.user.id, pending.activo);
       setUsers((current) => current.map((user) => user.id === updated.id ? updated : user));
+      announceToScreenReader(`La cuenta de ${updated.nombre} quedó ${updated.activo ? 'activa' : 'inactiva'}.`);
       setPending(null);
     } catch (requestError) {
       setError(requestError instanceof Error ? requestError.message : 'No fue posible actualizar el usuario.');
@@ -126,12 +138,12 @@ export default function AdminUsersPage() {
 
       {pending && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4" role="presentation">
-          <section role="dialog" aria-modal="true" aria-labelledby="confirm-user-title" className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
+          <section ref={confirmDialogRef} role="dialog" aria-modal="true" aria-labelledby="confirm-user-title" aria-describedby="confirm-user-description" tabIndex={-1} className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl">
             <ShieldCheck className="h-9 w-9 text-[#0D5C75]" />
             <h2 id="confirm-user-title" className="mt-4 text-xl font-black">{pending.activo ? '¿Activar esta cuenta?' : '¿Desactivar esta cuenta?'}</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">{pending.user.nombre} · {pending.user.correo}{!pending.activo && ' perderá acceso inmediatamente y sus sesiones abiertas serán invalidadas.'}</p>
+            <p id="confirm-user-description" className="mt-2 text-sm leading-6 text-slate-600">{pending.user.nombre} · {pending.user.correo}{!pending.activo && ' perderá acceso inmediatamente y sus sesiones abiertas serán invalidadas.'}</p>
             <div className="mt-6 flex justify-end gap-3">
-              <button type="button" disabled={saving} onClick={() => setPending(null)} className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-bold text-slate-700">Cancelar</button>
+              <button ref={cancelButtonRef} type="button" disabled={saving} onClick={closePending} className="min-h-11 rounded-xl border border-slate-300 px-4 text-sm font-bold text-slate-700">Cancelar</button>
               <button type="button" disabled={saving} onClick={() => void confirmChange()} className="min-h-11 rounded-xl bg-[#0D5C75] px-4 text-sm font-bold text-white disabled:opacity-60">{saving ? 'Guardando…' : 'Confirmar cambio'}</button>
             </div>
           </section>

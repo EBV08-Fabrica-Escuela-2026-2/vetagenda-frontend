@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { BackToHomeButton } from '../components/BackToHomeButton';
 import { BrandHeader } from '../components/BrandHeader';
 import { registerVeterinarian } from '../services/api';
+import { useDialogAccessibility } from '../accessibility/dialog';
+import { announceToScreenReader } from '../accessibility/announcer';
 
 interface FormErrors {
   firstName?: string;
@@ -147,6 +149,7 @@ export const RegisterVeterinarianPage: React.FC = () => {
         horarioAtencion: formData.attentionSchedule.trim() || undefined,
       });
       setShowSuccessModal(true);
+      announceToScreenReader('Registro de veterinario exitoso.');
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : 'No se pudo registrar el veterinario en este momento.');
     } finally {
@@ -176,6 +179,8 @@ export const RegisterVeterinarianPage: React.FC = () => {
     setShowSuccessModal(false);
     resetForm();
   };
+  const successButtonRef = useRef<HTMLButtonElement>(null);
+  const successDialogRef = useDialogAccessibility({ isOpen: showSuccessModal, onClose: handleCloseModal, initialFocusRef: successButtonRef });
 
   return (
     <main className="min-h-screen bg-[#edf7ff] px-4 py-10 text-slate-800 md:px-8">
@@ -470,15 +475,16 @@ export const RegisterVeterinarianPage: React.FC = () => {
       {/* Modal de Confirmación de Registro Exitoso */}
       {showSuccessModal && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/50">
-          <div className="w-[90%] max-w-[400px] rounded-xl bg-white p-8 text-center shadow-2xl">
+          <div ref={successDialogRef} role="dialog" aria-modal="true" aria-labelledby="veterinarian-register-success-title" aria-describedby="veterinarian-register-success-description" tabIndex={-1} className="w-[90%] max-w-[400px] rounded-xl bg-white p-8 text-center shadow-2xl">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-2xl font-bold text-emerald-600">
               ✓
             </div>
-            <h3 className="mb-2 text-lg font-bold text-slate-900">Registro de veterinario exitoso</h3>
-            <p className="mb-6 text-sm text-slate-500">
+            <h3 id="veterinarian-register-success-title" className="mb-2 text-lg font-bold text-slate-900">Registro de veterinario exitoso</h3>
+            <p id="veterinarian-register-success-description" className="mb-6 text-sm text-slate-500">
               El profesional médico ha sido registrado correctamente en el sistema con estado activo.
             </p>
             <button
+              ref={successButtonRef}
               onClick={handleCloseModal}
               className="w-full rounded-xl bg-[#115e59] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0f766e]"
             >

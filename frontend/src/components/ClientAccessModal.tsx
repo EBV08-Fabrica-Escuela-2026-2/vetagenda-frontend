@@ -87,13 +87,14 @@ export function ClientAccessModal({ isOpen, onClose }: ClientAccessModalProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="client-access-title"
+        aria-describedby="client-access-description"
         className="my-auto w-full max-w-md rounded-3xl bg-white p-6 shadow-2xl shadow-slate-950/20 sm:p-8"
       >
         <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-[#0D9488]">Acceso a VetAgenda</p>
             <h2 id="client-access-title" className="mt-2 text-2xl font-black text-slate-900">Inicia sesión</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-600">Ingresa a tu portal para consultar mascotas y administrar citas.</p>
+            <p id="client-access-description" className="mt-2 text-sm leading-6 text-slate-600">Ingresa a tu portal para consultar mascotas y administrar citas.</p>
           </div>
           <button
             type="button"

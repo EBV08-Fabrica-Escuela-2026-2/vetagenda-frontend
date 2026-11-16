@@ -1,6 +1,8 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { ClientPortalHeader } from '../components/ClientPortalHeader';
 import { getClientSession, registerPet } from '../services/api';
+import { useDialogAccessibility } from '../accessibility/dialog';
+import { announceToScreenReader } from '../accessibility/announcer';
 
 export function RegistroMascotaPage() {
   const session = getClientSession();
@@ -45,6 +47,7 @@ export function RegistroMascotaPage() {
       );
 
       setShowSuccessModal(true);
+      announceToScreenReader('La mascota se registró correctamente.');
       setError('');
       setForm({
         nombre: '',
@@ -63,6 +66,8 @@ export function RegistroMascotaPage() {
   const handleCloseModal = () => {
     setShowSuccessModal(false);
   };
+  const successButtonRef = useRef<HTMLButtonElement>(null);
+  const successDialogRef = useDialogAccessibility({ isOpen: showSuccessModal, onClose: handleCloseModal, initialFocusRef: successButtonRef });
 
   return (
     <div className="min-h-screen bg-[#edf7ff] text-slate-800">
@@ -160,13 +165,14 @@ export function RegistroMascotaPage() {
 
       {showSuccessModal && (
         <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-slate-900/50">
-          <div className="w-[90%] max-w-[400px] rounded-xl bg-white p-8 text-center shadow-2xl">
+          <div ref={successDialogRef} role="dialog" aria-modal="true" aria-labelledby="pet-register-success-title" aria-describedby="pet-register-success-description" tabIndex={-1} className="w-[90%] max-w-[400px] rounded-xl bg-white p-8 text-center shadow-2xl">
             <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-100 text-2xl font-bold text-emerald-600">
               ✓
             </div>
-            <h3 className="mb-2 text-lg font-bold text-slate-900">Registro guardado correctamente</h3>
-            <p className="mb-6 text-sm text-slate-500">La mascota se ha registrado correctamente en el sistema.</p>
+            <h3 id="pet-register-success-title" className="mb-2 text-lg font-bold text-slate-900">Registro guardado correctamente</h3>
+            <p id="pet-register-success-description" className="mb-6 text-sm text-slate-500">La mascota se ha registrado correctamente en el sistema.</p>
             <button
+              ref={successButtonRef}
               onClick={handleCloseModal}
               className="w-full rounded-xl bg-[#0ea5e9] px-4 py-3 text-sm font-semibold text-white transition hover:bg-[#0284c7]"
             >

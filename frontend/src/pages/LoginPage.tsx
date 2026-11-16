@@ -21,6 +21,7 @@ export default function LoginPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const submitInProgress = useRef(false);
+  const inactiveSession = searchParams.get('reason') === 'inactive';
   const requestedReturn = searchParams.get('returnTo');
   const returnTo = requestedReturn?.startsWith('/') && !requestedReturn.startsWith('//')
     ? requestedReturn
@@ -89,6 +90,12 @@ export default function LoginPage() {
         <p className="mt-2 text-sm text-slate-500">
           Inicia sesión para agendar y gestionar las citas de tus mascotas.
         </p>
+
+        {inactiveSession && (
+          <p role="alert" className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm font-medium text-amber-950">
+            Tu sesión se cerró por inactividad para proteger tu cuenta. Inicia sesión nuevamente para continuar.
+          </p>
+        )}
 
         <form className="mt-8 space-y-4" noValidate onSubmit={handleLogin}>
           <div>
