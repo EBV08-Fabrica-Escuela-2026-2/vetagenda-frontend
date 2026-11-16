@@ -104,6 +104,8 @@ export type Cita = {
   consultorio: string;
   precio: string;
   duracionMinutos?: number;
+  fechaHoraInicio?: string;
+  fechaHoraFin?: string;
   motivoCancelacion?: string;
   fechaCancelacion?: string;
 };
@@ -1450,6 +1452,8 @@ export async function getCitas(documentoIdentidad: string): Promise<Cita[]> {
           consultorio: 'Clínica VetAgenda',
           precio: 'Consultar',
           duracionMinutos,
+          fechaHoraInicio: cita.fechaHoraInicio,
+          fechaHoraFin: cita.fechaHoraFin,
           motivoCancelacion: cita.motivoCancelacion,
           fechaCancelacion: cita.canceladaAt
             ? new Intl.DateTimeFormat('es-CO').format(new Date(cita.canceladaAt))
