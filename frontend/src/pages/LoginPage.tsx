@@ -53,10 +53,10 @@ export default function LoginPage() {
 
       const session = await saveSessionFromLogin(trimmedEmail, response);
       const defaultRoute = session.rol === 'ADMIN'
-        ? '/dashboard'
+        ? '/admin'
         : session.rol === 'VETERINARIO'
-          ? '/agenda'
-          : '/mis-citas';
+          ? '/veterinario/agenda'
+          : '/cliente';
       navigate(returnTo === '/cliente' ? defaultRoute : returnTo, { replace: true });
     } catch (loginError: unknown) {
       if (loginError instanceof LoginApiError && loginError.status === 429) {
