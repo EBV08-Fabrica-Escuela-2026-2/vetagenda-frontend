@@ -10,6 +10,7 @@ import {
   Plus,
   RefreshCw,
   Search,
+  Sparkles,
   Stethoscope,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useState } from 'react';
@@ -148,6 +149,45 @@ export function ClientPortalPage() {
           </div>
         )}
 
+        <section
+          className="relative mt-8 overflow-hidden rounded-3xl bg-gradient-to-br from-[#0D5C75] via-[#087A83] to-[#0D9488] p-6 text-white shadow-lg sm:p-8"
+          aria-labelledby="ai-orientation-title"
+        >
+          <div className="pointer-events-none absolute -right-16 -top-20 h-56 w-56 rounded-full bg-white/10" aria-hidden="true" />
+          <div className="pointer-events-none absolute -bottom-24 right-32 h-52 w-52 rounded-full bg-cyan-200/10" aria-hidden="true" />
+          <div className="relative grid gap-7 lg:grid-cols-[minmax(0,1fr)_auto] lg:items-center">
+            <div className="max-w-3xl">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.12em]">
+                <Sparkles className="h-4 w-4" aria-hidden="true" />
+                Orientación inteligente
+              </div>
+              <h2 id="ai-orientation-title" className="mt-4 text-2xl font-black leading-tight sm:text-3xl">
+                Cuéntanos qué le pasa a tu mascota
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-cyan-50 sm:text-base">
+                Describe los síntomas y nuestra asistente con IA te orientará sobre el tipo de consulta y los profesionales que podrían ayudarte.
+              </p>
+              <ul className="mt-5 flex flex-wrap gap-2 text-xs font-semibold text-white/90" aria-label="Beneficios de la orientación inteligente">
+                <li className="rounded-full bg-white/10 px-3 py-1.5">Describe lo que notas</li>
+                <li className="rounded-full bg-white/10 px-3 py-1.5">Recibe una sugerencia</li>
+                <li className="rounded-full bg-white/10 px-3 py-1.5">Encuentra atención adecuada</li>
+              </ul>
+            </div>
+            <button
+              type="button"
+              onClick={() => setIsOrientationModalOpen(true)}
+              className="inline-flex min-h-14 w-full items-center justify-center gap-3 rounded-2xl bg-white px-6 text-base font-black text-[#0D5C75] shadow-md transition hover:-translate-y-0.5 hover:bg-cyan-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white focus-visible:ring-offset-2 focus-visible:ring-offset-[#0D7C84] lg:w-auto"
+            >
+              <Brain className="h-5 w-5" aria-hidden="true" />
+              Iniciar orientación
+              <ArrowRight className="h-5 w-5" aria-hidden="true" />
+            </button>
+          </div>
+          <p className="relative mt-5 text-xs leading-5 text-cyan-100">
+            La orientación es informativa y no reemplaza la valoración de un profesional veterinario.
+          </p>
+        </section>
+
         <div className="mt-8 grid gap-8 xl:grid-cols-[minmax(0,1fr)_340px]">
           <div className="min-w-0 space-y-8">
             <section aria-labelledby="next-appointment-title">
@@ -208,11 +248,6 @@ export function ClientPortalPage() {
           </div>
 
           <aside className="space-y-7 xl:sticky xl:top-28 xl:self-start">
-            <section className="rounded-2xl border border-teal-200 bg-[#E8F4F1] p-5" aria-labelledby="orientation-title">
-              <div className="flex items-start gap-3"><span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-white text-[#0D9488]"><Brain className="h-5 w-5" /></span><div><h2 id="orientation-title" className="text-lg font-black leading-6 text-slate-950">¿Le pasa algo a tu mascota?</h2><p className="mt-2 text-sm leading-6 text-slate-700">Cuéntanos qué has notado y te orientamos sobre qué tipo de atención podría necesitar.</p></div></div>
-              <button type="button" onClick={() => setIsOrientationModalOpen(true)} className="mt-5 inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-xl bg-[#0D5C75] px-4 text-sm font-bold text-white hover:bg-[#094356] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488]">Recibir orientación <ArrowRight className="h-4 w-4" /></button>
-            </section>
-
             <section aria-labelledby="quick-actions-title">
               <h2 id="quick-actions-title" className="text-xl font-black text-slate-950">Accesos rápidos</h2>
               <div className="mt-4 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
