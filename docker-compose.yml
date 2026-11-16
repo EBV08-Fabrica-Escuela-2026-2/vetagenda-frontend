@@ -1,0 +1,71 @@
+services:
+
+  # ── Base de datos ─────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: vetagenda-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: vetagenda
+      POSTGRES_USER: vetagenda
+      POSTGRES_PASSWORD: vetagenda123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vetagenda -d vetagenda"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ── Backend Spring Boot ───────────────────────────────────────────
+  backend:
+    build:
+      context: ../veterinary-system
+      dockerfile: Dockerfile
+    container_name: vetagenda-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      # Sobreescribe application.yml para apuntar al contenedor de BD
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/vetagenda
+      SPRING_DATASOURCE_USERNAME: vetagenda
+      SPRING_DATASOURCE_PASSWORD: vetagenda123
+      # Flyway crea/actualiza el esquema y JPA valida las entidades.
+      SPRING_JPA_HIBERNATE_DDL_AUTO: validate
+      SPRING_FLYWAY_ENABLED: "true"
+      APP_CORS_ALLOWED_ORIGINS: http://localhost:5173,http://localhost:3000
+      # Zona horaria
+      TZ: America/Bogota
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/api-docs > /dev/null 2>&1 || exit 1"]
+      interval: 20s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  # ── Frontend React (Nginx) ────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        # VITE_API_URL se quema en el bundle durante el build.
+        # El navegador del usuario accede a localhost:8080 directamente.
+        VITE_API_URL: http://localhost:8080/api
+    container_name: vetagenda-frontend
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "5173:80"
+
+volumes:
+  postgres_data:
+    driver: local
