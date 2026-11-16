@@ -110,7 +110,7 @@ function LandingPage() {
 
   function openPortal(role: PortalRole) {
     const destination = role === 'ADMIN'
-      ? '/admin/usuarios'
+      ? '/admin'
       : role === 'VETERINARIO'
         ? '/veterinario/agenda'
         : '/cliente';

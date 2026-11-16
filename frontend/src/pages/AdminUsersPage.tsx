@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, BarChart3, RefreshCw, Search, ShieldCheck, UserCheck, UserX } from 'lucide-react';
+import { ArrowLeft, BarChart3, Home, RefreshCw, Search, ShieldCheck, UserCheck, UserX } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { BrandHeader } from '../components/BrandHeader';
 import { ClientSessionActions } from '../components/ClientSessionActions';
@@ -66,6 +66,9 @@ export default function AdminUsersPage() {
           subtitle="Administración de usuarios"
           rightContent={(
             <div className="flex flex-wrap items-center gap-2">
+              <Link to="/admin" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
+                <Home size={17} /> Panel
+              </Link>
               <Link to="/admin/analitica/ocupacion" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
                 <ArrowLeft size={17} /> Analítica
               </Link>

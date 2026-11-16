@@ -94,9 +94,9 @@ export default function OccupancyPage() {
             <div className="flex flex-wrap gap-2">
               <Link
                 className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D5C75] focus-visible:ring-offset-2"
-                to="/"
+                to="/admin"
               >
-                <ArrowLeft aria-hidden="true" size={17} /> Inicio
+                <ArrowLeft aria-hidden="true" size={17} /> Panel
               </Link>
               <Link
                 className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D5C75] focus-visible:ring-offset-2"

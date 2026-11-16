@@ -67,7 +67,7 @@ export function ClientAccessModal({ isOpen, onClose }: ClientAccessModalProps) {
       const auth = await loginUser({ email: email.trim(), password });
       const session = await saveSessionFromLogin(email.trim(), auth);
       onClose();
-      navigate(session.rol === 'ADMIN' ? '/admin/usuarios' : session.rol === 'VETERINARIO' ? '/veterinario/agenda' : '/cliente');
+      navigate(session.rol === 'ADMIN' ? '/admin' : session.rol === 'VETERINARIO' ? '/veterinario/agenda' : '/cliente');
     } catch (loginError) {
       setError(loginError instanceof Error ? loginError.message : 'No fue posible iniciar sesión.');
     } finally {

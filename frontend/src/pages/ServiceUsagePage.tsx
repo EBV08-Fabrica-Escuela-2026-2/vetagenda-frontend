@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
-import { Activity, ArrowLeft, CalendarDays, DollarSign, RefreshCw, Stethoscope } from 'lucide-react';
+import { Activity, ArrowLeft, CalendarDays, DollarSign, Home, RefreshCw, Stethoscope } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { BrandHeader } from '../components/BrandHeader';
 import { ClientSessionActions } from '../components/ClientSessionActions';
@@ -64,6 +64,9 @@ export default function ServiceUsagePage() {
           subtitle="Analítica de servicios"
           rightContent={(
             <div className="flex flex-wrap items-center gap-2">
+              <Link to="/admin" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
+                <Home size={17} /> Panel
+              </Link>
               <Link to="/admin/analitica/ocupacion" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 hover:bg-slate-50">
                 <ArrowLeft size={17} /> Ocupación
               </Link>

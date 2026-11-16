@@ -19,6 +19,7 @@ import { ClientPortalPage } from './pages/ClientPortalPage';
 import OccupancyPage from './pages/OccupancyPage';
 import ServiceUsagePage from './pages/ServiceUsagePage';
 import AdminUsersPage from './pages/AdminUsersPage';
+import AdminPortalPage from './pages/AdminPortalPage';
 import { PetHistoryPage } from './pages/PetHistoryPage';
 import { SkipLink } from './components/SkipLink';
 import { AccessibilityAnnouncer } from './components/AccessibilityAnnouncer';
@@ -96,7 +97,7 @@ function AdminProtectedRoute({ children }: { children: ReactElement }) {
 function PortalEntryRoute() {
   const session = getAuthenticatedSession();
   if (!session) return <Navigate to="/#portales" replace />;
-  if (session.rol === 'ADMIN') return <Navigate to="/admin/usuarios" replace />;
+  if (session.rol === 'ADMIN') return <Navigate to="/admin" replace />;
   if (session.rol === 'VETERINARIO') return <Navigate to="/veterinario/agenda" replace />;
   return <Navigate to="/cliente" replace />;
 }
@@ -114,6 +115,14 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/portal" element={<PortalEntryRoute />} />
         <Route path="/portales" element={<PortalEntryRoute />} />
+        <Route
+          path="/admin"
+          element={(
+            <AdminProtectedRoute>
+              <AdminPortalPage />
+            </AdminProtectedRoute>
+          )}
+        />
         <Route
           path="/admin/analitica/ocupacion"
           element={(
@@ -142,7 +151,7 @@ function App() {
           path="/dashboard"
           element={(
             <AdminProtectedRoute>
-              <AdminUsersPage />
+              <AdminPortalPage />
             </AdminProtectedRoute>
           )}
         />
