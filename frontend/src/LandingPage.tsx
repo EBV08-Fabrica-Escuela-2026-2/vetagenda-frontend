@@ -1,21 +1,14 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { HeroSearch } from './components/HeroSearch';
 import { ClientAccessModal } from './components/ClientAccessModal';
-import { MockRoleSwitcher, type DemoProfile } from './components/MockRoleSwitcher';
 import { Navbar } from './components/Navbar';
-import { PortalsGrid, type PortalRole } from './components/PortalsGrid';
+import { PortalsGrid } from './components/PortalsGrid';
 import { Footer } from './components/Footer';
 import { Icon, type IconName } from './components/Icon';
 import { FaqSection, HowItWorks } from './components/LandingSections';
 import { Reveal } from './components/Reveal';
-import {
-  getCurrentVeterinarian,
-  listServices,
-  loginVeterinarianDemo,
-  saveVeterinarianSession,
-  type CatalogService,
-} from './services/api';
+import { listServices, type CatalogService } from './services/api';
 
 const serviceVisuals = [
   'bg-[#E8F4F1] text-[#0D5C75]',
@@ -69,13 +62,9 @@ function formatServiceDuration(service: CatalogService) {
 }
 
 function LandingPage() {
-  const navigate = useNavigate();
-  const [isLoginOpen, setIsLoginOpen] = useState(false);
   const [isClientAccessOpen, setIsClientAccessOpen] = useState(false);
-  const [preferredRole, setPreferredRole] = useState<DemoProfile['rol'] | null>(null);
   const [catalogServices, setCatalogServices] = useState<CatalogService[]>([]);
   const [isCatalogLoading, setIsCatalogLoading] = useState(true);
-  const closeLogin = useCallback(() => setIsLoginOpen(false), []);
 
   useEffect(() => {
     let isMounted = true;
@@ -94,28 +83,6 @@ function LandingPage() {
       isMounted = false;
     };
   }, []);
-
-  async function startDemo(profile: DemoProfile) {
-    if (profile.rol !== 'VETERINARIO') return;
-    try {
-      const auth = await loginVeterinarianDemo();
-      const veterinarian = await getCurrentVeterinarian(auth.token);
-      saveVeterinarianSession(veterinarian, auth.token);
-      closeLogin();
-      navigate(profile.destination);
-    } catch (error) {
-      window.alert(error instanceof Error ? error.message : 'No fue posible iniciar el perfil demo.');
-    }
-  }
-
-  function openPortal(role: PortalRole) {
-    const destination = role === 'ADMIN'
-      ? '/admin'
-      : role === 'VETERINARIO'
-        ? '/veterinario/agenda'
-        : '/cliente';
-    navigate(`/login?returnTo=${encodeURIComponent(destination)}`);
-  }
 
   return (
     <main className="min-h-screen bg-white text-slate-900">
@@ -176,18 +143,12 @@ function LandingPage() {
         </div>
       </section>
 
-      <PortalsGrid onOpenPortal={openPortal} />
+      <PortalsGrid onLogin={() => setIsClientAccessOpen(true)} />
 
       <FaqSection />
 
       <Footer />
 
-      <MockRoleSwitcher
-        isOpen={isLoginOpen}
-        onClose={closeLogin}
-        onSwitchRole={startDemo}
-        preferredRole={preferredRole}
-      />
       <ClientAccessModal
         isOpen={isClientAccessOpen}
         onClose={() => setIsClientAccessOpen(false)}

@@ -4,7 +4,7 @@ import { Reveal } from './Reveal';
 export type PortalRole = 'CLIENTE' | 'VETERINARIO' | 'ADMIN';
 
 type PortalsGridProps = {
-  onOpenPortal: (role: PortalRole) => void;
+  onLogin: () => void;
 };
 
 const portals: {
@@ -15,7 +15,6 @@ const portals: {
   style: string;
   sectionId: string;
   bullets: string[];
-  action: string;
 }[] = [
   {
     id: 'CLIENTE',
@@ -29,7 +28,6 @@ const portals: {
       'Registra tus mascotas',
       'Consulta el detalle de tu cita',
     ],
-    action: 'Ingresar como cliente',
   },
   {
     id: 'VETERINARIO',
@@ -44,7 +42,6 @@ const portals: {
       'Agrega servicios a tu catálogo',
       'Gestiona cancelaciones por imprevistos',
     ],
-    action: 'Ingresar como veterinario',
   },
   {
     id: 'ADMIN',
@@ -59,11 +56,10 @@ const portals: {
       'Analiza el uso de los servicios',
       'Accede a indicadores del producto',
     ],
-    action: 'Ingresar como administrador',
   },
 ];
 
-export function PortalsGrid({ onOpenPortal }: PortalsGridProps) {
+export function PortalsGrid({ onLogin }: PortalsGridProps) {
   return (
     <section id="portales" className="scroll-mt-28 bg-white px-5 py-16 md:px-10 md:py-24">
       <div className="mx-auto max-w-7xl">
@@ -95,16 +91,20 @@ export function PortalsGrid({ onOpenPortal }: PortalsGridProps) {
                   </li>
                 ))}
               </ul>
-              <button
-                type="button"
-                onClick={() => onOpenPortal(portal.id)}
-                className="mt-auto min-h-12 rounded-full bg-[#0D5C75] px-5 py-3 text-sm font-bold text-white transition-all duration-300 hover:bg-[#094356] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488] focus-visible:ring-offset-2"
-              >
-                {portal.action}
-              </button>
             </article>
             </Reveal>
           ))}
+        </div>
+
+        <div className="mt-8 flex flex-col items-center gap-2 text-center">
+          <button
+            type="button"
+            onClick={onLogin}
+            className="min-h-12 rounded-full bg-[#0D5C75] px-7 py-3 text-sm font-bold text-white transition-all duration-300 hover:bg-[#094356] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488] focus-visible:ring-offset-2"
+          >
+            Ingresar a VetAgenda
+          </button>
+          <p className="text-sm text-slate-500">Te llevaremos automáticamente al portal correspondiente a tu cuenta.</p>
         </div>
       </div>
     </section>
