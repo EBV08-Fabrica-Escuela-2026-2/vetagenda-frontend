@@ -176,13 +176,7 @@ function LandingPage() {
         </div>
       </section>
 
-      <PortalsGrid
-        onOpenPortal={openPortal}
-        onOpenVeterinarianDemo={() => {
-          setPreferredRole('VETERINARIO');
-          setIsLoginOpen(true);
-        }}
-      />
+      <PortalsGrid onOpenPortal={openPortal} />
 
       <FaqSection />
 

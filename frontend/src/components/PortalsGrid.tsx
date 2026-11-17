@@ -5,7 +5,6 @@ export type PortalRole = 'CLIENTE' | 'VETERINARIO' | 'ADMIN';
 
 type PortalsGridProps = {
   onOpenPortal: (role: PortalRole) => void;
-  onOpenVeterinarianDemo: () => void;
 };
 
 const portals: {
@@ -64,7 +63,7 @@ const portals: {
   },
 ];
 
-export function PortalsGrid({ onOpenPortal, onOpenVeterinarianDemo }: PortalsGridProps) {
+export function PortalsGrid({ onOpenPortal }: PortalsGridProps) {
   return (
     <section id="portales" className="scroll-mt-28 bg-white px-5 py-16 md:px-10 md:py-24">
       <div className="mx-auto max-w-7xl">
@@ -103,15 +102,6 @@ export function PortalsGrid({ onOpenPortal, onOpenVeterinarianDemo }: PortalsGri
               >
                 {portal.action}
               </button>
-              {portal.id === 'VETERINARIO' && (
-                <button
-                  type="button"
-                  onClick={onOpenVeterinarianDemo}
-                  className="mt-3 min-h-11 rounded-full border border-[#0D5C75] px-5 py-2.5 text-sm font-bold text-[#0D5C75] transition hover:bg-white/70 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488] focus-visible:ring-offset-2"
-                >
-                  Probar perfil veterinario demo
-                </button>
-              )}
             </article>
             </Reveal>
           ))}
