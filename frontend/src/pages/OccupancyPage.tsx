@@ -10,6 +10,7 @@ import { OccupancyKpiGrid } from '../components/analytics/OccupancyKpiGrid';
 import { OccupancySkeleton } from '../components/analytics/OccupancySkeleton';
 import { OccupancyTable } from '../components/analytics/OccupancyTable';
 import { BrandHeader } from '../components/BrandHeader';
+import { LogoutConfirmationModal } from '../components/LogoutConfirmationModal';
 import { getOccupancyReport } from '../services/occupancy';
 import { clearClientSession, getAuthenticatedSession, listVeterinarians, logoutCurrentSession } from '../services/api';
 import type { OccupancyFilter, OccupancyReportResponse } from '../types/occupancy';
@@ -43,6 +44,21 @@ export default function OccupancyPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [filterOptions, setFilterOptions] = useState<Array<{ id: string; nombre: string }>>([]);
+  const [isLogoutConfirmationOpen, setIsLogoutConfirmationOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+
+  const handleLogout = useCallback(async () => {
+    const session = getAuthenticatedSession();
+    setIsLoggingOut(true);
+    try {
+      if (session) await logoutCurrentSession(session.token);
+    } finally {
+      clearClientSession();
+      setIsLogoutConfirmationOpen(false);
+      setIsLoggingOut(false);
+      navigate('/login', { replace: true });
+    }
+  }, [navigate]);
 
   const loadReport = useCallback(async (query: OccupancyFilter) => {
     setIsLoading(true);
@@ -112,17 +128,7 @@ export default function OccupancyPage() {
               </Link>
               <button
                 className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-bold text-slate-700 transition hover:bg-slate-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D5C75] focus-visible:ring-offset-2"
-                onClick={() => {
-                  const session = getAuthenticatedSession();
-                  void (async () => {
-                    try {
-                      if (session) await logoutCurrentSession(session.token);
-                    } finally {
-                      clearClientSession();
-                      navigate('/login', { replace: true });
-                    }
-                  })();
-                }}
+                onClick={() => setIsLogoutConfirmationOpen(true)}
                 type="button"
               >
                 <LogOut aria-hidden="true" size={17} /> Cerrar sesión
@@ -195,6 +201,12 @@ export default function OccupancyPage() {
           </div>
         )}
       </div>
+      <LogoutConfirmationModal
+        isOpen={isLogoutConfirmationOpen}
+        isSubmitting={isLoggingOut}
+        onCancel={() => setIsLogoutConfirmationOpen(false)}
+        onConfirm={() => void handleLogout()}
+      />
     </main>
   );
 }

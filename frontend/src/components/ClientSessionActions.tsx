@@ -9,6 +9,7 @@ import {
   type AuthenticatedSession,
 } from '../services/api';
 import { announceToScreenReader } from '../accessibility/announcer';
+import { LogoutConfirmationModal } from './LogoutConfirmationModal';
 
 type ClientSessionActionsProps = {
   className?: string;
@@ -26,6 +27,8 @@ export function ClientSessionActions({
   stacked = false,
 }: ClientSessionActionsProps) {
   const [session, setSession] = useState<AuthenticatedSession | null>(() => getAuthenticatedSession());
+  const [isLogoutConfirmationOpen, setIsLogoutConfirmationOpen] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -42,12 +45,15 @@ export function ClientSessionActions({
 
   const handleLogout = async () => {
     if (!session) return;
+    setIsLoggingOut(true);
     try {
       await logoutCurrentSession(session.token);
     } finally {
       clearClientSession();
       announceToScreenReader('Sesión cerrada correctamente.');
       setSession(null);
+      setIsLogoutConfirmationOpen(false);
+      setIsLoggingOut(false);
       onAction?.();
       navigate('/', { replace: true });
     }
@@ -99,35 +105,44 @@ export function ClientSessionActions({
     : nameParts[0] || session.nombre;
 
   return (
-    <div className={`${containerClass} ${className}`}>
-      <span
-        className={`${stacked ? 'w-full justify-start' : ''} inline-flex min-h-11 items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-900`}
-        title={`Sesión iniciada como ${session.nombre}`}
-      >
-        <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />
-        <UserRound className="h-4 w-4" />
-        <span>Sesión: {firstName}</span>
-      </span>
-
-      {showPortalLink && (
-        <Link
-          to="/portal"
-          onClick={onAction}
-          className={`${stacked ? 'w-full justify-start' : ''} inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-[#0D5C75] transition hover:bg-[#F0F7F7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488]`}
+    <>
+      <div className={`${containerClass} ${className}`}>
+        <span
+          className={`${stacked ? 'w-full justify-start' : ''} inline-flex min-h-11 items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-900`}
+          title={`Sesión iniciada como ${session.nombre}`}
         >
-          <LayoutDashboard className="h-4 w-4" />
-          Mi portal
-        </Link>
-      )}
+          <span className="h-2 w-2 rounded-full bg-emerald-500" aria-hidden="true" />
+          <UserRound className="h-4 w-4" aria-hidden="true" />
+          <span>Sesión: {firstName}</span>
+        </span>
 
-      <button
-        type="button"
-        onClick={handleLogout}
-        className={`${stacked ? 'w-full justify-start' : ''} inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-slate-600 transition hover:bg-rose-50 hover:text-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400`}
-      >
-        <LogOut className="h-4 w-4" />
-        Cerrar sesión
-      </button>
-    </div>
+        {showPortalLink && (
+          <Link
+            to="/portal"
+            onClick={onAction}
+            className={`${stacked ? 'w-full justify-start' : ''} inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-[#0D5C75] transition hover:bg-[#F0F7F7] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0D9488]`}
+          >
+            <LayoutDashboard className="h-4 w-4" aria-hidden="true" />
+            Mi portal
+          </Link>
+        )}
+
+        <button
+          type="button"
+          onClick={() => setIsLogoutConfirmationOpen(true)}
+          className={`${stacked ? 'w-full justify-start' : ''} inline-flex min-h-11 items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-bold text-slate-600 transition hover:bg-rose-50 hover:text-rose-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-400`}
+        >
+          <LogOut className="h-4 w-4" aria-hidden="true" />
+          Cerrar sesión
+        </button>
+      </div>
+
+      <LogoutConfirmationModal
+        isOpen={isLogoutConfirmationOpen}
+        isSubmitting={isLoggingOut}
+        onCancel={() => setIsLogoutConfirmationOpen(false)}
+        onConfirm={() => void handleLogout()}
+      />
+    </>
   );
 }
